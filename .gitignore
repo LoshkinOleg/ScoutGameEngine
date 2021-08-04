@@ -1,5 +1,6 @@
 /out/
 /[bB]uild/
+/[dD]ata/[jJ]sons/
 
 # Prerequisites
 *.d
@@ -12,7 +13,6 @@
 *.obj
 *.gltf
 *.glb
-*.json
 *.mtl
 *.bmp
 

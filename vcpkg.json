@@ -1,0 +1,16 @@
+{
+    "name": "scoutgameengine",
+    "version-string": "1.0",
+    "dependencies":
+    [
+        "glm",
+        "sdl2",
+		"glad",
+		"stb",
+		"gli",
+		"tinyobjloader",
+		"tinygltf",
+		"xxhash",
+		"nlohmann-json"
+    ]
+}
