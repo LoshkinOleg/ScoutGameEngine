@@ -14,7 +14,6 @@ using json = nlohmann::json;
 #include <tiny_gltf.h>
 
 #include "Engine.h"
-#include "globals.h"
 
 using Gltf = tinygltf::Model;
 
@@ -72,7 +71,7 @@ namespace sge
 		return &Engine::Get().GetResourceManager().GetGltfData(resourceIndex, resourceHash);
 	}
 
-	void ResourceManager::Init()
+	void ResourceManager::PostInit()
 	{
 		if (FREE_DATA_AT_INIT_) jsons_.resize(0);
 	}
@@ -184,18 +183,18 @@ namespace sge
 	ShaderData& ResourceManager::GetShaderData(const uint32_t resourceIndex, const uint32_t resourceHash)
 	{
 		assert(resourceHash > 0);
-		ShaderData& resource = shaders_[resourceIndex];
+		ShaderData& resource = shaderSrcs_[resourceIndex];
 		assert(resource.hash == resourceHash);
 		return resource;
 	}
 
-	ShaderHandle ResourceManager::LoadShader(const std::string_view vertexPath, const std::string_view fragmentPath)
+	ShaderSrcHandle ResourceManager::LoadShader(const std::string_view vertexPath, const std::string_view fragmentPath)
 	{
 		assert(vertexPath.substr(vertexPath.find_last_of('.'), vertexPath.size()) == ".vert");
 		assert(fragmentPath.substr(fragmentPath.find_last_of('.'), fragmentPath.size()) == ".frag");
 
-		auto match = std::find(shaders_.begin(), shaders_.end(), ShaderData());
-		assert(match != shaders_.end());
+		auto match = std::find(shaderSrcs_.begin(), shaderSrcs_.end(), ShaderData());
+		assert(match != shaderSrcs_.end());
 		ShaderData& data = *match;
 
 		data.vertexShader = LoadFile_(vertexPath);
@@ -203,10 +202,10 @@ namespace sge
 		const std::string combinedHash = std::to_string(HashString_(data.vertexShader)) + std::to_string(HashString_(data.fragmentShader));
 		data.hash = XXH32(combinedHash.c_str(), combinedHash.size(), HASHING_SEED);
 
-		return { (uint32_t)(match - shaders_.begin()), data.hash };
+		return { (uint32_t)(match - shaderSrcs_.begin()), data.hash };
 	}
 
-	void ResourceManager::FreeShader(ShaderHandle handle)
+	void ResourceManager::FreeShader(ShaderSrcHandle handle)
 	{
 		handle->Clear();
 		handle.Clear();
@@ -217,7 +216,7 @@ namespace sge
 		for (auto& element : jsons_) element.Clear();
 		for (auto& element : gltfs_) element.Clear();
 		for (auto& element : ktxs_) element.Clear();
-		for (auto& element : shaders_) element.Clear();
+		for (auto& element : shaderSrcs_) element.Clear();
 	}
 
 	std::string ResourceManager::LoadFile_(const std::string_view path) const
@@ -230,6 +229,7 @@ namespace sge
 
 	uint32_t ResourceManager::HashString_(const std::string_view str) const
 	{
+		assert(sizeof(char) == 1);
 		return XXH32(str.data(), str.size(), HASHING_SEED);
 	}
 	uint32_t ResourceManager::HashGltf_(const tinygltf::Model* gltf) const
@@ -250,6 +250,18 @@ namespace sge
 	{
 		return hash == other.hash;
 	}
+	int32_t KtxData::GetGlInternalFormat() const
+	{
+		return gli::gl(gli::gl::PROFILE_KTX).translate(texture.format(), texture.swizzles()).Internal;
+	}
+	int32_t KtxData::GetGlExternalFormat() const
+	{
+		return gli::gl(gli::gl::PROFILE_KTX).translate(texture.format(), texture.swizzles()).External;
+	}
+	int32_t KtxData::GetGlTarget() const
+	{
+		return gli::gl(gli::gl::PROFILE_KTX).translate(texture.target());
+	}
 	KtxData* KtxHandle::operator->()
 	{
 		assert(resourceHash > 0);
@@ -260,11 +272,11 @@ namespace sge
 		resourceIndex = 0;
 		resourceHash = 0;
 	}
-	ShaderData* ShaderHandle::operator->()
+	ShaderData* ShaderSrcHandle::operator->()
 	{
 		return &Engine::Get().GetResourceManager().GetShaderData(resourceIndex, resourceHash);
 	}
-	void ShaderHandle::Clear()
+	void ShaderSrcHandle::Clear()
 	{
 		resourceIndex = 0;
 		resourceHash = 0;

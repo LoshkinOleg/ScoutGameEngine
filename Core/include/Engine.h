@@ -38,6 +38,7 @@ namespace sge
 		sge_DISALLOW_COPY(Engine);
 		static Engine& Get();
 		ResourceManager& GetResourceManager();
+		Renderer& GetRenderer();
 		void Run(I_Application* app);
 		float GetCurrentTimer() const;
 		float GetLastTimer() const;

@@ -47,14 +47,15 @@ namespace sge
 		const auto success = gladLoadGLLoader((GLADloadproc)SDL_GL_GetProcAddress);
 		assert(success);
 
+		renderer_.Init();
 		app_->Init();
-		resourceManager_.Init();
+		resourceManager_.PostInit();
 	}
 	void Engine::Shutdown()
 	{
 		app_->Shutdown();
-		resourceManager_.Shutdown();
 		renderer_.Shutdown();
+		resourceManager_.Shutdown();
 		SDL_GL_DeleteContext(glContextPtr_);
 		SDL_DestroyWindow(window_);
 		SDL_Quit();
@@ -69,6 +70,11 @@ namespace sge
 	ResourceManager& Engine::GetResourceManager()
 	{
 		return resourceManager_;
+	}
+
+	Renderer& Engine::GetRenderer()
+	{
+		return renderer_;
 	}
 
 	void Engine::Run(I_Application* app)
@@ -104,6 +110,7 @@ namespace sge
 					}
 				}
 				app_->Update();
+				renderer_.Update();
 				SDL_GL_SwapWindow(window_);
 			}
 		}

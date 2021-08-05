@@ -10,10 +10,8 @@
 *.jpeg
 *.png
 *.ktx
-*.obj
 *.gltf
 *.glb
-*.mtl
 *.bmp
 
 # Compiled Object files
@@ -41,7 +39,6 @@
 *.lib
 
 # Executables
-*.exe
 *.out
 *.app
 

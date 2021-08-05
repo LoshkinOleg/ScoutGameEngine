@@ -2,6 +2,9 @@
 
 #include <array>
 
+#include <SDL_keycode.h>
+#include <SDL_mouse.h>
+
 #include "globals.h"
 
 union SDL_Event;

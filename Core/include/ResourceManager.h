@@ -42,6 +42,9 @@ namespace sge
 
 		void Clear();
 		bool operator==(const KtxData& other) const;
+		int32_t GetGlInternalFormat() const;
+		int32_t GetGlExternalFormat() const;
+		int32_t GetGlTarget() const;
 	};
 
 	struct KtxHandle
@@ -82,7 +85,7 @@ namespace sge
 		bool operator==(const ShaderData& other) const;
 	};
 
-	struct ShaderHandle
+	struct ShaderSrcHandle
 	{
 		uint32_t resourceIndex = 0;
 		uint32_t resourceHash = 0;
@@ -96,7 +99,7 @@ namespace sge
 	public:
 		sge_DISALLOW_COPY(ResourceManager);
 
-		void Init();
+		void PostInit();
 
 		JsonData& GetJsonData(const uint32_t resourceIndex, const uint32_t resourceHash);
 		JsonHandle LoadJson(const std::string_view path);
@@ -111,8 +114,8 @@ namespace sge
 		void FreeKtx(KtxHandle handle);
 
 		ShaderData& GetShaderData(const uint32_t resourceIndex, const uint32_t resourceHash);
-		ShaderHandle LoadShader(const std::string_view vertexPath, const std::string_view fragmentPath);
-		void FreeShader(ShaderHandle handle);
+		ShaderSrcHandle LoadShader(const std::string_view vertexPath, const std::string_view fragmentPath);
+		void FreeShader(ShaderSrcHandle handle);
 
 		void Shutdown();
 
@@ -120,7 +123,7 @@ namespace sge
 		friend class Engine;
 		sge_ALLOW_CONSTRUCTION(ResourceManager);
 
-		std::string LoadFile_(const std::string_view path) const;
+		std::string LoadFile_(const std::string_view path) const; // TODO: use hashes to avoid duplicate resources
 		uint32_t HashString_(const std::string_view str) const;
 		uint32_t HashGltf_(const tinygltf::Model* gltf) const;
 		uint32_t HashKtx_(const gli::texture& ktx) const;
@@ -132,6 +135,6 @@ namespace sge
 		std::vector<JsonData> jsons_ = std::vector<JsonData>(SIZE_OF_RESOURCE_POOLS_, JsonData());
 		std::vector<GltfData> gltfs_ = std::vector<GltfData>(SIZE_OF_RESOURCE_POOLS_, GltfData());
 		std::vector<KtxData> ktxs_ = std::vector<KtxData>(SIZE_OF_RESOURCE_POOLS_, KtxData());
-		std::vector<ShaderData> shaders_ = std::vector<ShaderData>(SIZE_OF_RESOURCE_POOLS_, ShaderData());
+		std::vector<ShaderData> shaderSrcs_ = std::vector<ShaderData>(SIZE_OF_RESOURCE_POOLS_, ShaderData());
 	};
 }//!sge
