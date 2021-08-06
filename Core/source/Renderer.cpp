@@ -50,6 +50,27 @@ namespace sge
 		glUniform1i(location, value);
 		sge_CHECK_GL_ERROR();
 	}
+	void Shader::SetVec3(const std::string_view name, const glm::vec3 value)
+	{
+		glUseProgram(PROGRAM);
+		const int location = GetUniformLocation(name);
+		glUniform3fv(location, 1, &value[0]);
+		sge_CHECK_GL_ERROR();
+	}
+	void Shader::SetMat4(const std::string_view name, const glm::mat4 & value)
+	{
+		glUseProgram(PROGRAM);
+		const int location = GetUniformLocation(name);
+		glUniformMatrix4fv(location, 1, GL_FALSE, &value[0][0]);
+		sge_CHECK_GL_ERROR();
+	}
+	void Shader::SetMat3(const std::string_view name, const glm::mat3& value)
+	{
+		glUseProgram(PROGRAM);
+		const int location = GetUniformLocation(name);
+		glUniformMatrix3fv(location, 1, GL_FALSE, &value[0][0]);
+		sge_CHECK_GL_ERROR();
+	}
 	void Shader::Bind() const
 	{
 		glUseProgram(PROGRAM);
@@ -75,22 +96,19 @@ namespace sge
 		sge_CHECK_GL_ERROR();
 	}
 
-	void VertexBuffer::Init(const uint32_t VAO, const uint32_t EBO, const std::vector<uint32_t>& VBOs, const uint32_t hash, const uint32_t vertexCount)
+	void VertexBuffer::Init(const uint32_t VAO, const std::vector<uint32_t>& VBOs, const uint32_t hash, const uint32_t vertexCount)
 	{
 		this->VAO = VAO;
-		this->EBO = EBO;
 		this->VBOs = std::vector<uint32_t>(VBOs);
 		bufferDataHash = hash;
 		this->vertexCount = vertexCount;
 	}
 	void VertexBuffer::Destroy()
 	{
-		glDeleteBuffers(VBOs.size(), VBOs.data());
-		glDeleteBuffers(1, &EBO);
+		glDeleteBuffers((GLsizei)VBOs.size(), VBOs.data());
 		glDeleteVertexArrays(1, &VAO);
 		sge_CHECK_GL_ERROR();
 		VAO = 0;
-		EBO = 0;
 		VBOs.clear();
 		bufferDataHash = 0;
 	}
@@ -103,13 +121,15 @@ namespace sge
 		}
 		sge_CHECK_GL_ERROR();
 		glBindVertexArray(VAO);
-		glDrawElementsInstanced(primitive, vertexCount, GL_UNSIGNED_INT, 0, nrOfInstances);
+		glDrawArrays(primitive, 0, vertexCount);
 		sge_CHECK_GL_ERROR();
 	}
 
 	void Renderer::Init()
 	{
 		glClearColor(CLEAR_COLOR_[0], CLEAR_COLOR_[1], CLEAR_COLOR_[2], CLEAR_COLOR_[3]);
+		glEnable(GL_DEPTH_TEST);
+		glEnable(GL_CULL_FACE);
 	}
 	void Renderer::Shutdown()
 	{
@@ -217,9 +237,9 @@ namespace sge
 		GLenum target = translator.translate(handle->texture.target());
 		assert(target == GL_TEXTURE_2D);
 
-		const GLint levels = handle->texture.levels();
-		const GLint layers = handle->texture.layers();
-		const GLint faces = handle->texture.faces();
+		const GLint levels = static_cast<GLint>(handle->texture.levels());
+		const GLint layers = static_cast<GLint>(handle->texture.layers());
+		const GLint faces = static_cast<GLint>(handle->texture.faces());
 
 		glGenTextures(1, &TEX);
 		glBindTexture(target, TEX);
@@ -278,9 +298,9 @@ namespace sge
 		// TODO: implement this.
 		return VertexBufferHandle();
 	}
-	VertexBufferHandle Renderer::CreateVertexBuffer(const std::vector<float>& vertices, const std::vector<uint32_t>& indices, const std::vector<uint32_t>& layout)
+	VertexBufferHandle Renderer::CreateVertexBuffer(const std::vector<float>& vertices, const std::vector<uint32_t>& layout)
 	{
-		uint32_t VAO = 0, EBO = 0, VBO = 0;
+		uint32_t VAO = 0, VBO = 0;
 		const uint32_t stride = std::accumulate(layout.begin(), layout.end(), 0);
 
 		assert(vertices.size() % stride == 0);
@@ -288,15 +308,8 @@ namespace sge
 		{
 			assert(element < 5);
 		}
-		for (const auto& element : indices)
-		{
-			assert(element < vertices.size());
-		}
 
-		std::string accumulatedData = std::to_string(XXH32(vertices.data(), vertices.size() * sizeof(float), HASHING_SEED));
-		accumulatedData += std::to_string(XXH32(indices.data(), indices.size() * sizeof(uint32_t), HASHING_SEED));
-		assert(sizeof(char) == 1);
-		const uint32_t hash = XXH32(accumulatedData.c_str(), accumulatedData.size(), HASHING_SEED);
+		const uint32_t hash = XXH32(vertices.data(), vertices.size() * sizeof(float), HASHING_SEED);
 
 		// TODO: check here we're not loading data that's already on the GPU using the hash.
 
@@ -304,7 +317,6 @@ namespace sge
 		VertexBuffer& vertexBuffer = vertexBuffers_.front();
 
 		glGenVertexArrays(1, &VAO);
-		glGenBuffers(1, &EBO);
 		glGenBuffers(1, &VBO);
 
 		glBindVertexArray(VAO);
@@ -313,22 +325,18 @@ namespace sge
 		glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(float), vertices.data(), GL_STATIC_DRAW);
 		sge_CHECK_GL_ERROR();
 
-		const uint32_t layoutSize = layout.size();
+		const uint32_t layoutSize = (uint32_t)layout.size();
 		uint32_t accumulatedOffset = 0;
 		for (uint32_t i = 0; i < layoutSize; i++)
 		{
-			glVertexAttribPointer(i, layout[i], GL_FLOAT, GL_FALSE, sizeof(float) * layout[i], (void*)accumulatedOffset);
+			glVertexAttribPointer(i, layout[i], GL_FLOAT, GL_FALSE, sizeof(float) * stride, (void*)(uint64_t)accumulatedOffset);
 			glEnableVertexAttribArray(i);
 			sge_CHECK_GL_ERROR();
-			accumulatedOffset += layout[i];
+			accumulatedOffset += sizeof(float) * layout[i];
 		}
-
-		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
-		glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(uint32_t), indices.data(), GL_STATIC_DRAW);
-		glBindVertexArray(0);
 		sge_CHECK_GL_ERROR();
 
-		vertexBuffer.Init(VAO, EBO, { VBO }, hash, indices.size());
+		vertexBuffer.Init(VAO, { VBO }, hash, (uint32_t)vertices.size() / stride);
 
 		return { (uint32_t)(vertexBuffers_.size() - 1) , hash };
 	}

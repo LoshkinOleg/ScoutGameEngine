@@ -28,6 +28,9 @@ namespace sge
 
 		int32_t GetUniformLocation(const std::string_view name);
 		void SetInt(const std::string_view name, const int32_t value);
+		void SetVec3(const std::string_view name, const glm::vec3 value);
+		void SetMat4(const std::string_view name, const glm::mat4& value);
+		void SetMat3(const std::string_view name, const glm::mat3& value);
 	};
 
 	struct ShaderHandle
@@ -59,12 +62,12 @@ namespace sge
 
 	struct VertexBuffer
 	{
-		uint32_t VAO = 0, EBO = 0;
+		uint32_t VAO = 0;
 		std::vector<uint32_t> VBOs = {};
 		uint32_t bufferDataHash = 0;
 		uint32_t vertexCount = 0;
 
-		void Init(const uint32_t VAO, const uint32_t EBO, const std::vector<uint32_t>& VBOs, const uint32_t hash, const uint32_t vertexCount);
+		void Init(const uint32_t VAO, const std::vector<uint32_t>& VBOs, const uint32_t hash, const uint32_t vertexCount);
 		void Destroy();
 		void Render(Shader& shader, const std::vector<Texture2d>& textures, const uint32_t nrOfInstances, const int32_t primitive) const;
 	};
@@ -95,7 +98,7 @@ namespace sge
 			const int32_t primitive;
 		};
 
-		constexpr static const int32_t CLEAR_FLAGS_ = GL_COLOR_BUFFER_BIT;
+		constexpr static const int32_t CLEAR_FLAGS_ = GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT;
 		constexpr static const float CLEAR_COLOR_[4] = { 0.3f, 0.0f, 0.3f, 1.0f };
 
 		std::vector<Shader> shaders_ = {}; // TODO: use hashes to avoid duplicate resources
@@ -117,7 +120,7 @@ namespace sge
 		ShaderHandle CreateShader(ShaderSrcHandle& handle);
 		Texture2dHandle CreateTexture2d(KtxHandle& handle);
 		VertexBufferHandle CreateVertexBuffer(GltfHandle& handle);
-		VertexBufferHandle CreateVertexBuffer(const std::vector<float>& vertices, const std::vector<uint32_t>& indices, const std::vector<uint32_t>& layout);
+		VertexBufferHandle CreateVertexBuffer(const std::vector<float>& vertices, const std::vector<uint32_t>& layout);
 
 		void ScheduleToBeDrawn(VertexBufferHandle bufferHandle, ShaderHandle shaderHandle, const std::vector<Texture2dHandle>& textures, const uint32_t nrOfInstances, const int32_t primitive);
 	};

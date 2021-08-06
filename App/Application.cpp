@@ -12,31 +12,32 @@ class Game final : public sge::I_Application
 private:
 	sge::VertexBufferHandle buffer;
 	sge::ShaderHandle shader;
-	sge::Texture2dHandle texture;
+	glm::mat4 model = glm::translate(sge::IDENTITY_MAT4, sge::DOWN_VEC3 * 5.0f);
 public:
 	void Init() override
 	{
 		auto& rm = sge::Engine::Get().GetResourceManager();
 		auto& renderer = sge::Engine::Get().GetRenderer();
 
-		const auto vertices = std::vector<float>(sge::QUAD_2D_INDEXED.begin(), sge::QUAD_2D_INDEXED.end());
-		const auto indices = std::vector<uint32_t>(sge::QUAD_INDICES.begin(), sge::QUAD_INDICES.end());
-		const std::vector<uint32_t> layout = {2};
-		buffer = renderer.CreateVertexBuffer(vertices, indices, layout);
+		const std::vector<float> vertices = std::vector<float>(sge::CUBE.begin(), sge::CUBE.end());
+		const std::vector<uint32_t> layout = {3, 3};
 
-		auto shaderSrcHandle = rm.LoadShader("../data/shaders/quad.vert", "../data/shaders/quad.frag");
+		buffer = renderer.CreateVertexBuffer(vertices, layout);
+
+		auto shaderSrcHandle = rm.LoadShader("../data/shaders/gooch.vert", "../data/shaders/gooch.frag");
 		shader = renderer.CreateShader(shaderSrcHandle);
 		rm.FreeShader(shaderSrcHandle);
 
-		auto ktxHandle = rm.LoadKtx("../data/ktxs/smiley.ktx");
-		texture = renderer.CreateTexture2d(ktxHandle);
-		rm.FreeKtx(ktxHandle);
-
-		shader->SetInt("albedo", 0);
+		shader->SetMat4("cameraMatrix", sge::WINDOW_PROJECTION * sge::DEFAULT_VIEW_MATRIX);
+		shader->SetVec3("viewPos", sge::ZERO_VEC3);
+		shader->SetVec3("baseColor", sge::WHITE * 0.5f);
 	}
 	void Update() override
 	{
-		sge::Engine::Get().GetRenderer().ScheduleToBeDrawn(buffer, shader, {texture}, 1, GL_TRIANGLES);
+		model = glm::rotate(model, 0.01f, glm::normalize(sge::NORTH_VEC3 + sge::EAST_VEC3));
+		shader->SetMat4("modelMatrix", model);
+		shader->SetMat3("normalMatrix", glm::transpose(glm::inverse(glm::mat3(model))));
+		sge::Engine::Get().GetRenderer().ScheduleToBeDrawn(buffer, shader, {}, 1, GL_TRIANGLES);
 	}
 	void Shutdown() override
 	{

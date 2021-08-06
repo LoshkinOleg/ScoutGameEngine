@@ -145,16 +145,16 @@ namespace sge
 	{
 		return glm::vec2
 		(
-			RemapToRange<float>(0.0f, (float)RESOLUTION[0], -1.0f, 1.0f, currentPos.x),
-			RemapToRange<float>(0.0f, (float)RESOLUTION[1], 1.0f, -1.0f, currentPos.y)
+			RemapToRange<float>(0.0f, (float)RESOLUTION[0], -1.0f, 1.0f, (float)currentPos.x),
+			RemapToRange<float>(0.0f, (float)RESOLUTION[1], 1.0f, -1.0f, (float)currentPos.y)
 		);
 	}
 	glm::vec2 MouseMotion::GetDeltaNdc() const
 	{
 		const glm::vec2 ndcLastPos = glm::vec2
 		(
-			RemapToRange<float>(0.0f, (float)RESOLUTION[0], -1.0f, 1.0f, lastPos.x),
-			RemapToRange<float>(0.0f, (float)RESOLUTION[1], 1.0f, -1.0f, lastPos.y)
+			RemapToRange<float>(0.0f, (float)RESOLUTION[0], -1.0f, 1.0f, (float)lastPos.x),
+			RemapToRange<float>(0.0f, (float)RESOLUTION[1], 1.0f, -1.0f, (float)lastPos.y)
 		);
 		const glm::vec2 ndcCurrentPos = GetPosNdc();
 		return ndcCurrentPos - ndcLastPos;
