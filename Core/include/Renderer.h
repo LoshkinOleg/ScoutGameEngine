@@ -62,14 +62,15 @@ namespace sge
 
 	struct VertexBuffer
 	{
-		uint32_t VAO = 0;
+		uint32_t VAO = 0, EBO = 0;
 		std::vector<uint32_t> VBOs = {};
 		uint32_t bufferDataHash = 0;
 		uint32_t vertexCount = 0;
+		uint32_t sizeOfIndex = 0;
 
-		void Init(const uint32_t VAO, const std::vector<uint32_t>& VBOs, const uint32_t hash, const uint32_t vertexCount);
+		void Init(const uint32_t VAO, const std::vector<uint32_t>& VBOs, const uint32_t hash, const uint32_t vertexCount, const uint32_t sizeOfIndex);
 		void Destroy();
-		void Render(Shader& shader, const std::vector<Texture2d>& textures, const uint32_t nrOfInstances, const int32_t primitive) const;
+		void Render(Shader& shader, const std::vector<Texture2d>& textures, const uint32_t nrOfInstances, const int32_t primitive, const bool indexedData) const;
 	};
 
 	struct VertexBufferHandle
@@ -89,13 +90,14 @@ namespace sge
 		{
 			DrawCall_() = delete;
 			~DrawCall_() = default;
-			DrawCall_(const VertexBuffer& buffer, Shader& shader, const std::vector<Texture2d>& textures, const uint32_t nrOfInstances, const int32_t primitive) : buffer(buffer), shader(shader), textures(textures), nrOfInstances(nrOfInstances), primitive(primitive) {}
+			DrawCall_(const VertexBuffer& buffer, Shader& shader, const std::vector<Texture2d>& textures, const uint32_t nrOfInstances, const int32_t primitive, const bool indexedData) : buffer(buffer), shader(shader), textures(textures), nrOfInstances(nrOfInstances), primitive(primitive), indexedData(indexedData) {}
 			
 			const VertexBuffer& buffer;
 			Shader& shader;
 			const std::vector<Texture2d> textures;  // TODO: switch for a non heap type of container.
 			const uint32_t nrOfInstances;
 			const int32_t primitive;
+			const bool indexedData;
 		};
 
 		constexpr static const int32_t CLEAR_FLAGS_ = GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT;

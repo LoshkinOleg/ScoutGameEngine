@@ -15,8 +15,9 @@
 #define sge_ERROR(msg) std::cerr << "[ERROR]@" << __FILE__ << "@" << __LINE__ << ": " << msg << std::endl; abort();
 #define sge_CHECK_GL_ERROR() { if (glGetError() != GL_NO_ERROR){ std::cerr << "[GL_ERROR]@" << __FILE__ << "@" << __LINE__ << std::endl; abort(); } }
 #else
-#define sge_MESSAGE(msg)
-#define sge_WARNING(msg)
-#define sge_ERROR(msg)
+#define sge_MESSAGE(msg) [](){}
+#define sge_WARNING(msg) [](){}
+#define sge_ERROR(msg) [](){}
+#define sge_CHECK_GL_ERROR() [](){}
 #endif //!_DEBUG
 #endif //!sgeGuard_StdOutput

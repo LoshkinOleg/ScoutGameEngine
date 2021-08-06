@@ -7,7 +7,7 @@
 #include "Engine.h"
 #include "globals.h"
 
-class Game final : public sge::I_Application
+class CubeDemo final : public sge::I_Application
 {
 private:
 	sge::VertexBufferHandle buffer;
@@ -19,11 +19,12 @@ public:
 		auto& rm = sge::Engine::Get().GetResourceManager();
 		auto& renderer = sge::Engine::Get().GetRenderer();
 
-		auto gltfHandle = rm.LoadGltf("../data/gltfs/suzane_noTextures.glb");
-		buffer = renderer.CreateVertexBuffer(gltfHandle);
-		rm.FreeGltf(gltfHandle);
+		const std::vector<float> vertices = std::vector<float>(sge::CUBE.begin(), sge::CUBE.end());
+		const std::vector<uint32_t> layout = {3, 3};
 
-		auto shaderSrcHandle = rm.LoadShader("../data/shaders/gooch.vert", "../data/shaders/gooch.frag");
+		buffer = renderer.CreateVertexBuffer(vertices, layout);
+
+		auto shaderSrcHandle = rm.LoadShader("data/shaders/gooch.vert", "data/shaders/gooch.frag");
 		shader = renderer.CreateShader(shaderSrcHandle);
 		rm.FreeShader(shaderSrcHandle);
 
@@ -46,7 +47,7 @@ public:
 
 int main(int argv, char** args)
 {
-	Game game;
+	CubeDemo game;
 	sge::Engine& engine = sge::Engine::Get();
 	engine.Run(&game);
 	return EXIT_SUCCESS;

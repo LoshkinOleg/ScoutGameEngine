@@ -82,8 +82,10 @@ namespace sge
 		using seconds = std::chrono::duration<float, std::ratio<1, 1>>;
 		app_ = app;
 
+#ifdef _DEBUG
 		try
 		{
+#endif
 			auto clock = std::chrono::system_clock::now();
 			Init();
 			while (true)
@@ -113,11 +115,13 @@ namespace sge
 				renderer_.Update();
 				SDL_GL_SwapWindow(window_);
 			}
+#ifdef _DEBUG
 		}
 		catch (const std::exception& e)
 		{
 			sge_ERROR(e.what());
 		}
+#endif
 	}
 	float Engine::GetCurrentTimer() const
 	{

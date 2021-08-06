@@ -4,6 +4,7 @@
 
 #include <glad/glad.h>
 #include <xxhash.h>
+#include <tiny_gltf.h>
 
 #include "ResourceManager.h"
 #include "Engine.h"
@@ -96,12 +97,13 @@ namespace sge
 		sge_CHECK_GL_ERROR();
 	}
 
-	void VertexBuffer::Init(const uint32_t VAO, const std::vector<uint32_t>& VBOs, const uint32_t hash, const uint32_t vertexCount)
+	void VertexBuffer::Init(const uint32_t VAO, const std::vector<uint32_t>& VBOs, const uint32_t hash, const uint32_t vertexCount, const uint32_t sizeOfIndex)
 	{
 		this->VAO = VAO;
 		this->VBOs = std::vector<uint32_t>(VBOs);
 		bufferDataHash = hash;
 		this->vertexCount = vertexCount;
+		this->sizeOfIndex = sizeOfIndex;
 	}
 	void VertexBuffer::Destroy()
 	{
@@ -112,7 +114,7 @@ namespace sge
 		VBOs.clear();
 		bufferDataHash = 0;
 	}
-	void VertexBuffer::Render(Shader& shader, const std::vector<Texture2d>& textures, const uint32_t nrOfInstances, const int32_t primitive) const
+	void VertexBuffer::Render(Shader& shader, const std::vector<Texture2d>& textures, const uint32_t nrOfInstances, const int32_t primitive, const bool indexedData) const
 	{
 		shader.Bind();
 		for (uint32_t i = 0; i < textures.size(); i++)
@@ -121,7 +123,14 @@ namespace sge
 		}
 		sge_CHECK_GL_ERROR();
 		glBindVertexArray(VAO);
-		glDrawArrays(primitive, 0, vertexCount);
+		if (indexedData)
+		{
+			glDrawElementsInstanced(primitive, vertexCount, sizeOfIndex, 0, nrOfInstances);
+		}
+		else
+		{
+			glDrawArraysInstanced(primitive, 0, vertexCount, nrOfInstances);
+		}
 		sge_CHECK_GL_ERROR();
 	}
 
@@ -153,7 +162,7 @@ namespace sge
 		for (uint32_t i = 0; i < drawQueue_.size(); i++)
 		{
 			const auto drawCall = drawQueue_[i];
-			drawCall.buffer.Render(drawCall.shader, drawCall.textures, drawCall.nrOfInstances, drawCall.primitive);
+			drawCall.buffer.Render(drawCall.shader, drawCall.textures, drawCall.nrOfInstances, drawCall.primitive, drawCall.indexedData);
 		}
 		drawQueue_.clear();
 	}
@@ -184,7 +193,9 @@ namespace sge
 	{
 		uint32_t VERT = 0, FRAG = 0;
 		int32_t success = false;
+#ifdef _DEBUG
 		int8_t errorMsg[1024];
+#endif
 		const char* vertSrc = handle->vertexShader.c_str();
 		const char* fragSrc = handle->fragmentShader.c_str();
 		shaders_.push_back(Shader());
@@ -295,8 +306,118 @@ namespace sge
 	}
 	VertexBufferHandle Renderer::CreateVertexBuffer(GltfHandle& handle)
 	{
-		// TODO: implement this.
-		return VertexBufferHandle();
+		// Code adapted from https://github.com/syoyo/tinygltf/blob/master/examples/glview/glview.cc .
+		// Back magic gltf fuckery.
+
+		const auto& model = *handle->gltf;
+
+		vertexBuffers_.push_back(VertexBuffer());
+		VertexBuffer& vertexBuffer = vertexBuffers_.front();
+		uint32_t VAO = 0, EBO = 0;
+		std::vector<uint32_t> VBOs = std::vector<uint32_t>(model.bufferViews.size() - 1, 0); // -1 since one buffer is for the indices.
+		std::vector<uint32_t> hashes;
+		uint32_t nrOfVertices = 0;
+
+		glGenVertexArrays(1, &VAO);
+		glBindVertexArray(VAO);
+		sge_CHECK_GL_ERROR();
+
+		std::function<uint64_t(const int32_t type)> sizeOfComponent = [](const int32_t type)
+		{
+			switch (type)
+			{
+				case TINYGLTF_COMPONENT_TYPE_UNSIGNED_BYTE:
+				case TINYGLTF_COMPONENT_TYPE_BYTE:
+					return sizeof(char);
+				case TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT:
+				case TINYGLTF_COMPONENT_TYPE_SHORT:
+					return sizeof(short);
+				case TINYGLTF_COMPONENT_TYPE_UNSIGNED_INT:
+				case TINYGLTF_COMPONENT_TYPE_INT:
+					return sizeof(int);
+				case TINYGLTF_COMPONENT_TYPE_FLOAT:
+					return sizeof(float);
+				case TINYGLTF_COMPONENT_TYPE_DOUBLE:
+					return sizeof(double);
+				default:
+					return uint64_t(0);
+			}
+		};
+
+		for (size_t bufferViewIdx = 0; bufferViewIdx < model.bufferViews.size(); bufferViewIdx++)
+		{
+			const tinygltf::BufferView& view = model.bufferViews[bufferViewIdx];
+
+			int32_t sparseAccessor = -1;
+			for (size_t accessorIdx = 0; accessorIdx < model.accessors.size(); accessorIdx++)
+			{
+				const auto& accessor = model.accessors[accessorIdx];
+				if (accessor.bufferView == bufferViewIdx && accessor.sparse.isSparse)
+				{
+					sparseAccessor = accessorIdx;
+				}
+			}
+			if (view.target == GL_ELEMENT_ARRAY_BUFFER)
+			{
+				const tinygltf::Buffer& buffer = model.buffers[view.buffer];
+				glGenBuffers(1, &EBO);
+				glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
+				sge_CHECK_GL_ERROR();
+				if (sparseAccessor < 0) // Regular accessor.
+				{
+					hashes.push_back(XXH32(&buffer.data.at(0), view.byteLength, HASHING_SEED));
+					nrOfVertices = view.byteLength / sizeof(uint16_t);
+					glBufferData(GL_ELEMENT_ARRAY_BUFFER, view.byteLength, &buffer.data.at(0) + view.byteOffset, GL_STATIC_DRAW);
+					sge_CHECK_GL_ERROR();
+				}
+				else // Sparse accessor.
+				{
+					sge_ERROR("Handling of sparse accessors isn't implemented!");
+				}
+			}
+			else
+			{
+				assert(view.target == GL_ARRAY_BUFFER);
+				const tinygltf::Buffer& buffer = model.buffers[view.buffer];
+				glGenBuffers(1, &VBOs[bufferViewIdx]);
+				glBindBuffer(GL_ARRAY_BUFFER, VBOs[bufferViewIdx]);
+				sge_CHECK_GL_ERROR();
+				if (sparseAccessor < 0) // Regular accessor.
+				{
+					hashes.push_back(XXH32(&buffer.data.at(0), view.byteLength, HASHING_SEED));
+					glBufferData(GL_ARRAY_BUFFER, view.byteLength, &buffer.data.at(0) + view.byteOffset, GL_STATIC_DRAW);
+					sge_CHECK_GL_ERROR();
+					static size_t lastBufferIndex;
+					if (bufferViewIdx == 0)
+					{
+						lastBufferIndex = 0;
+					}
+					else
+					{
+						assert(lastBufferIndex == bufferViewIdx - 1);
+					}
+					glEnableVertexAttribArray(bufferViewIdx);
+					glVertexAttribPointer(bufferViewIdx, 3, GL_FLOAT, GL_FALSE, sizeof(float) * 3, (void*)0);
+					sge_CHECK_GL_ERROR();
+				}
+				else // Sparse accessor.
+				{
+					sge_ERROR("Handling of sparse accessors isn't implemented!");
+				}
+			}
+		}
+
+		std::string accumulatedHashes = "";
+		for (size_t i = 0; i < hashes.size(); i++)
+		{
+			accumulatedHashes += std::to_string(hashes[i]);
+		}
+
+		// Note: apparently GL_UNSIGNED_SHORTs are used.
+		vertexBuffer.Init(VAO, VBOs, XXH32(accumulatedHashes.c_str(), accumulatedHashes.size(), HASHING_SEED), nrOfVertices, GL_UNSIGNED_SHORT);
+		sge_CHECK_GL_ERROR();
+
+		return { (uint32_t)(vertexBuffers_.size() - 1) , vertexBuffer.bufferDataHash };
 	}
 	VertexBufferHandle Renderer::CreateVertexBuffer(const std::vector<float>& vertices, const std::vector<uint32_t>& layout)
 	{
@@ -336,7 +457,7 @@ namespace sge
 		}
 		sge_CHECK_GL_ERROR();
 
-		vertexBuffer.Init(VAO, { VBO }, hash, (uint32_t)vertices.size() / stride);
+		vertexBuffer.Init(VAO, { VBO }, hash, (uint32_t)vertices.size() / stride, 0);
 
 		return { (uint32_t)(vertexBuffers_.size() - 1) , hash };
 	}
@@ -359,16 +480,13 @@ namespace sge
 			assert(textures[i].textureHash == texs[i].textureHash);
 		}
 
-		drawQueue_.push_back(DrawCall_(buffer, shader, texs, nrOfInstances, primitive));
+		drawQueue_.push_back(DrawCall_(buffer, shader, texs, nrOfInstances, primitive, buffer.sizeOfIndex > 0));
 	}
 
 	Shader* ShaderHandle::operator->()
 	{
 		return &Engine::Get().GetRenderer().GetShader(shaderIndex, shaderSrcHash);
 	}
-
-	uint32_t textureIndex = 0;
-	uint32_t textureHash = 0;
 
 	Texture2d* Texture2dHandle::operator->()
 	{
