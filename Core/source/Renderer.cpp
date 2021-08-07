@@ -454,7 +454,6 @@ namespace sge
 					positions.begin(),
 					positions.end()
 				);
-				
 			}
 
 			{ // Indices.
@@ -483,11 +482,47 @@ namespace sge
 				auto& buffer = model.buffers[bufferView.buffer];
 
 				assert(accessor.componentType == TINYGLTF_COMPONENT_TYPE_FLOAT && accessor.type == TINYGLTF_TYPE_VEC3);
+
+				std::vector<glm::vec3> normals;
+				normals.insert
+				(
+					normals.end(),
+					reinterpret_cast<glm::vec3*>(buffer.data.data()) + (bufferView.byteOffset / sizeof(glm::vec3)),
+					reinterpret_cast<glm::vec3*>(buffer.data.data()) + (bufferView.byteOffset / sizeof(glm::vec3)) + (bufferView.byteLength / sizeof(glm::vec3))
+				);
+
+				glm::mat4 modelMatrix = (model.nodes[meshIdx].matrix.size() > 0) ?
+					glm::mat4(
+						model.nodes[meshIdx].matrix[0], model.nodes[meshIdx].matrix[1], model.nodes[meshIdx].matrix[2], model.nodes[meshIdx].matrix[3],
+						model.nodes[meshIdx].matrix[4], model.nodes[meshIdx].matrix[5], model.nodes[meshIdx].matrix[6], model.nodes[meshIdx].matrix[7],
+						model.nodes[meshIdx].matrix[8], model.nodes[meshIdx].matrix[9], model.nodes[meshIdx].matrix[10], model.nodes[meshIdx].matrix[11],
+						model.nodes[meshIdx].matrix[12], model.nodes[meshIdx].matrix[13], model.nodes[meshIdx].matrix[14], model.nodes[meshIdx].matrix[15]) :
+					IDENTITY_MAT4;
+
+				if (modelMatrix == IDENTITY_MAT4)
+				{
+					const glm::quat rotation = (model.nodes[meshIdx].rotation.size() > 0) ?
+						glm::quat(model.nodes[meshIdx].rotation[0], model.nodes[meshIdx].rotation[1], model.nodes[meshIdx].rotation[2], model.nodes[meshIdx].rotation[3]) :
+						IDENTITY_QUAT;
+					const glm::vec3 scale = (model.nodes[meshIdx].scale.size() > 0) ?
+						glm::vec3(model.nodes[meshIdx].scale[0], model.nodes[meshIdx].scale[1], model.nodes[meshIdx].scale[2]) :
+						ONE_VEC3;
+					modelMatrix *= glm::toMat4(rotation);
+					modelMatrix = glm::scale(modelMatrix, scale);
+				}
+
+				const glm::mat3 normalMatrix = glm::transpose(glm::inverse(glm::mat3(modelMatrix)));
+
+				for (size_t i = 0; i < normals.size(); i++)
+				{
+					normals[i] = normalMatrix * normals[i];
+				}
+
 				returnVal.normals.insert
 				(
 					returnVal.normals.end(),
-					reinterpret_cast<glm::vec3*>(buffer.data.data()) + (bufferView.byteOffset / sizeof(glm::vec3)),
-					reinterpret_cast<glm::vec3*>(buffer.data.data()) + (bufferView.byteOffset / sizeof(glm::vec3)) + (bufferView.byteLength / sizeof(glm::vec3))
+					normals.begin(),
+					normals.end()
 				);
 			}
 
@@ -514,6 +549,8 @@ namespace sge
 					tangents[i] = glm::vec3(tangentsVec4[i]);
 					bitangents[i] = glm::cross(normals[i], glm::vec3(tangentsVec4[i])) * tangentsVec4[i].w;
 				}
+
+				// Note: I have a sneaking suspicion that the tangents and bitangents need to be multiplied by a matrix to take into account the mesh'es transform.
 
 				returnVal.tangents.insert
 				(

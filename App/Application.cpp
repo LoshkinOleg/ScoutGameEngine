@@ -19,7 +19,7 @@ public:
 		auto& rm = sge::Engine::Get().GetResourceManager();
 		auto& renderer = sge::Engine::Get().GetRenderer();
 
-		auto gltfHandle = rm.LoadGltf("../data/gltfs/complexModel.glb");
+		auto gltfHandle = rm.LoadGltf("../data/gltfs/complexScene.glb");
 		buffer = renderer.CreateVertexBuffer(gltfHandle);
 		rm.FreeGltf(gltfHandle);
 
@@ -33,7 +33,7 @@ public:
 	}
 	void Update() override
 	{
-		model = glm::rotate(model, 0.01f, glm::normalize(sge::NORTH_VEC3 + sge::EAST_VEC3));
+		model = glm::rotate(model, 0.01f, sge::NORTH_VEC3);
 		shader->SetMat4("modelMatrix", model);
 		shader->SetMat3("normalMatrix", glm::transpose(glm::inverse(glm::mat3(model))));
 		sge::Engine::Get().GetRenderer().ScheduleToBeDrawn(buffer, shader, {}, 1, GL_TRIANGLES);
