@@ -60,6 +60,7 @@ namespace sge
 	{
 		uint32_t hash = 0;
 		tinygltf::Model* gltf = nullptr;
+		std::map<std::string, KtxHandle> textures = {};
 
 		void InitHeap();
 		void Clear();

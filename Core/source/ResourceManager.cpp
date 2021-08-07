@@ -50,6 +50,7 @@ namespace sge
 	void GltfData::Clear()
 	{
 		hash = 0;
+		textures.clear();
 		delete gltf;
 		gltf = nullptr;
 	}
@@ -86,7 +87,9 @@ namespace sge
 
 	JsonHandle ResourceManager::LoadJson(const std::string_view path)
 	{
-		assert(path.substr(path.find_last_of('.'), path.size()) == ".json"); // Make sure we're loading a .json
+		const std::string_view extension = path.substr(path.find_last_of('.'), path.size());
+		assert(extension == ".json"); // Make sure we're loading a .json
+		if (extension == ".gltf") { sge_ERROR("Please use LoadGltf to load composite gltf files instead."); };
 		auto match = std::find(jsons_.begin(), jsons_.end(), JsonData()); // Find free resource slot.
 		assert(match != jsons_.end());
 		JsonData& data = *match;
@@ -109,7 +112,8 @@ namespace sge
 
 	GltfHandle ResourceManager::LoadGltf(const std::string_view path)
 	{
-		assert(path.substr(path.find_last_of('.'), path.size()) == ".glb"); // Make sure we're loading a .glb
+		const std::string_view extension = path.substr(path.find_last_of('.'), path.size());
+		assert(extension == ".glb" || extension == ".gltf"); // Make sure we're loading a gltf file.
 		assert(std::filesystem::exists(path));
 		auto match = std::find(gltfs_.begin(), gltfs_.end(), GltfData());
 		assert(match != gltfs_.end());
@@ -120,7 +124,15 @@ namespace sge
 		std::string error, warning;
 		bool success = false;
 
-		success = loader.LoadBinaryFromFile(data.gltf, &error, &warning, path.data());
+		if (extension == ".glb") // Loading a binary only.
+		{
+			success = loader.LoadBinaryFromFile(data.gltf, &error, &warning, path.data());
+		}
+		else // Loading a composite gltf file.
+		{
+			success = loader.LoadASCIIFromFile(data.gltf, &error, &warning, path.data());
+		}
+
 		if (!warning.empty())
 		{
 			sge_WARNING(warning);
@@ -129,7 +141,7 @@ namespace sge
 		{
 			sge_ERROR(error);
 		}
-		else if(!success)
+		else if (!success)
 		{
 			sge_ERROR("Tried loading: " << path << " but TinyGLTF loader failed to load file without providing any details.");
 		}

@@ -100,6 +100,16 @@ namespace sge
 			const bool indexedData;
 		};
 
+		struct Mesh_
+		{
+			std::vector<glm::vec3> positions = {};
+			std::vector<glm::vec3> normals = {};
+			std::vector<glm::vec3> tangents = {};
+			std::vector<glm::vec3> bitangents = {};
+			std::vector<glm::vec2> uvs = {};
+			std::vector<uint16_t> indices = {};
+		};
+
 		constexpr static const int32_t CLEAR_FLAGS_ = GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT;
 		constexpr static const float CLEAR_COLOR_[4] = { 0.3f, 0.0f, 0.3f, 1.0f };
 
@@ -108,6 +118,8 @@ namespace sge
 		std::vector<VertexBuffer> vertexBuffers_ = {}; // TODO: use hashes to avoid duplicate resources
 		std::vector<DrawCall_> drawQueue_ = {}; // TODO: use a fixed size container
 
+		VertexBufferHandle OLD_CreateVertexBuffer_(GltfHandle& handle);
+		Mesh_ ProcessGltf_(GltfHandle& handle) const;
 	public:
 		sge_DISALLOW_COPY(Renderer);
 

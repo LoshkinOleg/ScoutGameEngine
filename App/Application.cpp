@@ -19,7 +19,7 @@ public:
 		auto& rm = sge::Engine::Get().GetResourceManager();
 		auto& renderer = sge::Engine::Get().GetRenderer();
 
-		auto gltfHandle = rm.LoadGltf("../data/gltfs/suzane_noTextures.glb");
+		auto gltfHandle = rm.LoadGltf("../data/gltfs/cubes.glb");
 		buffer = renderer.CreateVertexBuffer(gltfHandle);
 		rm.FreeGltf(gltfHandle);
 

@@ -2,6 +2,9 @@
 
 layout (location = 0) in vec3 vPos;
 layout (location = 1) in vec3 vNormal;
+layout (location = 2) in vec3 vTangent;
+layout (location = 3) in vec3 vBitangent;
+layout (location = 4) in vec2 vUv;
 
 out VS_OUT {
 	vec3 normal;
