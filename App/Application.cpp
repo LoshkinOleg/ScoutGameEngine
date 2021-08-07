@@ -12,14 +12,14 @@ class Game final : public sge::I_Application
 private:
 	sge::VertexBufferHandle buffer;
 	sge::ShaderHandle shader;
-	glm::mat4 model = glm::translate(sge::IDENTITY_MAT4, sge::DOWN_VEC3 * 5.0f);
+	glm::mat4 model = glm::translate(sge::IDENTITY_MAT4, sge::DOWN_VEC3 * 10.0f);
 public:
 	void Init() override
 	{
 		auto& rm = sge::Engine::Get().GetResourceManager();
 		auto& renderer = sge::Engine::Get().GetRenderer();
 
-		auto gltfHandle = rm.LoadGltf("../data/gltfs/cubes.glb");
+		auto gltfHandle = rm.LoadGltf("../data/gltfs/complexModel.glb");
 		buffer = renderer.CreateVertexBuffer(gltfHandle);
 		rm.FreeGltf(gltfHandle);
 

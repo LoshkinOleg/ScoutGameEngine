@@ -379,10 +379,14 @@ namespace sge
 	{
 		Mesh_ returnVal = {};
 		tinygltf::Model& model = *handle->gltf;
+
+		uint32_t accumulatedVertexCount = 0;
+		uint32_t currentMeshVertexCount = 0;
+
 		for (uint32_t meshIdx = 0; meshIdx < model.meshes.size(); meshIdx++)
 		{
 			tinygltf::Mesh& mesh = model.meshes[meshIdx];
-			assert(mesh.primitives.size() == 1 && mesh.primitives[0].attributes.size() == 4 && mesh.primitives[0].indices == 4);
+			assert(mesh.primitives.size() == 1 && mesh.primitives[0].attributes.size() == 4);
 			auto& attributes = mesh.primitives[0].attributes;
 			const auto indicesIdx = mesh.primitives[0].indices;
 			auto& materialIdx = mesh.primitives[0].material;
@@ -397,7 +401,6 @@ namespace sge
 				);
 			}
 
-			uint32_t nrOfVertices = 0;
 			{ // Positions.
 				auto& accessor = model.accessors[attributes["POSITION"]];
 				auto& bufferView = model.bufferViews[accessor.bufferView];
@@ -406,8 +409,8 @@ namespace sge
 				assert(accessor.componentType == TINYGLTF_COMPONENT_TYPE_FLOAT && accessor.type == TINYGLTF_TYPE_VEC3);
 				assert(model.meshes.size() == model.nodes.size()); // Note: this DOES NOT guarantee that there is a one-to-one matching between nodes and meshes, we just assume it does...
 
-				nrOfVertices = accessor.count;
-
+				accumulatedVertexCount += accessor.count;
+				currentMeshVertexCount = accessor.count;
 				std::vector<glm::vec3> positions;
 				positions.insert
 				(
@@ -469,7 +472,7 @@ namespace sge
 				);
 				for (; currentMeshIndices < returnVal.indices.size(); currentMeshIndices++)
 				{
-					returnVal.indices[currentMeshIndices] += meshIdx * nrOfVertices;
+					returnVal.indices[currentMeshIndices] += (accumulatedVertexCount - currentMeshVertexCount);
 				}
 			}
 
