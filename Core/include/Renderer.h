@@ -1,125 +1,65 @@
 #pragma once
 
-#include <vector>
-#include <map>
-#include <string_view>
-
-#include "globals.h"
+#include "Resources.h"
 #include "macros.h"
+#include "globals.h"
 
 namespace sge
 {
-	struct ShaderSrcHandle;
-	struct KtxHandle;
-	struct GltfHandle;
-
-	struct Shader
-	{
-		using Hash = uint32_t;
-
-		uint32_t PROGRAM = 0;
-		uint32_t shaderSrcHash = 0;
-		std::map<Hash, uint32_t> uniformLocationCache = {};
-
-		void Init(const uint32_t program, const uint32_t hash);
-		void Destroy();
-
-		void Bind() const;
-
-		int32_t GetUniformLocation(const std::string_view name);
-		void SetInt(const std::string_view name, const int32_t value);
-		void SetVec3(const std::string_view name, const glm::vec3 value);
-		void SetMat4(const std::string_view name, const glm::mat4& value);
-		void SetMat3(const std::string_view name, const glm::mat3& value);
-	};
-
-	struct ShaderHandle
-	{
-		uint32_t shaderIndex = 0;
-		uint32_t shaderSrcHash = 0;
-
-		Shader* operator->();
-	};
-
-	struct Texture2d
-	{
-		uint32_t TEX = 0;
-		uint32_t textureHash = 0;
-
-		void Init(const uint32_t tex, const uint32_t hash);
-		void Destroy();
-
-		void Bind(const uint32_t textureUnit) const;
-	};
-
-	struct Texture2dHandle
-	{
-		uint32_t textureIndex = 0;
-		uint32_t textureHash = 0;
-
-		Texture2d* operator->();
-	};
-
-	struct VertexBuffer
-	{
-		uint32_t VAO = 0, EBO = 0;
-		std::vector<uint32_t> VBOs = {};
-		uint32_t bufferDataHash = 0;
-		uint32_t vertexCount = 0;
-		uint32_t sizeOfIndex = 0;
-
-		void Init(const uint32_t VAO, const std::vector<uint32_t>& VBOs, const uint32_t hash, const uint32_t vertexCount, const uint32_t sizeOfIndex);
-		void Destroy();
-		void Render(Shader& shader, const std::vector<Texture2d>& textures, const uint32_t nrOfInstances, const int32_t primitive, const bool indexedData) const;
-	};
-
-	struct VertexBufferHandle
-	{
-		uint32_t vertexBufferIndex = 0;
-		uint32_t bufferDataHash = 0;
-
-		VertexBuffer* operator->();
-	};
-
 	class Renderer
 	{
 		friend class Engine;
 		sge_ALLOW_CONSTRUCTION(Renderer);
 
+		constexpr static const int32_t CLEAR_FLAGS_ = GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT;
+		constexpr static const float CLEAR_COLOR_[4] = { 0.3f, 0.0f, 0.3f, 1.0f };
+
 		struct DrawCall_
 		{
-			DrawCall_() = delete;
-			~DrawCall_() = default;
-			DrawCall_(const VertexBuffer& buffer, Shader& shader, const std::vector<Texture2d>& textures, const uint32_t nrOfInstances, const int32_t primitive, const bool indexedData) : buffer(buffer), shader(shader), textures(textures), nrOfInstances(nrOfInstances), primitive(primitive), indexedData(indexedData) {}
-			
-			const VertexBuffer& buffer;
-			Shader& shader;
-			const std::vector<Texture2d> textures;  // TODO: switch for a non heap type of container.
-			const uint32_t nrOfInstances;
-			const int32_t primitive;
-			const bool indexedData;
+			ModelHandle model = {};
+			ShaderHandle shader = {};
+			int32_t primitive = GL_TRIANGLES;
 		};
 
-		struct Mesh_
+		struct MeshData_
 		{
+			// Value matches the size of the type in bytes.
+			enum IndexType : uint32_t
+			{
+				INVALID = 0,
+				UNSIGNED_SHORT = 2
+			};
+
 			std::vector<glm::vec3> positions = {};
 			std::vector<glm::vec3> normals = {};
 			std::vector<glm::vec3> tangents = {};
 			std::vector<glm::vec3> bitangents = {};
 			std::vector<glm::vec2> uvs = {};
 			std::vector<uint16_t> indices = {};
+			KtxDataHandle alphaMap = {};
+			KtxDataHandle albedoMap = {};
+			KtxDataHandle specularMap = {};
+			KtxDataHandle normalMap = {};
+			float shininess = 0;
+			IndexType indexType = IndexType::INVALID;
 		};
 
-		constexpr static const int32_t CLEAR_FLAGS_ = GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT;
-		constexpr static const float CLEAR_COLOR_[4] = { 0.3f, 0.0f, 0.3f, 1.0f };
+		ShaderContainer shaders_ = {};
+		VertexBufferContainer vertexBuffers_ = {};
+		TextureContainer textures_ = {};
+		MeshContainer meshes_ = {};
+		ModelContainer models_ = {};
 
-		std::vector<Shader> shaders_ = {}; // TODO: use hashes to avoid duplicate resources
-		std::vector<Texture2d> textures_ = {}; // TODO: use hashes to avoid duplicate resources
-		std::vector<VertexBuffer> vertexBuffers_ = {}; // TODO: use hashes to avoid duplicate resources
-		std::vector<DrawCall_> drawQueue_ = {}; // TODO: use a fixed size container
+		std::vector<DrawCall_> drawQueueOpaques_ = {};
+		std::vector<DrawCall_> drawQueueTransparents_ = {};
 
-		VertexBufferHandle OLD_CreateVertexBuffer_(GltfHandle& handle);
-		Mesh_ ProcessGltf_(GltfHandle& handle) const;
+		glm::mat4 viewMatrix_ = DEFAULT_VIEW_MATRIX;
+
+		static std::vector<MeshData_> ProcessGltf_(const GltfDataHandle& handle);
+		static std::vector<glm::mat4> FrustumCulling_(const glm::ivec2 resolution, const float horizontalFullFov, const float nearPlane, const float farPlane, const float radius, const glm::mat4* const begin, const glm::mat4* const end);
+		static void SortFrontToBack_(std::vector<glm::mat4>& transforms);
+		static void SortBackToFront_(std::vector<glm::mat4>& transforms);
+
 	public:
 		sge_DISALLOW_COPY(Renderer);
 
@@ -127,15 +67,18 @@ namespace sge
 		void Shutdown();
 		void Update();
 
-		Shader& GetShader(const uint32_t shaderIndex, const uint32_t shaderSrcHash);
-		Texture2d& GetTexture(const uint32_t textureIndex, const uint32_t textureHash);
-		VertexBuffer& GetVertexBuffer(const uint32_t vertexBufferIndex, const uint32_t bufferDataHash);
+		Shader& GetShader(const ShaderHandle& handle);
+		Texture& GetTexture(const TextureHandle& handle);
+		VertexBuffer& GetVertexBuffer(const VertexBufferHandle& handle);
+		Mesh& GetMesh(const MeshHandle& handle);
+		Model& GetModel(const ModelHandle& handle);
 
-		ShaderHandle CreateShader(ShaderSrcHandle& handle);
-		Texture2dHandle CreateTexture2d(KtxHandle& handle);
-		VertexBufferHandle CreateVertexBuffer(GltfHandle& handle);
-		VertexBufferHandle CreateVertexBuffer(const std::vector<float>& vertices, const std::vector<uint32_t>& layout);
+		ShaderHandle CreateShader(const ShaderDataHandle& handle);
+		TextureHandle CreateTexture(const KtxDataHandle& handle);
+		VertexBufferHandle CreateVertexBuffer(const std::vector<float>& data, const int32_t usage);
+		MeshHandle CreateMesh(const MeshData_& data);
+		ModelHandle CreateModel(const GltfDataHandle& handle);
 
-		void ScheduleToBeDrawn(VertexBufferHandle bufferHandle, ShaderHandle shaderHandle, const std::vector<Texture2dHandle>& textures, const uint32_t nrOfInstances, const int32_t primitive);
+		void Schedule(const ModelHandle& model, const ShaderHandle& shader, const int32_t primitive);
 	};
 }//!sge

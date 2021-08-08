@@ -1,141 +1,57 @@
 #pragma once
 
-#include <vector>
-#include <utility>
-#include <string_view>
-#include <string>
-
-#include <nlohmann/json.hpp>
-#include <gli/gli.hpp>
-
+#include "Resources.h"
 #include "macros.h"
-
-namespace tinygltf
-{
-	class Model;
-}
 
 namespace sge
 {
-	struct JsonData
-	{
-		uint32_t hash = 0;
-		nlohmann::json json = nlohmann::json::value_t::discarded;
-
-		void Clear();
-		bool operator==(const JsonData& other) const;
-	};
-
-	struct JsonHandle
-	{
-		uint32_t resourceIndex = 0;
-		uint32_t resourceHash = 0;
-
-		JsonData* operator->();
-		void Clear();
-	};
-
-	struct KtxData
-	{
-		uint32_t hash = 0;
-		gli::texture texture = gli::texture();
-
-		void Clear();
-		bool operator==(const KtxData& other) const;
-		int32_t GetGlInternalFormat() const;
-		int32_t GetGlExternalFormat() const;
-		int32_t GetGlTarget() const;
-	};
-
-	struct KtxHandle
-	{
-		uint32_t resourceIndex = 0;
-		uint32_t resourceHash = 0;
-
-		KtxData* operator->();
-		void Clear();
-	};
-
-	struct GltfData
-	{
-		uint32_t hash = 0;
-		tinygltf::Model* gltf = nullptr;
-		std::map<std::string, KtxHandle> textures = {};
-
-		void InitHeap();
-		void Clear();
-		bool operator==(const GltfData& other) const;
-	};
-
-	struct GltfHandle
-	{
-		uint32_t resourceIndex = 0;
-		uint32_t resourceHash = 0;
-
-		GltfData* operator->();
-		void Clear();
-	};
-
-	struct ShaderData
-	{
-		uint32_t hash = 0;
-		std::string vertexShader = "";
-		std::string fragmentShader = "";
-
-		void Clear();
-		bool operator==(const ShaderData& other) const;
-	};
-
-	struct ShaderSrcHandle
-	{
-		uint32_t resourceIndex = 0;
-		uint32_t resourceHash = 0;
-
-		ShaderData* operator->();
-		void Clear();
-	};
-
 	class ResourceManager
 	{
 	public:
 		sge_DISALLOW_COPY(ResourceManager);
 
+		void Init();
 		void PostInit();
 
-		JsonData& GetJsonData(const uint32_t resourceIndex, const uint32_t resourceHash);
-		JsonHandle LoadJson(const std::string_view path);
-		void FreeJson(JsonHandle handle);
+		JsonDataHandle LoadJson(const std::string_view path);
+		GltfDataHandle LoadGltf(const std::string_view path);
+		KtxDataHandle LoadKtx(const std::string_view path);
+		ShaderDataHandle LoadShader(const std::string_view vertexPath, const std::string_view fragmentPath);
 
-		GltfData& GetGltfData(const uint32_t resourceIndex, const uint32_t resourceHash);
-		GltfHandle LoadGltf(const std::string_view path);
-		void FreeGltf(GltfHandle handle);
+		void FreeJson(const JsonDataHandle& handle);
+		void FreeGltf(GltfDataHandle handle);
+		void FreeKtx(KtxDataHandle handle);
+		void FreeShader(ShaderDataHandle handle);
 
-		KtxData& GetKtxData(const uint32_t resourceIndex, const uint32_t resourceHash);
-		KtxHandle LoadKtx(const std::string_view path);
-		void FreeKtx(KtxHandle handle);
+		JsonData& GetJsonData(const JsonDataHandle& handle);
+		KtxData& GetKtxData(const KtxDataHandle& handle);
+		GltfData& GetGltfData(const GltfDataHandle& handle);
+		ShaderData& GetShaderData(const ShaderDataHandle& handle);
 
-		ShaderData& GetShaderData(const uint32_t resourceIndex, const uint32_t resourceHash);
-		ShaderSrcHandle LoadShader(const std::string_view vertexPath, const std::string_view fragmentPath);
-		void FreeShader(ShaderSrcHandle handle);
+		glm::mat4* const AllocateTransforms(const uint32_t nrOfTransforms);
+		void FreeTransforms(glm::mat4* const begin, glm::mat4* const end);
 
 		void Shutdown();
 
 	private:
+
 		friend class Engine;
 		sge_ALLOW_CONSTRUCTION(ResourceManager);
 
-		std::string LoadFile_(const std::string_view path) const; // TODO: use hashes to avoid duplicate resources
-		uint32_t HashString_(const std::string_view str) const;
-		uint32_t HashGltf_(const tinygltf::Model* gltf) const;
-		uint32_t HashKtx_(const gli::texture& ktx) const;
+		static std::string LoadFile_(const std::string_view path);
+		static uint32_t HashString_(const std::string_view str);
+		static uint32_t HashGltf_(const tinygltf::Model& gltf);
+		static uint32_t HashKtx_(const gli::texture& ktx);
 
-		constexpr static const uint32_t SIZE_OF_RESOURCE_POOLS_ = 8;
-		constexpr static const uint32_t SIZE_OF_HANDLES_POOL_ = 4 * SIZE_OF_RESOURCE_POOLS_;
-		constexpr static const bool FREE_DATA_AT_INIT_ = true;
+		constexpr static const bool FREE_DATA_POST_INIT_ = true;
+		constexpr static const uint32_t TRANSFORMS_POOL_SIZE_ = 256;
 
-		std::vector<JsonData> jsons_ = std::vector<JsonData>(SIZE_OF_RESOURCE_POOLS_, JsonData());
-		std::vector<GltfData> gltfs_ = std::vector<GltfData>(SIZE_OF_RESOURCE_POOLS_, GltfData());
-		std::vector<KtxData> ktxs_ = std::vector<KtxData>(SIZE_OF_RESOURCE_POOLS_, KtxData());
-		std::vector<ShaderData> shaderSrcs_ = std::vector<ShaderData>(SIZE_OF_RESOURCE_POOLS_, ShaderData());
+		JsonDataContainer jsons_ = {};
+		GltfDataContainer gltfs_ = {};
+		KtxDataContainer ktxs_ = {};
+		ShaderDataContainer shaderSrcs_ = {};
+
+		glm::mat4* transforms_ = nullptr;
+		glm::mat4* currentTransformsEnd_ = nullptr;
 	};
 }//!sge
