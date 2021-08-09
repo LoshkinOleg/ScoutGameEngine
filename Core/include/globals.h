@@ -22,7 +22,7 @@ namespace sge
 	constexpr const glm::vec3 UP_VEC3 = glm::vec3(0.0f, 0.0f, 1.0f);
 	constexpr const glm::vec3 DOWN_VEC3 = glm::vec3(0.0f, 0.0f, -1.0f);
 	
-	constexpr const glm::quat IDENTITY_QUAT = glm::quat(0.0f, 0.0f, 0.0f, 1.0f);
+	constexpr const glm::quat IDENTITY_QUAT = glm::quat(1.0f, 0.0f, 0.0f, 0.0f);
 
 	constexpr const glm::vec3 RED = glm::vec3(1.0f, 0.0f, 0.0f);
 	constexpr const glm::vec3 WHITE = glm::vec3(1.0f);

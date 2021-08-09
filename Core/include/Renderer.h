@@ -1,5 +1,7 @@
 #pragma once
 
+#include <concepts>
+
 #include "Resources.h"
 #include "macros.h"
 #include "globals.h"
@@ -40,18 +42,17 @@ namespace sge
 			KtxDataHandle albedoMap = {};
 			KtxDataHandle specularMap = {};
 			KtxDataHandle normalMap = {};
-			float shininess = 0;
+			float shininess = 0.0f;
 			IndexType indexType = IndexType::INVALID;
 		};
 
-		ShaderContainer shaders_ = {};
-		VertexBufferContainer vertexBuffers_ = {};
-		TextureContainer textures_ = {};
-		MeshContainer meshes_ = {};
-		ModelContainer models_ = {};
+		ResourceContainer<Shader, ShaderHandle> shaders_ = {};
+		ResourceContainer<VertexBuffer, VertexBufferHandle> vertexBuffers_ = {};
+		ResourceContainer<Texture, TextureHandle> textures_ = {};
+		ResourceContainer<Mesh, MeshHandle> meshes_ = {};
+		ResourceContainer<Model, ModelHandle> models_ = {};
 
-		std::vector<DrawCall_> drawQueueOpaques_ = {};
-		std::vector<DrawCall_> drawQueueTransparents_ = {};
+		std::vector<DrawCall_> drawQueue_ = {};
 
 		glm::mat4 viewMatrix_ = DEFAULT_VIEW_MATRIX;
 
@@ -77,7 +78,7 @@ namespace sge
 		TextureHandle CreateTexture(const KtxDataHandle& handle);
 		VertexBufferHandle CreateVertexBuffer(const std::vector<float>& data, const int32_t usage);
 		MeshHandle CreateMesh(const MeshData_& data);
-		ModelHandle CreateModel(const GltfDataHandle& handle);
+		ModelHandle CreateModel(const GltfDataHandle& handle, const std::vector<glm::mat4>& transforms);
 
 		void Schedule(const ModelHandle& model, const ShaderHandle& shader, const int32_t primitive);
 	};

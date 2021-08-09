@@ -4,8 +4,12 @@
 #include <numeric>
 #include <algorithm>
 #include <filesystem>
+#include <fstream>
 
 #include <xxhash.h>
+#define TINYGLTF_IMPLEMENTATION
+#include <tiny_gltf.h>
+#include <gli/gli.hpp>
 
 #include "macros.h"
 #include "globals.h"
@@ -86,11 +90,17 @@ namespace sge
 			sge_ERROR("Tried loading: " << path << " but TinyGLTF loader failed to load file without providing any details.");
 		}
 
-		assert(newElement.model != tinygltf::Model());
-		newElement.hash = HashGltf_(newElement.model);
-		assert(newElement.hash > 0);
+		assert(newElement.model.images.size() == 4);
+		// assert(newElement.model.images[0].as_is && newElement.model.images[1].as_is && newElement.model.images[2].as_is && newElement.model.images[3].as_is);
+		assert(newElement.model.images[0].name == "alphaMap" && newElement.model.images[1].name == "albedoMap" && newElement.model.images[2].name == "specularMap" && newElement.model.images[3].name == "normalMap");
+		assert(!newElement.model.images[0].uri.empty() && !newElement.model.images[1].uri.empty()&& !newElement.model.images[2].uri.empty()&& !newElement.model.images[3].uri.empty());
+		newElement.alphaMap = LoadKtx(newElement.model.images[0].uri);
+		newElement.albedoMap = LoadKtx(newElement.model.images[1].uri);
+		newElement.specularMap = LoadKtx(newElement.model.images[2].uri);
+		newElement.normalMap = LoadKtx(newElement.model.images[3].uri);
 
-		// TODO: load textures as well.
+		newElement.hash = HashGltf_(newElement.model, {newElement.alphaMap, newElement.albedoMap, newElement.specularMap, newElement.normalMap });
+		assert(newElement.hash > 0);
 
 		gltfs_.Insert(newElement);
 		GltfDataHandle returnVal;
@@ -177,10 +187,17 @@ namespace sge
 		return shaderSrcs_.Access(handle);
 	}
 
-	glm::mat4* const ResourceManager::AllocateTransforms(const uint32_t nrOfTransforms)
+	glm::mat4* const ResourceManager::AllocateTransforms(const std::vector<glm::mat4>& transforms)
 	{
 		glm::mat4* const returnVal = currentTransformsEnd_;
-		currentTransformsEnd_ += nrOfTransforms;
+
+		const auto len = transforms.size();
+		size_t i = 0;
+		for (; currentTransformsEnd_ < returnVal + len; currentTransformsEnd_++)
+		{
+			*currentTransformsEnd_ = transforms[i++];
+		}
+
 		return returnVal;
 	}
 
@@ -219,10 +236,26 @@ namespace sge
 		return XXH32(str.data(), str.size(), HASHING_SEED);
 	}
 
-	uint32_t ResourceManager::HashGltf_(const tinygltf::Model& model)
+	uint32_t ResourceManager::HashGltf_(const tinygltf::Model& model, const std::array<const KtxDataHandle, 4> textures)
 	{
-		// TODO: this only works if the model is kept loaded in memory. The same file loaded twice into memory will result in different hashes since tinygltf::Model uses std::vectors.
-		return XXH32(&model, sizeof(tinygltf::Model), HASHING_SEED);
+		const uint32_t alphaMapHash = textures[0]->hash;
+		const uint32_t alebdoMapHash = textures[1]->hash;
+		const uint32_t specularMapHash = textures[2]->hash;
+		const uint32_t normalMapHash = textures[3]->hash;
+
+		// TODO: this doesn't work since model uses std::vectors.
+		const uint32_t modelHash = XXH32(&model, sizeof(tinygltf::Model), HASHING_SEED);
+
+		std::string accumulatedData = "";
+		accumulatedData += std::to_string(modelHash);
+		accumulatedData += std::to_string(alphaMapHash);
+		accumulatedData += std::to_string(alebdoMapHash);
+		accumulatedData += std::to_string(specularMapHash);
+		accumulatedData += std::to_string(normalMapHash);
+
+		// TODO: take into account shininess?
+
+		return XXH32(accumulatedData.c_str(), accumulatedData.size(), HASHING_SEED);
 	}
 
 	uint32_t ResourceManager::HashKtx_(const gli::texture& ktx)

@@ -83,234 +83,6 @@ namespace sge
 		return Engine::Get().GetRenderer().GetModel(*this);
 	}
 
-	JsonData& sge::JsonDataContainer::Access(const JsonDataHandle& handle)
-	{
-		assert(handle.hash > 0);
-		assert(data_.find(handle.hash) != data_.end());
-		JsonData& value = data_[handle.hash];
-		assert(value == handle);
-		return value;
-	}
-	KtxData& sge::KtxDataContainer::Access(const KtxDataHandle& handle)
-	{
-		assert(handle.hash > 0);
-		assert(data_.find(handle.hash) != data_.end());
-		KtxData& value = data_[handle.hash];
-		assert(value == handle);
-		return value;
-	}
-	GltfData& sge::GltfDataContainer::Access(const GltfDataHandle& handle)
-	{
-		assert(handle.hash > 0);
-		assert(data_.find(handle.hash) != data_.end());
-		GltfData& value = data_[handle.hash];
-		assert(value == handle);
-		return value;
-	}
-	ShaderData& sge::ShaderDataContainer::Access(const ShaderDataHandle& handle)
-	{
-		assert(handle.hash > 0);
-		assert(data_.find(handle.hash) != data_.end());
-		ShaderData& value = data_[handle.hash];
-		assert(value == handle);
-		return value;
-	}
-	Shader& sge::ShaderContainer::Access(const ShaderHandle& handle)
-	{
-		assert(handle.hash > 0);
-		assert(data_.find(handle.hash) != data_.end());
-		Shader& value = data_[handle.hash];
-		assert(value == handle);
-		return value;
-	}
-	Texture& sge::TextureContainer::Access(const TextureHandle& handle)
-	{
-		assert(handle.hash > 0);
-		assert(data_.find(handle.hash) != data_.end());
-		Texture& value = data_[handle.hash];
-		assert(value == handle);
-		return value;
-	}
-	VertexBuffer& sge::VertexBufferContainer::Access(const VertexBufferHandle& handle)
-	{
-		assert(handle.hash > 0);
-		assert(data_.find(handle.hash) != data_.end());
-		VertexBuffer& value = data_[handle.hash];
-		assert(value == handle);
-		return value;
-	}
-	Mesh& sge::MeshContainer::Access(const MeshHandle& handle)
-	{
-		assert(handle.hash > 0);
-		assert(data_.find(handle.hash) != data_.end());
-		Mesh& value = data_[handle.hash];
-		assert(value == handle);
-		return value;
-	}
-	Model& sge::ModelContainer::Access(const ModelHandle& handle)
-	{
-		assert(handle.hash > 0);
-		assert(data_.find(handle.hash) != data_.end());
-		Model& value = data_[handle.hash];
-		assert(value == handle);
-		return value;
-	}
-
-	void JsonDataContainer::Clear()
-	{
-		for (auto& pair : data_)
-		{
-			pair.second.Destroy();
-		}
-		data_.clear();
-	}
-	bool JsonDataContainer::Exists(const Hash key)
-	{
-		return data_.find(key) != data_.end();
-	}
-	void JsonDataContainer::Insert(const JsonData& value)
-	{
-		assert(!Exists(value.hash));
-		data_[value.hash] = value;
-	}
-	void KtxDataContainer::Clear()
-	{
-		for (auto& pair : data_)
-		{
-			pair.second.Destroy();
-		}
-		data_.clear();
-	}
-	bool KtxDataContainer::Exists(const Hash key)
-	{
-		return data_.find(key) != data_.end();
-	}
-	void KtxDataContainer::Insert(const KtxData& value)
-	{
-		assert(!Exists(value.hash));
-		data_[value.hash] = value;
-	}
-	void GltfDataContainer::Clear()
-	{
-		for (auto& pair : data_)
-		{
-			pair.second.Destroy();
-		}
-		data_.clear();
-	}
-	bool GltfDataContainer::Exists(const Hash key)
-	{
-		return data_.find(key) != data_.end();
-	}
-	void GltfDataContainer::Insert(const GltfData& value)
-	{
-		assert(!Exists(value.hash));
-		data_[value.hash] = value;
-	}
-	void ShaderDataContainer::Clear()
-	{
-		for (auto& pair : data_)
-		{
-			pair.second.Destroy();
-		}
-		data_.clear();
-	}
-	bool ShaderDataContainer::Exists(const Hash key)
-	{
-		return data_.find(key) != data_.end();
-	}
-	void ShaderDataContainer::Insert(const ShaderData& value)
-	{
-		assert(!Exists(value.hash));
-		data_[value.hash] = value;
-	}
-	void ShaderContainer::Clear()
-	{
-		for (auto& pair : data_)
-		{
-			pair.second.Destroy();
-		}
-		data_.clear();
-	}
-	bool ShaderContainer::Exists(const Hash key)
-	{
-		return data_.find(key) != data_.end();
-	}
-	void ShaderContainer::Insert(const Shader& value)
-	{
-		assert(!Exists(value.hash));
-		data_[value.hash] = value;
-	}
-	void TextureContainer::Clear()
-	{
-		for (auto& pair : data_)
-		{
-			pair.second.Destroy();
-		}
-		data_.clear();
-	}
-	bool TextureContainer::Exists(const Hash key)
-	{
-		return data_.find(key) != data_.end();
-	}
-	void TextureContainer::Insert(const Texture& value)
-	{
-		assert(!Exists(value.hash));
-		data_[value.hash] = value;
-	}
-	void VertexBufferContainer::Clear()
-	{
-		for (auto& pair : data_)
-		{
-			pair.second.Destroy();
-		}
-		data_.clear();
-	}
-	bool VertexBufferContainer::Exists(const Hash key)
-	{
-		return data_.find(key) != data_.end();
-	}
-	void VertexBufferContainer::Insert(const VertexBuffer& value)
-	{
-		assert(!Exists(value.hash));
-		data_[value.hash] = value;
-	}
-	void MeshContainer::Clear()
-	{
-		for (auto& pair : data_)
-		{
-			pair.second.Destroy();
-		}
-		data_.clear();
-	}
-	bool MeshContainer::Exists(const Hash key)
-	{
-		return data_.find(key) != data_.end();
-	}
-	void MeshContainer::Insert(const Mesh& value)
-	{
-		assert(!Exists(value.hash));
-		data_[value.hash] = value;
-	}
-	void ModelContainer::Clear()
-	{
-		for (auto& pair : data_)
-		{
-			pair.second.Destroy();
-		}
-		data_.clear();
-	}
-	bool ModelContainer::Exists(const Hash key)
-	{
-		return data_.find(key) != data_.end();
-	}
-	void ModelContainer::Insert(const Model& value)
-	{
-		assert(!Exists(value.hash));
-		data_[value.hash] = value;
-	}
-
-
 	void sge::JsonData::Destroy()
 	{
 		data = json::value_t::discarded; // Has RAII.
@@ -365,31 +137,31 @@ namespace sge
 		indexType = GL_UNSIGNED_SHORT;
 		nrOfVertices = 0;
 		shininess = 0.0f;
-		normalMap->Destroy();
-		specularMap->Destroy();
-		albedoMap->Destroy();
-		alphaMap->Destroy();
-		uvs->Destroy();
-		bitangents->Destroy();
-		tangents->Destroy();
-		normals->Destroy();
-		positions->Destroy();
-		if (VAO > 0)
-		{
-			glDeleteVertexArrays(1, &VAO);
-		}
+		// normalMap->Destroy();
+		// specularMap->Destroy();
+		// albedoMap->Destroy();
+		// alphaMap->Destroy();
+		// uvs->Destroy();
+		// bitangents->Destroy();
+		// tangents->Destroy();
+		// normals->Destroy();
+		// positions->Destroy();
+		// if (VAO > 0)
+		// {
+		// 	glDeleteVertexArrays(1, &VAO);
+		// }
 		VAO = 0;
 		EBO = 0;
 	}
 	void sge::Model::Destroy()
 	{
 		radius = 0.0f;
-		transformsVertexBuffer->Destroy();
+		// transformsVertexBuffer->Destroy();
 		Engine::Get().GetResourceManager().FreeTransforms(transformsBegin, transformsEnd);
-		for (auto& mesh : meshes)
-		{
-			mesh->Destroy();
-		}
+		// for (auto& mesh : meshes)
+		// {
+		// 	mesh->Destroy();
+		// }
 	}
 
 	int32_t Shader::GetUniformLocation(const std::string_view name)
@@ -443,5 +215,21 @@ namespace sge
 		const int location = GetUniformLocation(name);
 		glUniformMatrix3fv(location, 1, GL_FALSE, &value[0][0]);
 		sge_CHECK_GL_ERROR();
+	}
+	bool A_Handle::operator==(const A_Handle& other) const
+	{
+		return hash == other.hash;
+	}
+	bool A_Handle::operator==(const A_Resource& resource) const
+	{
+		return hash == resource.hash;
+	}
+	bool A_Resource::operator==(const A_Resource& other) const
+	{
+		return hash == other.hash;
+	}
+	bool A_Resource::operator==(const A_Handle& handle) const
+	{
+		return hash == handle.hash;
 	}
 }//!sge

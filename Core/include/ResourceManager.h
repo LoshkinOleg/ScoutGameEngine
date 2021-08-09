@@ -28,7 +28,7 @@ namespace sge
 		GltfData& GetGltfData(const GltfDataHandle& handle);
 		ShaderData& GetShaderData(const ShaderDataHandle& handle);
 
-		glm::mat4* const AllocateTransforms(const uint32_t nrOfTransforms);
+		glm::mat4* const AllocateTransforms(const std::vector<glm::mat4>& transforms);
 		void FreeTransforms(glm::mat4* const begin, glm::mat4* const end);
 
 		void Shutdown();
@@ -40,16 +40,16 @@ namespace sge
 
 		static std::string LoadFile_(const std::string_view path);
 		static uint32_t HashString_(const std::string_view str);
-		static uint32_t HashGltf_(const tinygltf::Model& gltf);
+		static uint32_t HashGltf_(const tinygltf::Model& model, const std::array<const KtxDataHandle, 4> textures);
 		static uint32_t HashKtx_(const gli::texture& ktx);
 
 		constexpr static const bool FREE_DATA_POST_INIT_ = true;
 		constexpr static const uint32_t TRANSFORMS_POOL_SIZE_ = 256;
 
-		JsonDataContainer jsons_ = {};
-		GltfDataContainer gltfs_ = {};
-		KtxDataContainer ktxs_ = {};
-		ShaderDataContainer shaderSrcs_ = {};
+		ResourceContainer<JsonData, JsonDataHandle> jsons_ = {};
+		ResourceContainer<GltfData, GltfDataHandle> gltfs_ = {};
+		ResourceContainer<KtxData, KtxDataHandle> ktxs_ = {};
+		ResourceContainer<ShaderData, ShaderDataHandle> shaderSrcs_ = {};
 
 		glm::mat4* transforms_ = nullptr;
 		glm::mat4* currentTransformsEnd_ = nullptr;

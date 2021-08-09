@@ -12,6 +12,7 @@
 *.ktx
 *.gltf
 *.glb
+*.bin
 *.bmp
 
 # Compiled Object files

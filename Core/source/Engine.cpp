@@ -47,6 +47,7 @@ namespace sge
 		const auto success = gladLoadGLLoader((GLADloadproc)SDL_GL_GetProcAddress);
 		assert(success);
 
+		resourceManager_.Init();
 		renderer_.Init();
 		app_->Init();
 		resourceManager_.PostInit();

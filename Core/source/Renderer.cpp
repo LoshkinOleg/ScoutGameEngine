@@ -5,6 +5,8 @@
 #include <xxhash.h>
 #include <glm/gtx/quaternion.hpp>
 
+#include "Engine.h"
+
 namespace sge
 {
 	std::vector<Renderer::MeshData_> Renderer::ProcessGltf_(const GltfDataHandle& handle)
@@ -15,11 +17,19 @@ namespace sge
 		// uint32_t accumulatedVertexCount = 0;
 		// uint32_t currentMeshVertexCount = 0;
 
+
 		for (uint32_t meshIdx = 0; meshIdx < model.meshes.size(); meshIdx++)
 		{
 			tinygltf::Mesh& mesh = model.meshes[meshIdx];
 			returnVal.push_back(Renderer::MeshData_());
 			Renderer::MeshData_& meshData = returnVal.front();
+
+			// TODO: load per mesh textures
+			meshData.alphaMap = handle->alphaMap;
+			meshData.albedoMap = handle->albedoMap;
+			meshData.specularMap = handle->specularMap;
+			meshData.normalMap = handle->normalMap;
+			meshData.shininess = 64.0f; // TODO: read that from file
 
 			assert(mesh.primitives.size() == 1 && mesh.primitives[0].attributes.size() == 4);
 
@@ -45,7 +55,6 @@ namespace sge
 					model.nodes[meshIdx].matrix[8], model.nodes[meshIdx].matrix[9], model.nodes[meshIdx].matrix[10], model.nodes[meshIdx].matrix[11],
 					model.nodes[meshIdx].matrix[12], model.nodes[meshIdx].matrix[13], model.nodes[meshIdx].matrix[14], model.nodes[meshIdx].matrix[15]) :
 				IDENTITY_MAT4;
-			const glm::mat3 normalMatrix = glm::transpose(glm::inverse(glm::mat3(modelMatrix)));
 
 			if (modelMatrix == IDENTITY_MAT4)
 			{
@@ -59,9 +68,11 @@ namespace sge
 					glm::vec3(model.nodes[meshIdx].scale[0], model.nodes[meshIdx].scale[1], model.nodes[meshIdx].scale[2]) :
 					ONE_VEC3;
 				modelMatrix = glm::translate(IDENTITY_MAT4, translation);
-				modelMatrix *= glm::toMat4(rotation);
+				modelMatrix = modelMatrix * glm::toMat4(rotation);
 				modelMatrix = glm::scale(modelMatrix, scale);
 			}
+
+			const glm::mat3 normalMatrix = glm::transpose(glm::inverse(glm::mat3(modelMatrix)));
 
 			{ // Positions.
 				auto& accessor = model.accessors[attributes["POSITION"]];
@@ -173,6 +184,9 @@ namespace sge
 						glm::dot(normals[i], bitangents[i]) == 0.0f &&
 						glm::dot(tangents[i], bitangents[i]) == 0.0f
 					);
+
+					// tangents[i] = glm::normalize(glm::vec3(tangentsVec4[i]));
+					// bitangents[i] = glm::normalize(glm::cross(normals[i], glm::vec3(tangentsVec4[i])) * tangentsVec4[i].w);
 				}
 
 				meshData.tangents.insert
@@ -202,8 +216,6 @@ namespace sge
 					reinterpret_cast<glm::vec2*>(buffer.data.data()) + (bufferView.byteOffset / sizeof(glm::vec2)) + (bufferView.byteLength / sizeof(glm::vec2))
 				);
 			}
-
-			// TODO: material
 		}
 
 		return returnVal;
@@ -235,28 +247,29 @@ namespace sge
 	void Renderer::Shutdown()
 	{
 		// Note: containers call the Destroy() function on their objects before clearing the map.
-		shaders_.Clear();
+		models_.Clear();
+		meshes_.Clear();
 		vertexBuffers_.Clear();
 		textures_.Clear();
-		meshes_.Clear();
-		models_.Clear();
-		drawQueueOpaques_.clear();
-		drawQueueTransparents_.clear();
+		shaders_.Clear();
+		drawQueue_.clear();
 	}
 	void Renderer::Update()
 	{
 		// TODO: update view matrix using player input.
 
+		// TODO: separate draw calls into two queues based on whether the mesh has transparency or not.
+
 		glClear(CLEAR_FLAGS_);
 		
 		// TODO: make a pass on all shaders beforehand to set the common uniforms instead of bothering the gpu for every model.
 
-		const size_t queueLen = drawQueueOpaques_.size();
+		const size_t queueLen = drawQueue_.size();
 		for (size_t modelIdx = 0; modelIdx < queueLen; modelIdx++)
 		{
-			Model& model = *drawQueueOpaques_[modelIdx].model;
-			Shader& shader = *drawQueueOpaques_[modelIdx].shader;
-			const int32_t primitive = drawQueueOpaques_[modelIdx].primitive;
+			Model& model = *drawQueue_[modelIdx].model;
+			Shader& shader = *drawQueue_[modelIdx].shader;
+			const int32_t primitive = drawQueue_[modelIdx].primitive;
 
 			std::vector<glm::mat4> transforms = FrustumCulling_(RESOLUTION, FULL_FOV[0], WINDOW_PROJECTION_NEAR, WINDOW_PROJECTION_FAR, model.radius, model.transformsBegin, model.transformsEnd);
 			if (transforms.size() < 1) continue;
@@ -265,6 +278,10 @@ namespace sge
 			glUseProgram(shader.PROGRAM);
 			shader.SetMat4("cameraMatrix", WINDOW_PROJECTION * viewMatrix_);
 			shader.SetVec3("viewPos", glm::vec3(viewMatrix_[3]));
+			shader.SetInt("alphaMap", 0);
+			shader.SetInt("albedoMap", 1);
+			shader.SetInt("specularMap", 2);
+			shader.SetInt("normalMap", 3);
 			sge_CHECK_GL_ERROR();
 
 			const size_t meshLen = model.meshes.size();
@@ -321,33 +338,32 @@ namespace sge
 		glBindVertexArray(0);
 		glUseProgram(0);
 
-		drawQueueOpaques_.clear();
-		drawQueueTransparents_.clear();
+		drawQueue_.clear();
 	}
 
 	Shader& Renderer::GetShader(const ShaderHandle& handle)
 	{
-		shaders_.Access(handle);
+		return shaders_.Access(handle);
 	}
 
 	Texture& Renderer::GetTexture(const TextureHandle& handle)
 	{
-		textures_.Access(handle);
+		return textures_.Access(handle);
 	}
 
 	VertexBuffer& Renderer::GetVertexBuffer(const VertexBufferHandle& handle)
 	{
-		vertexBuffers_.Access(handle);
+		return vertexBuffers_.Access(handle);
 	}
 
 	Mesh& Renderer::GetMesh(const MeshHandle& handle)
 	{
-		meshes_.Access(handle);
+		return meshes_.Access(handle);
 	}
 
 	Model& Renderer::GetModel(const ModelHandle& handle)
 	{
-		models_.Access(handle);
+		return models_.Access(handle);
 	}
 
 	ShaderHandle Renderer::CreateShader(const ShaderDataHandle& handle)
@@ -357,11 +373,12 @@ namespace sge
 #ifdef _DEBUG
 		int8_t errorMsg[1024];
 #endif
-		const char* vertSrc = handle->vertexCode.data();
-		const char* fragSrc = handle->fragmentCode.data();
+		const auto& shaderData = *handle;
+		const char* vertSrc = shaderData.vertexCode.c_str();
+		const char* fragSrc = shaderData.fragmentCode.c_str();
 		assert(
-			(handle->vertexCode.data() != "" && handle->vertexCode.data() != "\0") &&
-			(handle->fragmentCode.data() != "" && handle->fragmentCode.data() != "\0"));
+			(vertSrc != "" && vertSrc != "\0") &&
+			(fragSrc != "" && fragSrc != "\0"));
 
 		VERT = glCreateShader(GL_VERTEX_SHADER);
 		glShaderSource(VERT, 1, &vertSrc, NULL);
@@ -508,7 +525,11 @@ namespace sge
 		VertexBufferHandle tangents;
 		VertexBufferHandle bitangents;
 		VertexBufferHandle uvs;
-		const float shininess = 64.0f; // TODO: actually read that from file.
+		TextureHandle alphaMap;
+		TextureHandle albedoMap;
+		TextureHandle specularMap;
+		TextureHandle normalMap;
+		const float shininess = data.shininess;
 		uint32_t nrOfVertices = 0;
 		int32_t indexType = 0;
 		const bool isTransparent = false; // TODO: analyse alphaMap to set this.
@@ -521,19 +542,49 @@ namespace sge
 		glBufferData(GL_ELEMENT_ARRAY_BUFFER, data.indices.size() * data.indexType, data.indices.data(), GL_STATIC_DRAW);
 		glBindVertexArray(0);
 
-		const std::vector<float> positionsData = std::vector<float>(data.positions.begin(), data.positions.end());
+		std::vector<float> positionsData;
+		positionsData.insert
+		(
+			positionsData.end(),
+			reinterpret_cast<const float*>(data.positions.data()),
+			reinterpret_cast<const float*>(data.positions.data() + data.positions.size())
+		);
 		positions = CreateVertexBuffer(positionsData, GL_STATIC_DRAW);
 
-		const std::vector<float> normalsData = std::vector<float>(data.normals.begin(), data.normals.end());
+		std::vector<float> normalsData;
+		normalsData.insert
+		(
+			normalsData.end(),
+			reinterpret_cast<const float*>(data.normals.data()),
+			reinterpret_cast<const float*>(data.normals.data() + data.normals.size())
+		);
 		normals = CreateVertexBuffer(normalsData, GL_STATIC_DRAW);
 
-		const std::vector<float> tangentsData = std::vector<float>(data.tangents.begin(), data.tangents.end());
+		std::vector<float> tangentsData;
+		tangentsData.insert
+		(
+			tangentsData.end(),
+			reinterpret_cast<const float*>(data.tangents.data()),
+			reinterpret_cast<const float*>(data.tangents.data() + data.tangents.size())
+		);
 		tangents = CreateVertexBuffer(tangentsData, GL_STATIC_DRAW);
 
-		const std::vector<float> bitangentsData = std::vector<float>(data.bitangents.begin(), data.bitangents.end());
+		std::vector<float> bitangentsData;
+		bitangentsData.insert
+		(
+			bitangentsData.end(),
+			reinterpret_cast<const float*>(data.bitangents.data()),
+			reinterpret_cast<const float*>(data.bitangents.data() + data.bitangents.size())
+		);
 		bitangents = CreateVertexBuffer(bitangentsData, GL_STATIC_DRAW);
 
-		const std::vector<float> uvsData = std::vector<float>(data.uvs.begin(), data.uvs.end());
+		std::vector<float> uvsData;
+		uvsData.insert
+		(
+			uvsData.end(),
+			reinterpret_cast<const float*>(data.uvs.data()),
+			reinterpret_cast<const float*>(data.uvs.data() + data.uvs.size())
+		);
 		uvs = CreateVertexBuffer(uvsData, GL_STATIC_DRAW);
 
 		nrOfVertices = data.indices.size();
@@ -559,6 +610,12 @@ namespace sge
 		glBindBuffer(GL_ARRAY_BUFFER, 0);
 		glBindVertexArray(0);
 
+		alphaMap = CreateTexture(data.alphaMap);
+		albedoMap = CreateTexture(data.albedoMap);
+		specularMap = CreateTexture(data.specularMap);
+		normalMap = CreateTexture(data.normalMap);
+		assert(alphaMap.hash > 0 && albedoMap.hash > 0 && specularMap.hash > 0 && normalMap.hash > 0);
+
 		Mesh newElement;
 		newElement.positions = positions;
 		assert(newElement.positions->hash > 0);
@@ -576,8 +633,10 @@ namespace sge
 		newElement.nrOfVertices = nrOfVertices;
 		assert(newElement.nrOfVertices > 0);
 		newElement.shininess = shininess;
-
-		// TODO: add textures too.
+		newElement.alphaMap = alphaMap;
+		newElement.albedoMap = albedoMap;
+		newElement.specularMap = specularMap;
+		newElement.normalMap = normalMap;
 
 		std::string accumulatedData = "";
 		accumulatedData += std::to_string(positions->hash);
@@ -585,6 +644,11 @@ namespace sge
 		accumulatedData += std::to_string(tangents->hash);
 		accumulatedData += std::to_string(bitangents->hash);
 		accumulatedData += std::to_string(uvs->hash);
+		accumulatedData += std::to_string(shininess);
+		accumulatedData += std::to_string(alphaMap->hash);
+		accumulatedData += std::to_string(albedoMap->hash);
+		accumulatedData += std::to_string(specularMap->hash);
+		accumulatedData += std::to_string(normalMap->hash);
 		newElement.hash = XXH32(accumulatedData.data(), accumulatedData.size(), HASHING_SEED);
 		assert(newElement.hash > 0);
 
@@ -595,33 +659,75 @@ namespace sge
 		return returnVal;
 	}
 
-	ModelHandle Renderer::CreateModel(const GltfDataHandle& handle)
+	ModelHandle Renderer::CreateModel(const GltfDataHandle& handle, const std::vector<glm::mat4>& transforms)
 	{
 		Model newElement;
-		newElement.
-		ModelHandle returnVal;
-	}
-	void Renderer::Schedule(const ModelHandle& model, const ShaderHandle& shader, const int32_t primitive)
-	{}
 
-	void Renderer::ScheduleToBeDrawn(VertexBufferHandle bufferHandle, ShaderHandle shaderHandle, const std::vector<Texture2dHandle>& textures, const uint32_t nrOfInstances, const int32_t primitive)
-	{
-		assert(bufferHandle.bufferDataHash > 0);
-		VertexBuffer& buffer = vertexBuffers_[bufferHandle.vertexBufferIndex];
-		assert(bufferHandle.bufferDataHash == buffer.bufferDataHash);
+		uint32_t hash = 0;
+		std::vector<MeshHandle> meshes;
+		glm::mat4* transformsBegin = nullptr;
+		glm::mat4* transformsEnd = nullptr;
+		VertexBufferHandle transformsVBO;
+		const float radius = 0.0f;
 
-		assert(shaderHandle.shaderSrcHash > 0);
-		Shader& shader = shaders_[shaderHandle.shaderIndex];
-		assert(shaderHandle.shaderSrcHash == shader.shaderSrcHash);
+		assert(transforms.size() > 0);
+		auto& rm = Engine::Get().GetResourceManager();
+		transformsBegin = rm.AllocateTransforms(transforms);
+		transformsEnd = transformsBegin + transforms.size();
+		assert(transformsEnd > transformsBegin);
 
-		std::vector<Texture2d> texs = std::vector<Texture2d>(textures.size());
-		for (size_t i = 0; i < textures.size(); i++)
+		std::vector<float> data;
+		data.insert
+		(
+			data.end(),
+			reinterpret_cast<const float*>(transforms.data()),
+			reinterpret_cast<const float*>(transforms.data() + transforms.size())
+		);
+		transformsVBO = CreateVertexBuffer(data, GL_DYNAMIC_DRAW);
+		assert(transformsVBO->hash > 0 && transformsVBO.hash > 0 && (transformsVBO->hash == transformsVBO.hash));
+
+		std::string accumulatedData = "";
+
+		auto meshesData = ProcessGltf_(handle);
+		meshes.reserve(meshesData.size());
+		for (const auto& mesh : meshesData)
 		{
-			assert(textures[i].textureHash > 0);
-			texs[i] = textures_[textures[i].textureIndex];
-			assert(textures[i].textureHash == texs[i].textureHash);
+			assert(mesh.positions.size() > 0);
+			assert(mesh.normals.size() > 0);
+			assert(mesh.tangents.size() > 0);
+			assert(mesh.bitangents.size() > 0);
+			assert(mesh.uvs.size() > 0);
+			assert(mesh.indices.size() > 0);
+			assert(mesh.shininess > 0.0f);
+			assert(mesh.indexType > 0);
+			meshes.push_back(CreateMesh(mesh));
+			accumulatedData += std::to_string(meshes.front().hash);
 		}
+		hash = XXH32(accumulatedData.c_str(), accumulatedData.size(), HASHING_SEED);
+		assert(hash > 0);
 
-		drawQueue_.push_back(DrawCall(buffer, shader, texs, nrOfInstances, primitive, buffer.sizeOfIndex > 0));
+		newElement.hash = hash;
+		newElement.meshes = meshes;
+		newElement.radius = radius;
+		newElement.transformsBegin = transformsBegin;
+		newElement.transformsEnd = transformsEnd;
+		newElement.transformsVertexBuffer = transformsVBO;
+		models_.Insert(newElement);
+
+		ModelHandle returnVal;
+		returnVal.hash = newElement.hash;
+		return returnVal;
+	}
+	
+	void Renderer::Schedule(const ModelHandle& model, const ShaderHandle& shader, const int32_t primitive)
+	{
+		assert(model->hash > 0 && shader->hash > 0);
+
+		DrawCall_ newElement;
+		newElement.model = model;
+		newElement.shader = shader;
+		newElement.primitive = primitive;
+
+		drawQueue_.push_back(newElement);
 	}
 }//!sge

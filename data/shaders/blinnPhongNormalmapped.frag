@@ -5,7 +5,6 @@ layout (location = 0) out vec4 fragColor;
 in VS_OUT {
 	vec3 t_fragPos;
 	vec3 t_viewPos;
-	vec3 t_lightDir;
 	vec2 uv;
 } fs_in;
 
@@ -16,12 +15,12 @@ uniform sampler2D normalMap;
 uniform float shininess;
 
 const float AMBIENT_FACTOR = 0.01;
+const vec3 lightDir = normalize(vec3(-1.0, -1.0, -1.0)); // Note: Why can this be in world space when all the computations are in tangent space?
 
 void main()
 {
 	const vec3 fragPos = fs_in.t_fragPos;
 	const vec3 viewPos = fs_in.t_viewPos;
-	const vec3 lightDir = fs_in.t_lightDir;
 	const float alpha = texture(alphaMap, fs_in.uv).r;
 	if (alpha < 0.01) discard;
 	const vec3 albedo = texture(albedoMap, fs_in.uv).rgb;

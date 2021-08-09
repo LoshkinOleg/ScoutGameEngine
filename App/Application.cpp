@@ -10,33 +10,30 @@
 class Game final : public sge::I_Application
 {
 private:
-	sge::VertexBufferHandle buffer;
+	sge::ModelHandle model;
 	sge::ShaderHandle shader;
-	glm::mat4 model = glm::translate(sge::IDENTITY_MAT4, sge::DOWN_VEC3 * 10.0f);
 public:
 	void Init() override
 	{
 		auto& rm = sge::Engine::Get().GetResourceManager();
 		auto& renderer = sge::Engine::Get().GetRenderer();
 
-		auto gltfHandle = rm.LoadGltf("../data/gltfs/complexScene.glb");
-		buffer = renderer.CreateVertexBuffer(gltfHandle);
+		auto gltfHandle = rm.LoadGltf("../data/gltfs/brickCube.gltf");
+		model = renderer.CreateModel(gltfHandle, { glm::translate(sge::IDENTITY_MAT4, sge::DOWN_VEC3 * 5.0f) });
 		rm.FreeGltf(gltfHandle);
 
-		auto shaderSrcHandle = rm.LoadShader("../data/shaders/gooch.vert", "../data/shaders/gooch.frag");
+		auto shaderSrcHandle = rm.LoadShader("../data/shaders/blinnPhongNormalmapped.vert", "../data/shaders/blinnPhongNormalmapped.frag");
 		shader = renderer.CreateShader(shaderSrcHandle);
 		rm.FreeShader(shaderSrcHandle);
-
-		shader->SetMat4("cameraMatrix", sge::WINDOW_PROJECTION * sge::DEFAULT_VIEW_MATRIX);
-		shader->SetVec3("viewPos", sge::ZERO_VEC3);
-		shader->SetVec3("baseColor", sge::WHITE * 0.5f);
 	}
 	void Update() override
 	{
-		model = glm::rotate(model, 0.01f, sge::NORTH_VEC3);
-		shader->SetMat4("modelMatrix", model);
-		shader->SetMat3("normalMatrix", glm::transpose(glm::inverse(glm::mat3(model))));
-		sge::Engine::Get().GetRenderer().ScheduleToBeDrawn(buffer, shader, {}, 1, GL_TRIANGLES);
+		for (glm::mat4* it = model->transformsBegin; it < model->transformsEnd; it++)
+		{
+			*it = glm::rotate(*it, 0.01f, glm::normalize(sge::EAST_VEC3 + sge::NORTH_VEC3));
+		}
+
+		sge::Engine::Get().GetRenderer().Schedule(model, shader, GL_TRIANGLES);
 	}
 	void Shutdown() override
 	{

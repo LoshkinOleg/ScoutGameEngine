@@ -1,14 +1,18 @@
 #pragma once
 
+#include <iostream>
 #include <vector>
 #include <map>
 #include <type_traits>
 
+#include <glad/glad.h>
 #include <glm/glm.hpp>
 #include <nlohmann/json.hpp>
 using json = nlohmann::json;
 #include <gli/gli.hpp>
 #include <tiny_gltf.h>
+
+#include "macros.h"
 
 namespace sge
 {
@@ -34,16 +38,42 @@ namespace sge
 		virtual void Destroy() = 0;
 	};
 
-	template <typename ResourceType, typename HandleType>
-	class A_ResourceContainer
+	template <typename ResourceType> concept SubResource = std::derived_from<ResourceType, A_Resource>;
+	template <typename HandleType> concept SubHandle = std::derived_from<HandleType, A_Handle>;
+	template<SubResource Resource, SubHandle Handle>
+	class ResourceContainer
 	{
 	protected:
-		std::map<Hash, ResourceType> data_ = {};
+		std::map<Hash, Resource> data_ = {};
 	public:
-		virtual ResourceType& Access(const HandleType& handle) = 0;
-		virtual void Clear() = 0;
-		virtual bool Exists(const Hash key) = 0;
-		virtual void Insert(const ResourceType& value) = 0;
+		Resource& Access(const Handle& handle)
+		{
+			assert(handle.hash > 0);
+			assert(data_.find(handle.hash) != data_.end());
+			Resource& value = data_[handle.hash];
+			assert(value == handle);
+			return value;
+		}
+		void Clear()
+		{
+			for (auto& pair : data_)
+			{
+				pair.second.Destroy();
+			}
+			data_.clear();
+		}
+		bool Exists(const Hash key)
+		{
+			return data_.find(key) != data_.end();
+		}
+		void Insert(const Resource& value)
+		{
+			if (Exists(value.hash))
+			{
+				sge_WARNING("Value is already in the map! Not inserting new element.");
+			}
+			data_[value.hash] = value;
+		}
 	};
 
 	struct JsonData : public A_Resource
@@ -59,14 +89,14 @@ namespace sge
 		JsonData& operator*() const override;
 	};
 
-	class JsonDataContainer : public A_ResourceContainer<JsonData, JsonDataHandle>
-	{
-	public:
-		JsonData& Access(const JsonDataHandle& handle) override;
-		void Clear() override;
-		bool Exists(const Hash key) override;
-		void Insert(const JsonData& value) override;
-	};
+	// class JsonDataContainer : public A_ResourceContainer<JsonData, JsonDataHandle>
+	// {
+	// public:
+	// 	JsonData& Access(const JsonDataHandle& handle) override;
+	// 	void Clear() override;
+	// 	bool Exists(const Hash key) override;
+	// 	void Insert(const JsonData& value) override;
+	// };
 
 	struct KtxData : public A_Resource
 	{
@@ -81,14 +111,14 @@ namespace sge
 		KtxData& operator*() const override;
 	};
 
-	class KtxDataContainer : public A_ResourceContainer<KtxData, KtxDataHandle>
-	{
-	public:
-		KtxData& Access(const KtxDataHandle& handle) override;
-		void Clear() override;
-		bool Exists(const Hash key) override;
-		void Insert(const KtxData& value) override;
-	};
+	// class KtxDataContainer : public A_ResourceContainer<KtxData, KtxDataHandle>
+	// {
+	// public:
+	// 	KtxData& Access(const KtxDataHandle& handle) override;
+	// 	void Clear() override;
+	// 	bool Exists(const Hash key) override;
+	// 	void Insert(const KtxData& value) override;
+	// };
 
 	struct GltfData : public A_Resource
 	{
@@ -107,19 +137,19 @@ namespace sge
 		GltfData& operator*() const override;
 	};
 
-	class GltfDataContainer : public A_ResourceContainer<GltfData, GltfDataHandle>
-	{
-	public:
-		GltfData& Access(const GltfDataHandle& handle) override;
-		void Clear() override;
-		bool Exists(const Hash key) override;
-		void Insert(const GltfData& value) override;
-	};
+	// class GltfDataContainer : public A_ResourceContainer<GltfData, GltfDataHandle>
+	// {
+	// public:
+	// 	GltfData& Access(const GltfDataHandle& handle) override;
+	// 	void Clear() override;
+	// 	bool Exists(const Hash key) override;
+	// 	void Insert(const GltfData& value) override;
+	// };
 
 	struct ShaderData : public A_Resource
 	{
-		std::string_view vertexCode = std::string_view();
-		std::string_view fragmentCode = std::string_view();
+		std::string vertexCode = "";
+		std::string fragmentCode = "";
 
 		void Destroy() override;
 	};
@@ -130,14 +160,14 @@ namespace sge
 		ShaderData& operator*() const override;
 	};
 
-	class ShaderDataContainer : public A_ResourceContainer<ShaderData, ShaderDataHandle>
-	{
-	public:
-		ShaderData& Access(const ShaderDataHandle& handle) override;
-		void Clear() override;
-		bool Exists(const Hash key) override;
-		void Insert(const ShaderData& value) override;
-	};
+	//class ShaderDataContainer : public A_ResourceContainer<ShaderData, ShaderDataHandle>
+	//{
+	//public:
+	//	ShaderData& Access(const ShaderDataHandle& handle) override;
+	//	void Clear() override;
+	//	bool Exists(const Hash key) override;
+	//	void Insert(const ShaderData& value) override;
+	//};
 
 	struct Shader : public A_Resource
 	{
@@ -159,14 +189,14 @@ namespace sge
 		Shader& operator*() const override;
 	};
 
-	class ShaderContainer : public A_ResourceContainer<Shader, ShaderHandle>
-	{
-	public:
-		Shader& Access(const ShaderHandle& handle) override;
-		void Clear() override;
-		bool Exists(const Hash key) override;
-		void Insert(const Shader& value) override;
-	};
+	//class ShaderContainer : public A_ResourceContainer<Shader, ShaderHandle>
+	//{
+	//public:
+	//	Shader& Access(const ShaderHandle& handle) override;
+	//	void Clear() override;
+	//	bool Exists(const Hash key) override;
+	//	void Insert(const Shader& value) override;
+	//};
 
 	struct Texture : public A_Resource
 	{
@@ -181,14 +211,14 @@ namespace sge
 		Texture& operator*() const override;
 	};
 
-	class TextureContainer : public A_ResourceContainer<Texture, TextureHandle>
-	{
-	public:
-		Texture& Access(const TextureHandle& handle) override;
-		void Clear() override;
-		bool Exists(const Hash key) override;
-		void Insert(const Texture& value) override;
-	};
+	// class TextureContainer : public A_ResourceContainer<Texture, TextureHandle>
+	// {
+	// public:
+	// 	Texture& Access(const TextureHandle& handle) override;
+	// 	void Clear() override;
+	// 	bool Exists(const Hash key) override;
+	// 	void Insert(const Texture& value) override;
+	// };
 
 	struct VertexBuffer : public A_Resource
 	{
@@ -203,14 +233,14 @@ namespace sge
 		VertexBuffer& operator*() const override;
 	};
 
-	class VertexBufferContainer : public A_ResourceContainer<VertexBuffer, VertexBufferHandle>
-	{
-	public:
-		VertexBuffer& Access(const VertexBufferHandle& handle) override;
-		void Clear() override;
-		bool Exists(const Hash key) override;
-		void Insert(const VertexBuffer& value) override;
-	};
+	//class VertexBufferContainer : public A_ResourceContainer<VertexBuffer, VertexBufferHandle>
+	//{
+	//public:
+	//	VertexBuffer& Access(const VertexBufferHandle& handle) override;
+	//	void Clear() override;
+	//	bool Exists(const Hash key) override;
+	//	void Insert(const VertexBuffer& value) override;
+	//};
 
 	struct Mesh : public A_Resource
 	{
@@ -239,14 +269,14 @@ namespace sge
 		Mesh& operator*() const override;
 	};
 
-	class MeshContainer : public A_ResourceContainer<Mesh, MeshHandle>
-	{
-	public:
-		Mesh& Access(const MeshHandle& handle) override;
-		void Clear() override;
-		bool Exists(const Hash key) override;
-		void Insert(const Mesh& value) override;
-	};
+	//class MeshContainer : public A_ResourceContainer<Mesh, MeshHandle>
+	//{
+	//public:
+	//	Mesh& Access(const MeshHandle& handle) override;
+	//	void Clear() override;
+	//	bool Exists(const Hash key) override;
+	//	void Insert(const Mesh& value) override;
+	//};
 
 	struct Model : public A_Resource
 	{
@@ -265,13 +295,13 @@ namespace sge
 		Model& operator*() const override;
 	};
 
-	class ModelContainer : public A_ResourceContainer<Model, ModelHandle>
-	{
-	public:
-		Model& Access(const ModelHandle& handle) override;
-		void Clear() override;
-		bool Exists(const Hash key) override;
-		void Insert(const Model& value) override;
-	};
+	//class ModelContainer : public A_ResourceContainer<Model, ModelHandle>
+	//{
+	//public:
+	//	Model& Access(const ModelHandle& handle) override;
+	//	void Clear() override;
+	//	bool Exists(const Hash key) override;
+	//	void Insert(const Model& value) override;
+	//};
 
 }//!sge

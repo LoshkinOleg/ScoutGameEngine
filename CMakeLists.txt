@@ -13,8 +13,12 @@ find_path(VCPKG_GENERATED_HEADERS_DIR "stb.h")
 file(GLOB_RECURSE Core_sources ${PROJECT_SOURCE_DIR}/Core/source/*.cpp ${PROJECT_SOURCE_DIR}/Core/include/*.h)
 
 add_compile_definitions(XXH_INLINE_ALL)
-add_compile_definitions(TINYGLTF_NO_INCLUDE_JSON)
+add_compile_definitions(TINYGLTF_NO_STB_IMAGE)
 add_compile_definitions(TINYGLTF_NO_INCLUDE_STB_IMAGE)
+add_compile_definitions(TINYGLTF_NO_STB_IMAGE_WRITE)
+add_compile_definitions(TINYGLTF_NO_INCLUDE_STB_IMAGE_WRITE)
+add_compile_definitions(TINYGLTF_NO_EXTERNAL_IMAGE)
+add_compile_definitions(TINYGLTF_NO_INCLUDE_JSON)
 
 add_library(Core STATIC ${Core_sources})
 target_include_directories(Core PUBLIC ${PROJECT_SOURCE_DIR}/Core/include/ ${VCPKG_GENERATED_HEADERS_DIR})
