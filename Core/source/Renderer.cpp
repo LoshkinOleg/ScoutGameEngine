@@ -14,15 +14,11 @@ namespace sge
 		std::vector<Renderer::MeshData_> returnVal;
 		tinygltf::Model& model = handle->model;
 
-		// uint32_t accumulatedVertexCount = 0;
-		// uint32_t currentMeshVertexCount = 0;
-
-
 		for (uint32_t meshIdx = 0; meshIdx < model.meshes.size(); meshIdx++)
 		{
 			tinygltf::Mesh& mesh = model.meshes[meshIdx];
 			returnVal.push_back(Renderer::MeshData_());
-			Renderer::MeshData_& meshData = returnVal.front();
+			Renderer::MeshData_& meshData = returnVal.back();
 
 			// TODO: load per mesh textures
 			meshData.alphaMap = handle->alphaMap;
@@ -73,6 +69,7 @@ namespace sge
 			}
 
 			const glm::mat3 normalMatrix = glm::transpose(glm::inverse(glm::mat3(modelMatrix)));
+			const glm::mat3 tangentMatrix = glm::mat3(modelMatrix);
 
 			{ // Positions.
 				auto& accessor = model.accessors[attributes["POSITION"]];
@@ -82,8 +79,6 @@ namespace sge
 				assert(accessor.componentType == TINYGLTF_COMPONENT_TYPE_FLOAT && accessor.type == TINYGLTF_TYPE_VEC3);
 				assert(model.meshes.size() == model.nodes.size()); // Note: this DOES NOT guarantee that there is a one-to-one matching between nodes and meshes, we just assume it does... Note: this really necessary now that I'm putting meshes into separate VAOs?
 
-				// accumulatedVertexCount += accessor.count;
-				// currentMeshVertexCount = accessor.count;
 				std::vector<glm::vec3> positions;
 				positions.insert
 				(
@@ -119,31 +114,45 @@ namespace sge
 					reinterpret_cast<uint16_t*>(buffer.data.data()) + (bufferView.byteOffset / sizeof(uint16_t)),
 					reinterpret_cast<uint16_t*>(buffer.data.data()) + (bufferView.byteOffset / sizeof(uint16_t)) + (bufferView.byteLength / sizeof(uint16_t))
 				);
-				// for (; currentMeshIndices < meshData.indices.size(); currentMeshIndices++)
-				// {
-				// 	meshData.indices[currentMeshIndices] += (accumulatedVertexCount - currentMeshVertexCount);
-				// }
 			}
 
-			const size_t thisMeshesNormalsStart = meshData.normals.end() - meshData.normals.begin();
-			{ // Normals.
-				auto& accessor = model.accessors[attributes["NORMAL"]];
-				auto& bufferView = model.bufferViews[accessor.bufferView];
-				auto& buffer = model.buffers[bufferView.buffer];
+			{ // Normals, tangents and bitangents.
+				auto& accessorNormals = model.accessors[attributes["NORMAL"]];
+				auto& accessorTangents = model.accessors[attributes["TANGENT"]];
+				auto& bufferViewNormals = model.bufferViews[accessorNormals.bufferView];
+				auto& bufferViewTangents = model.bufferViews[accessorTangents.bufferView];
+				auto& bufferNormals = model.buffers[bufferViewNormals.buffer];
+				auto& bufferTangents = model.buffers[bufferViewTangents.buffer];
 
-				assert(accessor.componentType == TINYGLTF_COMPONENT_TYPE_FLOAT && accessor.type == TINYGLTF_TYPE_VEC3);
+				assert(accessorNormals.componentType == TINYGLTF_COMPONENT_TYPE_FLOAT && accessorNormals.type == TINYGLTF_TYPE_VEC3);
+				assert(accessorTangents.componentType == TINYGLTF_COMPONENT_TYPE_FLOAT && accessorTangents.type == TINYGLTF_TYPE_VEC4);
 
 				std::vector<glm::vec3> normals;
+				std::vector<float> tangentsVec4;
 				normals.insert
 				(
 					normals.end(),
-					reinterpret_cast<glm::vec3*>(buffer.data.data()) + (bufferView.byteOffset / sizeof(glm::vec3)),
-					reinterpret_cast<glm::vec3*>(buffer.data.data()) + (bufferView.byteOffset / sizeof(glm::vec3)) + (bufferView.byteLength / sizeof(glm::vec3))
+					reinterpret_cast<glm::vec3*>(bufferNormals.data.data()) + (bufferViewNormals.byteOffset / sizeof(glm::vec3)),
+					reinterpret_cast<glm::vec3*>(bufferNormals.data.data()) + (bufferViewNormals.byteOffset / sizeof(glm::vec3)) + (bufferViewNormals.byteLength / sizeof(glm::vec3))
 				);
+				tangentsVec4.insert
+				(
+					tangentsVec4.end(),
+					reinterpret_cast<float*>(bufferTangents.data.data()) + (bufferViewTangents.byteOffset / sizeof(float)),
+					reinterpret_cast<float*>(bufferTangents.data.data()) + (bufferViewTangents.byteOffset / sizeof(float)) + (bufferViewTangents.byteLength / sizeof(float))
+				);
+				assert(normals.size() * 4 == tangentsVec4.size());
+				std::vector<glm::vec3> tangents = std::vector<glm::vec3>(normals.size());
 
 				for (size_t i = 0; i < normals.size(); i++)
 				{
+					const glm::vec3 tangent = glm::vec3(tangentsVec4[i * 4 + 0], tangentsVec4[i * 4 + 1], tangentsVec4[i * 4 + 2]);
+					assert(glm::length(tangent) > 0.99f);
+
 					normals[i] = glm::normalize(normalMatrix * glm::normalize(normals[i]));
+					tangents[i] = glm::normalize(tangentMatrix * glm::normalize(tangent));
+
+					assert(glm::dot(normals[i], tangents[i]) < 0.0001f);
 				}
 
 				meshData.normals.insert
@@ -152,54 +161,11 @@ namespace sge
 					normals.begin(),
 					normals.end()
 				);
-			}
-
-			{ // Tangents and bitangents.
-				auto& accessor = model.accessors[attributes["TANGENT"]];
-				auto& bufferView = model.bufferViews[accessor.bufferView];
-				auto& buffer = model.buffers[bufferView.buffer];
-
-				assert(accessor.componentType == TINYGLTF_COMPONENT_TYPE_FLOAT && accessor.type == TINYGLTF_TYPE_VEC4);
-				std::vector<glm::vec4> tangentsVec4;
-				std::vector<glm::vec3> normals = std::vector<glm::vec3>(thisMeshesNormalsStart == 0 ?
-					meshData.normals.begin() :
-					meshData.normals.begin() + thisMeshesNormalsStart, meshData.normals.end());
-				tangentsVec4.insert
-				(
-					tangentsVec4.end(),
-					reinterpret_cast<glm::vec4*>(buffer.data.data()) + (bufferView.byteOffset / sizeof(glm::vec4)),
-					reinterpret_cast<glm::vec4*>(buffer.data.data()) + (bufferView.byteOffset / sizeof(glm::vec4)) + (bufferView.byteLength / sizeof(glm::vec4))
-				);
-				assert(normals.size() == tangentsVec4.size());
-
-				std::vector<glm::vec3> tangents = std::vector<glm::vec3>(tangentsVec4.size(), glm::vec3(0.0f));
-				std::vector<glm::vec3> bitangents = std::vector<glm::vec3>(tangentsVec4.size(), glm::vec3(0.0f));
-				for (size_t i = 0; i < tangentsVec4.size(); i++)
-				{
-					tangents[i] = glm::normalize(normalMatrix * glm::normalize(glm::vec3(tangentsVec4[i])));
-					bitangents[i] = glm::normalize(normalMatrix * glm::normalize(glm::cross(normals[i], glm::vec3(tangentsVec4[i])) * tangentsVec4[i].w));
-					assert
-					(
-						glm::dot(normals[i], tangents[i]) == 0.0f &&
-						glm::dot(normals[i], bitangents[i]) == 0.0f &&
-						glm::dot(tangents[i], bitangents[i]) == 0.0f
-					);
-
-					// tangents[i] = glm::normalize(glm::vec3(tangentsVec4[i]));
-					// bitangents[i] = glm::normalize(glm::cross(normals[i], glm::vec3(tangentsVec4[i])) * tangentsVec4[i].w);
-				}
-
 				meshData.tangents.insert
 				(
 					meshData.tangents.end(),
 					tangents.begin(),
 					tangents.end()
-				);
-				meshData.bitangents.insert
-				(
-					meshData.bitangents.end(),
-					bitangents.begin(),
-					bitangents.end()
 				);
 			}
 
@@ -313,19 +279,19 @@ namespace sge
 				glBindBuffer(GL_ARRAY_BUFFER, model.transformsVertexBuffer->VBO);
 				glBufferSubData(GL_ARRAY_BUFFER, 0, transforms.size() * sizeof(glm::mat4), transforms.data());
 				sge_CHECK_GL_ERROR();
+				glEnableVertexAttribArray(4);
+				glVertexAttribPointer(4, 4, GL_FLOAT, GL_FALSE, sizeof(glm::mat4), (void*)0);
 				glEnableVertexAttribArray(5);
-				glVertexAttribPointer(5, 4, GL_FLOAT, GL_FALSE, sizeof(glm::mat4), (void*)0);
+				glVertexAttribPointer(5, 4, GL_FLOAT, GL_FALSE, sizeof(glm::mat4), (void*)(sizeof(glm::vec4)));
 				glEnableVertexAttribArray(6);
-				glVertexAttribPointer(6, 4, GL_FLOAT, GL_FALSE, sizeof(glm::mat4), (void*)(sizeof(glm::vec4)));
+				glVertexAttribPointer(6, 4, GL_FLOAT, GL_FALSE, sizeof(glm::mat4), (void*)(2 * sizeof(glm::vec4)));
 				glEnableVertexAttribArray(7);
-				glVertexAttribPointer(7, 4, GL_FLOAT, GL_FALSE, sizeof(glm::mat4), (void*)(2 * sizeof(glm::vec4)));
-				glEnableVertexAttribArray(8);
-				glVertexAttribPointer(8, 4, GL_FLOAT, GL_FALSE, sizeof(glm::mat4), (void*)(3 * sizeof(glm::vec4)));
+				glVertexAttribPointer(7, 4, GL_FLOAT, GL_FALSE, sizeof(glm::mat4), (void*)(3 * sizeof(glm::vec4)));
 				sge_CHECK_GL_ERROR();
+				glVertexAttribDivisor(4, 1);
 				glVertexAttribDivisor(5, 1);
 				glVertexAttribDivisor(6, 1);
 				glVertexAttribDivisor(7, 1);
-				glVertexAttribDivisor(8, 1);
 				sge_CHECK_GL_ERROR();
 
 				glDrawElementsInstanced(primitive, mesh.nrOfVertices, mesh.indexType, 0, transforms.size());
@@ -444,6 +410,10 @@ namespace sge
 		glTexParameteri(target, GL_TEXTURE_SWIZZLE_G, format.Swizzles[1]);
 		glTexParameteri(target, GL_TEXTURE_SWIZZLE_B, format.Swizzles[2]);
 		glTexParameteri(target, GL_TEXTURE_SWIZZLE_A, format.Swizzles[3]);
+		glTexParameteri(target, GL_TEXTURE_WRAP_S, GL_REPEAT);
+		glTexParameteri(target, GL_TEXTURE_WRAP_T, GL_REPEAT);
+		glTexParameteri(target, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+		glTexParameteri(target, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 		sge_CHECK_GL_ERROR();
 
 		glm::tvec3<GLsizei> extents(handle->data.extent());
@@ -523,7 +493,6 @@ namespace sge
 		VertexBufferHandle positions;
 		VertexBufferHandle normals;
 		VertexBufferHandle tangents;
-		VertexBufferHandle bitangents;
 		VertexBufferHandle uvs;
 		TextureHandle alphaMap;
 		TextureHandle albedoMap;
@@ -569,15 +538,6 @@ namespace sge
 		);
 		tangents = CreateVertexBuffer(tangentsData, GL_STATIC_DRAW);
 
-		std::vector<float> bitangentsData;
-		bitangentsData.insert
-		(
-			bitangentsData.end(),
-			reinterpret_cast<const float*>(data.bitangents.data()),
-			reinterpret_cast<const float*>(data.bitangents.data() + data.bitangents.size())
-		);
-		bitangents = CreateVertexBuffer(bitangentsData, GL_STATIC_DRAW);
-
 		std::vector<float> uvsData;
 		uvsData.insert
 		(
@@ -600,12 +560,9 @@ namespace sge
 		glBindBuffer(GL_ARRAY_BUFFER, tangents->VBO);
 		glEnableVertexAttribArray(2);
 		glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, sizeof(glm::vec3), (void*)0);
-		glBindBuffer(GL_ARRAY_BUFFER, bitangents->VBO);
-		glEnableVertexAttribArray(3);
-		glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, sizeof(glm::vec3), (void*)0);
 		glBindBuffer(GL_ARRAY_BUFFER, uvs->VBO);
-		glEnableVertexAttribArray(4);
-		glVertexAttribPointer(4, 2, GL_FLOAT, GL_FALSE, sizeof(glm::vec2), (void*)0);
+		glEnableVertexAttribArray(3);
+		glVertexAttribPointer(3, 2, GL_FLOAT, GL_FALSE, sizeof(glm::vec2), (void*)0);
 
 		glBindBuffer(GL_ARRAY_BUFFER, 0);
 		glBindVertexArray(0);
@@ -623,8 +580,6 @@ namespace sge
 		assert(newElement.normals->hash > 0);
 		newElement.tangents = tangents;
 		assert(newElement.tangents->hash > 0);
-		newElement.bitangents = bitangents;
-		assert(newElement.bitangents->hash > 0);
 		newElement.EBO = EBO;
 		newElement.VAO = VAO;
 		newElement.indexType = indexType;
@@ -642,7 +597,6 @@ namespace sge
 		accumulatedData += std::to_string(positions->hash);
 		accumulatedData += std::to_string(normals->hash);
 		accumulatedData += std::to_string(tangents->hash);
-		accumulatedData += std::to_string(bitangents->hash);
 		accumulatedData += std::to_string(uvs->hash);
 		accumulatedData += std::to_string(shininess);
 		accumulatedData += std::to_string(alphaMap->hash);
@@ -695,7 +649,6 @@ namespace sge
 			assert(mesh.positions.size() > 0);
 			assert(mesh.normals.size() > 0);
 			assert(mesh.tangents.size() > 0);
-			assert(mesh.bitangents.size() > 0);
 			assert(mesh.uvs.size() > 0);
 			assert(mesh.indices.size() > 0);
 			assert(mesh.shininess > 0.0f);

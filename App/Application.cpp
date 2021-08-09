@@ -18,8 +18,8 @@ public:
 		auto& rm = sge::Engine::Get().GetResourceManager();
 		auto& renderer = sge::Engine::Get().GetRenderer();
 
-		auto gltfHandle = rm.LoadGltf("../data/gltfs/brickCube.gltf");
-		model = renderer.CreateModel(gltfHandle, { glm::translate(sge::IDENTITY_MAT4, sge::DOWN_VEC3 * 5.0f) });
+		auto gltfHandle = rm.LoadGltf("../data/gltfs/complexScene.gltf");
+		model = renderer.CreateModel(gltfHandle, { glm::translate(sge::IDENTITY_MAT4, sge::DOWN_VEC3 * 10.0f) });
 		rm.FreeGltf(gltfHandle);
 
 		auto shaderSrcHandle = rm.LoadShader("../data/shaders/blinnPhongNormalmapped.vert", "../data/shaders/blinnPhongNormalmapped.frag");
