@@ -10,11 +10,26 @@ namespace sge
 	public:
 		sge_DISALLOW_COPY(ResourceManager);
 
+		enum GltfAttributes: uint8_t
+		{
+			INVALID = 0,
+
+			POSITIONS = 1 << 0,
+			NORMALS = 1 << 1,
+			TANGENTS = 1 << 2,
+			UVS = 1 << 3,
+
+			ALPHA_MAPS = 1 << 4,
+			ALBEDO_MAPS = 1 << 5,
+			NORMAL_MAPS = 1 << 6,
+			SPECULAR_MAPS = 1 << 7
+		};
+
 		void Init();
 		void PostInit();
 
 		JsonDataHandle LoadJson(const std::string_view path);
-		GltfDataHandle LoadGltf(const std::string_view path);
+		GltfDataHandle LoadGltf(const std::string_view path, const GltfAttributes dataToLoad);
 		KtxDataHandle LoadKtx(const std::string_view path);
 		ShaderDataHandle LoadShader(const std::string_view vertexPath, const std::string_view fragmentPath);
 

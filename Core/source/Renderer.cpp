@@ -14,14 +14,13 @@ namespace sge
 		std::vector<Renderer::MeshData_> returnVal;
 		tinygltf::Model& model = handle->model;
 
-		for (uint32_t meshIdx = 0; meshIdx < model.meshes.size(); meshIdx++)
+		for(uint32_t meshIdx = 0; meshIdx < model.meshes.size(); meshIdx++)
 		{
 			tinygltf::Mesh& mesh = model.meshes[meshIdx];
 			returnVal.push_back(Renderer::MeshData_());
 			Renderer::MeshData_& meshData = returnVal.back();
 
 			// TODO: load per mesh textures
-			meshData.alphaMap = handle->alphaMap;
 			meshData.albedoMap = handle->albedoMap;
 			meshData.specularMap = handle->specularMap;
 			meshData.normalMap = handle->normalMap;
@@ -33,7 +32,7 @@ namespace sge
 			const auto indicesIdx = mesh.primitives[0].indices;
 			auto& materialIdx = mesh.primitives[0].material;
 
-			for (const auto& pair : attributes)
+			for(const auto& pair : attributes)
 			{
 				assert // Expecting the gltf to have all the data needed for normalmapped Blinn-Phong.
 				(
@@ -52,7 +51,7 @@ namespace sge
 					model.nodes[meshIdx].matrix[12], model.nodes[meshIdx].matrix[13], model.nodes[meshIdx].matrix[14], model.nodes[meshIdx].matrix[15]) :
 				IDENTITY_MAT4;
 
-			if (modelMatrix == IDENTITY_MAT4)
+			if(modelMatrix == IDENTITY_MAT4)
 			{
 				const glm::vec3 translation = (model.nodes[meshIdx].translation.size() > 0) ?
 					glm::vec3(model.nodes[meshIdx].translation[0], model.nodes[meshIdx].translation[1], model.nodes[meshIdx].translation[2]) :
@@ -87,7 +86,7 @@ namespace sge
 					reinterpret_cast<glm::vec3*>(buffer.data.data()) + (bufferView.byteOffset / sizeof(glm::vec3)) + (bufferView.byteLength / sizeof(glm::vec3))
 				);
 
-				for (size_t i = 0; i < positions.size(); i++)
+				for(size_t i = 0; i < positions.size(); i++)
 				{
 					positions[i] = modelMatrix * glm::vec4(positions[i], 1.0f);
 				}
@@ -144,7 +143,7 @@ namespace sge
 				assert(normals.size() * 4 == tangentsVec4.size());
 				std::vector<glm::vec3> tangents = std::vector<glm::vec3>(normals.size());
 
-				for (size_t i = 0; i < normals.size(); i++)
+				for(size_t i = 0; i < normals.size(); i++)
 				{
 					const glm::vec3 tangent = glm::vec3(tangentsVec4[i * 4 + 0], tangentsVec4[i * 4 + 1], tangentsVec4[i * 4 + 2]);
 					assert(glm::length(tangent) > 0.99f);
@@ -227,54 +226,109 @@ namespace sge
 		// TODO: separate draw calls into two queues based on whether the mesh has transparency or not.
 
 		glClear(CLEAR_FLAGS_);
-		
-		// TODO: make a pass on all shaders beforehand to set the common uniforms instead of bothering the gpu for every model.
+
+		// TODO: make a pass on all draw calls to update only the shaders that will be used.
+		for(auto& pair : shaders_.GetData())
+		{
+			auto& shader = pair.second;
+			switch(shader.illum)
+			{
+				case Shader::IlluminationModel::BLINN_PHONG_NORMALMAPPED:
+				{
+					shader.SetMat4("cameraMatrix", WINDOW_PROJECTION * viewMatrix_);
+					shader.SetVec3("viewPos", glm::vec3(viewMatrix_[3]));
+				}break;
+				case Shader::IlluminationModel::BLINN_PHONG:
+				{
+					shader.SetMat4("cameraMatrix", WINDOW_PROJECTION * viewMatrix_);
+					shader.SetVec3("viewPos", glm::vec3(viewMatrix_[3]));
+				}break;
+				case Shader::IlluminationModel::GOOCH:
+				{
+					shader.SetMat4("cameraMatrix", WINDOW_PROJECTION * viewMatrix_);
+					shader.SetVec3("viewPos", glm::vec3(viewMatrix_[3]));
+				}break;
+				case Shader::IlluminationModel::GIZMO:
+				{
+					shader.SetMat4("cameraMatrix", WINDOW_PROJECTION * viewMatrix_);
+				}break;
+				case Shader::IlluminationModel::ALBEDO_ONLY: break;
+				default:
+				{
+					sge_ERROR("Unexpected illumination model!");
+				}break;
+			}
+		}
 
 		const size_t queueLen = drawQueue_.size();
-		for (size_t modelIdx = 0; modelIdx < queueLen; modelIdx++)
+		for(size_t modelIdx = 0; modelIdx < queueLen; modelIdx++)
 		{
 			Model& model = *drawQueue_[modelIdx].model;
 			Shader& shader = *drawQueue_[modelIdx].shader;
 			const int32_t primitive = drawQueue_[modelIdx].primitive;
 
 			std::vector<glm::mat4> transforms = FrustumCulling_(RESOLUTION, FULL_FOV[0], WINDOW_PROJECTION_NEAR, WINDOW_PROJECTION_FAR, model.radius, model.transformsBegin, model.transformsEnd);
-			if (transforms.size() < 1) continue;
+			if(transforms.size() < 1) continue;
 
 			assert(shader.PROGRAM > 0);
 			glUseProgram(shader.PROGRAM);
-			shader.SetMat4("cameraMatrix", WINDOW_PROJECTION * viewMatrix_);
-			shader.SetVec3("viewPos", glm::vec3(viewMatrix_[3]));
-			shader.SetInt("alphaMap", 0);
-			shader.SetInt("albedoMap", 1);
-			shader.SetInt("specularMap", 2);
-			shader.SetInt("normalMap", 3);
 			sge_CHECK_GL_ERROR();
 
 			const size_t meshLen = model.meshes.size();
-			for (size_t meshIdx = 0; meshIdx < meshLen; meshIdx++)
+			for(size_t meshIdx = 0; meshIdx < meshLen; meshIdx++)
 			{
 				Mesh& mesh = *model.meshes[meshIdx];
-				shader.SetFloat("shininess", mesh.shininess);
 
 				assert(mesh.VAO > 0);
 				glBindVertexArray(mesh.VAO);
 				sge_CHECK_GL_ERROR();
 
-				glActiveTexture(GL_TEXTURE0);
-				glBindTexture(GL_TEXTURE_2D, mesh.alphaMap->TEX);
-				sge_CHECK_GL_ERROR();
-
-				glActiveTexture(GL_TEXTURE1);
-				glBindTexture(GL_TEXTURE_2D, mesh.albedoMap->TEX);
-				sge_CHECK_GL_ERROR();
-
-				glActiveTexture(GL_TEXTURE2);
-				glBindTexture(GL_TEXTURE_2D, mesh.specularMap->TEX);
-				sge_CHECK_GL_ERROR();
-
-				glActiveTexture(GL_TEXTURE3);
-				glBindTexture(GL_TEXTURE_2D, mesh.normalMap->TEX);
-				sge_CHECK_GL_ERROR();
+				switch(shader.illum)
+				{
+					case Shader::IlluminationModel::BLINN_PHONG_NORMALMAPPED:
+					{
+						assert(mesh.shininess > 0.0f);
+						shader.SetFloat("shininess", mesh.shininess);
+						glActiveTexture(GL_TEXTURE0);
+						glBindTexture(GL_TEXTURE_2D, mesh.albedoMap->TEX);
+						sge_CHECK_GL_ERROR();
+						glActiveTexture(GL_TEXTURE1);
+						glBindTexture(GL_TEXTURE_2D, mesh.specularMap->TEX);
+						sge_CHECK_GL_ERROR();
+						glActiveTexture(GL_TEXTURE2);
+						glBindTexture(GL_TEXTURE_2D, mesh.normalMap->TEX);
+						sge_CHECK_GL_ERROR();
+					}break;
+					case Shader::IlluminationModel::BLINN_PHONG:
+					{
+						assert(mesh.shininess > 0.0f);
+						shader.SetFloat("shininess", mesh.shininess);
+						glActiveTexture(GL_TEXTURE0);
+						glBindTexture(GL_TEXTURE_2D, mesh.albedoMap->TEX);
+						sge_CHECK_GL_ERROR();
+						glActiveTexture(GL_TEXTURE1);
+						glBindTexture(GL_TEXTURE_2D, mesh.specularMap->TEX);
+						sge_CHECK_GL_ERROR();
+					}break;
+					case Shader::IlluminationModel::GOOCH:
+					{
+						shader.SetVec3("baseColor", mesh.color);
+					}break;
+					case Shader::IlluminationModel::GIZMO:
+					{
+						shader.SetVec3("baseColor", mesh.color);
+					}break;
+					case Shader::IlluminationModel::ALBEDO_ONLY:
+					{
+						glActiveTexture(GL_TEXTURE0);
+						glBindTexture(GL_TEXTURE_2D, mesh.albedoMap->TEX);
+						sge_CHECK_GL_ERROR();
+					}break;
+					default:
+					{
+						sge_ERROR("Unexpected illumination model!");
+					}break;
+				}
 
 				glBindBuffer(GL_ARRAY_BUFFER, model.transformsVertexBuffer->VBO);
 				glBufferSubData(GL_ARRAY_BUFFER, 0, transforms.size() * sizeof(glm::mat4), transforms.data());
@@ -294,7 +348,14 @@ namespace sge
 				glVertexAttribDivisor(7, 1);
 				sge_CHECK_GL_ERROR();
 
-				glDrawElementsInstanced(primitive, mesh.nrOfVertices, mesh.indexType, 0, transforms.size());
+				if(mesh.indexType > 0)
+				{
+					glDrawElementsInstanced(primitive, mesh.nrOfVertices, mesh.indexType, 0, transforms.size());
+				}
+				else
+				{
+					glDrawArraysInstanced(primitive, 0, mesh.nrOfVertices, transforms.size());
+				}
 			}
 		}
 
@@ -332,7 +393,7 @@ namespace sge
 		return models_.Access(handle);
 	}
 
-	ShaderHandle Renderer::CreateShader(const ShaderDataHandle& handle)
+	ShaderHandle Renderer::CreateShader(const ShaderDataHandle& handle, const Shader::IlluminationModel illum)
 	{
 		uint32_t VERT = 0, FRAG = 0;
 		int32_t success = false;
@@ -353,7 +414,7 @@ namespace sge
 		sge_CHECK_GL_ERROR();
 		glGetShaderiv(VERT, GL_COMPILE_STATUS, &success);
 		sge_CHECK_GL_ERROR();
-		if (!success) { sge_ERROR(errorMsg); }
+		if(!success) { sge_ERROR(errorMsg); }
 
 		FRAG = glCreateShader(GL_FRAGMENT_SHADER);
 		glShaderSource(FRAG, 1, &fragSrc, NULL);
@@ -362,7 +423,7 @@ namespace sge
 		sge_CHECK_GL_ERROR();
 		glGetShaderiv(FRAG, GL_COMPILE_STATUS, &success);
 		sge_CHECK_GL_ERROR();
-		if (!success) { sge_ERROR(errorMsg); }
+		if(!success) { sge_ERROR(errorMsg); }
 
 		uint32_t PROGRAM = glCreateProgram();
 		glAttachShader(PROGRAM, VERT);
@@ -372,7 +433,7 @@ namespace sge
 		sge_CHECK_GL_ERROR();
 		glGetProgramiv(PROGRAM, GL_LINK_STATUS, &success);
 		sge_CHECK_GL_ERROR();
-		if (!success) { sge_ERROR(errorMsg); }
+		if(!success) { sge_ERROR(errorMsg); }
 
 		glDeleteShader(VERT);
 		glDeleteShader(FRAG);
@@ -382,6 +443,33 @@ namespace sge
 		newElement.PROGRAM = PROGRAM;
 		newElement.hash = handle.hash;
 		assert(newElement.hash > 0);
+		newElement.illum = illum;
+
+		switch(illum)
+		{
+			case Shader::IlluminationModel::BLINN_PHONG_NORMALMAPPED:
+			{
+				newElement.SetInt("albedoMap", 0);
+				newElement.SetInt("specularMap", 1);
+				newElement.SetInt("normalMap", 2);
+			}break;
+			case Shader::IlluminationModel::BLINN_PHONG:
+			{
+				newElement.SetInt("albedoMap", 0);
+				newElement.SetInt("specularMap", 1);
+			}break;
+			case Shader::IlluminationModel::GOOCH: break;
+			case Shader::IlluminationModel::GIZMO: break;
+			case Shader::IlluminationModel::ALBEDO_ONLY:
+			{
+				newElement.SetInt("albedoMap", 0);
+			}break;
+			default:
+			{
+				sge_ERROR("Unexpected illumination mode set for shader!");
+			}break;
+		}
+
 		shaders_.Insert(newElement);
 
 		ShaderHandle returnVal;
@@ -430,11 +518,11 @@ namespace sge
 
 		assert(gli::is_compressed(handle->data.format()));
 
-		for (size_t layer = 0; layer < layers; layer++)
+		for(size_t layer = 0; layer < layers; layer++)
 		{
-			for (size_t face = 0; face < faces; face++)
+			for(size_t face = 0; face < faces; face++)
 			{
-				for (size_t level = 0; level < levels; level++)
+				for(size_t level = 0; level < levels; level++)
 				{
 					extents = glm::tvec3<GLsizei>(handle->data.extent(level));
 					glCompressedTexSubImage2D
@@ -467,6 +555,11 @@ namespace sge
 
 	VertexBufferHandle Renderer::CreateVertexBuffer(const std::vector<float>& data, const int32_t usage)
 	{
+		if(data.size() < 1)
+		{
+			return VertexBufferHandle();
+		}
+
 		uint32_t VBO = 0;
 
 		glGenBuffers(1, &VBO);
@@ -494,7 +587,6 @@ namespace sge
 		VertexBufferHandle normals;
 		VertexBufferHandle tangents;
 		VertexBufferHandle uvs;
-		TextureHandle alphaMap;
 		TextureHandle albedoMap;
 		TextureHandle specularMap;
 		TextureHandle normalMap;
@@ -519,6 +611,7 @@ namespace sge
 			reinterpret_cast<const float*>(data.positions.data() + data.positions.size())
 		);
 		positions = CreateVertexBuffer(positionsData, GL_STATIC_DRAW);
+		assert(positions.hash > 0);
 
 		std::vector<float> normalsData;
 		normalsData.insert
@@ -547,62 +640,103 @@ namespace sge
 		);
 		uvs = CreateVertexBuffer(uvsData, GL_STATIC_DRAW);
 
-		nrOfVertices = data.indices.size();
-		indexType = GL_UNSIGNED_SHORT;
+		if(data.indexType != MeshData_::IndexType::INVALID)
+		{
+			nrOfVertices = data.indices.size();
+		}
+		else
+		{
+			// TODO: find a way to do this in a generic manner.
+			nrOfVertices = positionsData.size() / 3;
+		}
+		indexType = data.indexType == MeshData_::IndexType::INVALID ? 0 : GL_UNSIGNED_SHORT; // TODO: use indexType to set the appropriate index type.
 
 		glBindVertexArray(VAO);
 		glBindBuffer(GL_ARRAY_BUFFER, positions->VBO);
 		glEnableVertexAttribArray(0);
 		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(glm::vec3), (void*)0);
-		glBindBuffer(GL_ARRAY_BUFFER, normals->VBO);
-		glEnableVertexAttribArray(1);
-		glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(glm::vec3), (void*)0);
-		glBindBuffer(GL_ARRAY_BUFFER, tangents->VBO);
-		glEnableVertexAttribArray(2);
-		glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, sizeof(glm::vec3), (void*)0);
-		glBindBuffer(GL_ARRAY_BUFFER, uvs->VBO);
-		glEnableVertexAttribArray(3);
-		glVertexAttribPointer(3, 2, GL_FLOAT, GL_FALSE, sizeof(glm::vec2), (void*)0);
+		if(normalsData.size() > 0)
+		{
+			glBindBuffer(GL_ARRAY_BUFFER, normals->VBO);
+			glEnableVertexAttribArray(1);
+			glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(glm::vec3), (void*)0);
+		}
+		if(tangentsData.size() > 0)
+		{
+			glBindBuffer(GL_ARRAY_BUFFER, tangents->VBO);
+			glEnableVertexAttribArray(2);
+			glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, sizeof(glm::vec3), (void*)0);
+		}
+		if(uvsData.size() > 0)
+		{
+			glBindBuffer(GL_ARRAY_BUFFER, uvs->VBO);
+			glEnableVertexAttribArray(3);
+			glVertexAttribPointer(3, 2, GL_FLOAT, GL_FALSE, sizeof(glm::vec2), (void*)0);
+		}
 
 		glBindBuffer(GL_ARRAY_BUFFER, 0);
 		glBindVertexArray(0);
 
-		alphaMap = CreateTexture(data.alphaMap);
-		albedoMap = CreateTexture(data.albedoMap);
-		specularMap = CreateTexture(data.specularMap);
-		normalMap = CreateTexture(data.normalMap);
-		assert(alphaMap.hash > 0 && albedoMap.hash > 0 && specularMap.hash > 0 && normalMap.hash > 0);
+		if(data.albedoMap.hash > 0)
+		{
+			albedoMap = CreateTexture(data.albedoMap);
+		}
+		if(data.specularMap.hash > 0)
+		{
+			specularMap = CreateTexture(data.specularMap);
+		}
+		if(data.normalMap.hash > 0)
+		{
+			normalMap = CreateTexture(data.normalMap);
+		}
 
 		Mesh newElement;
 		newElement.positions = positions;
 		assert(newElement.positions->hash > 0);
 		newElement.normals = normals;
-		assert(newElement.normals->hash > 0);
+		// assert(newElement.normals->hash > 0);
 		newElement.tangents = tangents;
-		assert(newElement.tangents->hash > 0);
+		// assert(newElement.tangents->hash > 0);
 		newElement.EBO = EBO;
 		newElement.VAO = VAO;
 		newElement.indexType = indexType;
-		assert(newElement.indexType == GL_UNSIGNED_SHORT);
+		// assert(newElement.indexType == GL_UNSIGNED_SHORT);
 		newElement.isTransparent = isTransparent;
 		newElement.nrOfVertices = nrOfVertices;
 		assert(newElement.nrOfVertices > 0);
 		newElement.shininess = shininess;
-		newElement.alphaMap = alphaMap;
 		newElement.albedoMap = albedoMap;
 		newElement.specularMap = specularMap;
 		newElement.normalMap = normalMap;
+		newElement.color = data.color;
 
 		std::string accumulatedData = "";
 		accumulatedData += std::to_string(positions->hash);
-		accumulatedData += std::to_string(normals->hash);
-		accumulatedData += std::to_string(tangents->hash);
-		accumulatedData += std::to_string(uvs->hash);
+		if(normals.hash > 0)
+		{
+			accumulatedData += std::to_string(normals->hash);
+		}
+		if(tangents.hash > 0)
+		{
+			accumulatedData += std::to_string(tangents->hash);
+		}
+		if(uvs.hash > 0)
+		{
+			accumulatedData += std::to_string(uvs->hash);
+		}
 		accumulatedData += std::to_string(shininess);
-		accumulatedData += std::to_string(alphaMap->hash);
-		accumulatedData += std::to_string(albedoMap->hash);
-		accumulatedData += std::to_string(specularMap->hash);
-		accumulatedData += std::to_string(normalMap->hash);
+		if(albedoMap.hash > 0)
+		{
+			accumulatedData += std::to_string(albedoMap->hash);
+		}
+		if(specularMap.hash > 0)
+		{
+			accumulatedData += std::to_string(specularMap->hash);
+		}
+		if(normalMap.hash > 0)
+		{
+			accumulatedData += std::to_string(normalMap->hash);
+		}
 		newElement.hash = XXH32(accumulatedData.data(), accumulatedData.size(), HASHING_SEED);
 		assert(newElement.hash > 0);
 
@@ -644,7 +778,7 @@ namespace sge
 
 		auto meshesData = ProcessGltf_(handle);
 		meshes.reserve(meshesData.size());
-		for (const auto& mesh : meshesData)
+		for(const auto& mesh : meshesData)
 		{
 			assert(mesh.positions.size() > 0);
 			assert(mesh.normals.size() > 0);
@@ -671,7 +805,60 @@ namespace sge
 		returnVal.hash = newElement.hash;
 		return returnVal;
 	}
-	
+
+	ModelHandle Renderer::CreateModel(const std::vector<float>& data, const std::vector<uint32_t>& layout, const std::vector<glm::mat4>& transforms, const glm::vec3 color)
+	{
+		Model newElement;
+
+		std::vector<MeshHandle> meshes;
+		glm::mat4* transformsBegin;
+		glm::mat4* transformsEnd;
+		VertexBufferHandle transformsVertexBuffer;
+		const float radius = 0.0f; // TODO: set this
+
+		assert(transforms.size() > 0);
+		transformsBegin = Engine::Get().GetResourceManager().AllocateTransforms(transforms);
+		transformsEnd = transformsBegin + transforms.size();
+		assert(transformsEnd > transformsBegin);
+		std::vector<float> transformsData;
+		transformsData.insert
+		(
+			transformsData.end(),
+			reinterpret_cast<const float*>(transforms.data()),
+			reinterpret_cast<const float*>(transforms.data() + transforms.size())
+		);
+		transformsVertexBuffer = CreateVertexBuffer(transformsData, GL_DYNAMIC_DRAW);
+		assert(transformsVertexBuffer->hash > 0 && transformsVertexBuffer.hash > 0 && (transformsVertexBuffer->hash == transformsVertexBuffer.hash));
+
+		MeshData_ meshData;
+		meshData.color = color;
+		meshData.indexType = MeshData_::IndexType::INVALID;
+		assert(layout.size() == 1 && layout[0] == 3); // TODO: actually allow user to create own mesh with own data layout.
+		meshData.positions.insert
+		(
+			meshData.positions.end(),
+			reinterpret_cast<const glm::vec3*>(data.data()),
+			reinterpret_cast<const glm::vec3*>(data.data() + data.size())
+		);
+		meshData.shininess = 0.0f;
+		meshes.push_back(CreateMesh(meshData));
+
+		newElement.meshes = meshes;
+		newElement.radius = radius;
+		newElement.transformsBegin = transformsBegin;
+		newElement.transformsEnd = transformsEnd;
+		newElement.transformsVertexBuffer = transformsVertexBuffer;
+		std::string accumulatedData = "";
+		accumulatedData += std::to_string(newElement.meshes[0].hash);
+		accumulatedData += std::to_string(newElement.transformsVertexBuffer.hash);
+		newElement.hash = XXH32(accumulatedData.c_str(), accumulatedData.size(), HASHING_SEED);
+		models_.Insert(newElement);
+
+		ModelHandle returnVal;
+		returnVal.hash = newElement.hash;
+		return returnVal;
+	}
+
 	void Renderer::Schedule(const ModelHandle& model, const ShaderHandle& shader, const int32_t primitive)
 	{
 		assert(model->hash > 0 && shader->hash > 0);

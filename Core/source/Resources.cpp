@@ -112,6 +112,7 @@ namespace sge
 			sge_CHECK_GL_ERROR();
 		}
 		PROGRAM = 0;
+		illum = IlluminationModel::INVALID;
 		uniformLocationCache.clear();
 	}
 	void sge::Texture::Destroy()
@@ -137,6 +138,7 @@ namespace sge
 		indexType = GL_UNSIGNED_SHORT;
 		nrOfVertices = 0;
 		shininess = 0.0f;
+		color = WHITE;
 		// normalMap->Destroy();
 		// specularMap->Destroy();
 		// albedoMap->Destroy();

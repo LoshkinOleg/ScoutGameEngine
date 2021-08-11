@@ -29,7 +29,12 @@ namespace sge
 			enum IndexType : uint32_t
 			{
 				INVALID = 0,
-				UNSIGNED_SHORT = 2
+				UNSIGNED_BYTE = 1,
+				SIGNED_BYTE = 1,
+				UNSIGNED_SHORT = 2,
+				SIGNED_SHORT = 2,
+				UNSIGNED_INT = 4,
+				SIGNED_INT = 4
 			};
 
 			std::vector<glm::vec3> positions = {};
@@ -37,11 +42,11 @@ namespace sge
 			std::vector<glm::vec3> tangents = {};
 			std::vector<glm::vec2> uvs = {};
 			std::vector<uint16_t> indices = {};
-			KtxDataHandle alphaMap = {};
 			KtxDataHandle albedoMap = {};
 			KtxDataHandle specularMap = {};
 			KtxDataHandle normalMap = {};
 			float shininess = 0.0f;
+			glm::vec3 color = WHITE;
 			IndexType indexType = IndexType::INVALID;
 		};
 
@@ -73,11 +78,12 @@ namespace sge
 		Mesh& GetMesh(const MeshHandle& handle);
 		Model& GetModel(const ModelHandle& handle);
 
-		ShaderHandle CreateShader(const ShaderDataHandle& handle);
+		ShaderHandle CreateShader(const ShaderDataHandle& handle, const Shader::IlluminationModel illum);
 		TextureHandle CreateTexture(const KtxDataHandle& handle);
 		VertexBufferHandle CreateVertexBuffer(const std::vector<float>& data, const int32_t usage);
 		MeshHandle CreateMesh(const MeshData_& data);
 		ModelHandle CreateModel(const GltfDataHandle& handle, const std::vector<glm::mat4>& transforms);
+		ModelHandle CreateModel(const std::vector<float>& data, const std::vector<uint32_t>& layout, const std::vector<glm::mat4>& transforms, const glm::vec3 color);
 
 		void Schedule(const ModelHandle& model, const ShaderHandle& shader, const int32_t primitive);
 	};

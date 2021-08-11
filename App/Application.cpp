@@ -1,39 +1,19 @@
-#include <iostream>
-#include <string>
-
-#include <glm/glm.hpp>
-#include <glad/glad.h>
-
 #include "Engine.h"
-#include "globals.h"
+
+#include "Gizmos.h"
 
 class Game final : public sge::I_Application
 {
 private:
-	sge::ModelHandle model;
-	sge::ShaderHandle shader;
+	sge::Gizmos::GizmoVector vector;
 public:
 	void Init() override
 	{
-		auto& rm = sge::Engine::Get().GetResourceManager();
-		auto& renderer = sge::Engine::Get().GetRenderer();
-
-		auto gltfHandle = rm.LoadGltf("../data/gltfs/complexScene.gltf");
-		model = renderer.CreateModel(gltfHandle, { glm::translate(sge::IDENTITY_MAT4, sge::DOWN_VEC3 * 10.0f) });
-		rm.FreeGltf(gltfHandle);
-
-		auto shaderSrcHandle = rm.LoadShader("../data/shaders/blinnPhongNormalmapped.vert", "../data/shaders/blinnPhongNormalmapped.frag");
-		shader = renderer.CreateShader(shaderSrcHandle);
-		rm.FreeShader(shaderSrcHandle);
+		vector = sge::Gizmos::CreateVector(sge::RED);
 	}
 	void Update() override
 	{
-		for (glm::mat4* it = model->transformsBegin; it < model->transformsEnd; it++)
-		{
-			*it = glm::rotate(*it, 0.01f, glm::normalize(sge::EAST_VEC3 + sge::NORTH_VEC3));
-		}
-
-		sge::Engine::Get().GetRenderer().Schedule(model, shader, GL_TRIANGLES);
+		vector.Schedule();
 	}
 	void Shutdown() override
 	{

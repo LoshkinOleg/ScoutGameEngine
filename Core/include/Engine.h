@@ -3,6 +3,7 @@
 #include "Renderer.h"
 #include "InputManager.h"
 #include "ResourceManager.h"
+#include "PhysicsEngine.h"
 #include "macros.h"
 
 struct SDL_Window;
@@ -28,6 +29,7 @@ namespace sge
 		Renderer renderer_ = {};
 		InputManager inputManager_ = {};
 		ResourceManager resourceManager_ = {};
+		PhysicsEngine physicsEngine_ = {};
 		I_Application* app_ = nullptr;
 
 	private:

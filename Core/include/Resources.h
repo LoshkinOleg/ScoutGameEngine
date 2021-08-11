@@ -12,6 +12,7 @@ using json = nlohmann::json;
 #include <gli/gli.hpp>
 #include <tiny_gltf.h>
 
+#include "globals.h"
 #include "macros.h"
 
 namespace sge
@@ -46,6 +47,10 @@ namespace sge
 	protected:
 		std::map<Hash, Resource> data_ = {};
 	public:
+		std::map<Hash, Resource> GetData()
+		{
+			return data_;
+		}
 		Resource& Access(const Handle& handle)
 		{
 			assert(handle.hash > 0);
@@ -135,8 +140,19 @@ namespace sge
 
 	struct Shader : public A_Resource
 	{
+		enum class IlluminationModel
+		{
+			INVALID = 0,
+			GOOCH = 1,
+			ALBEDO_ONLY = 2,
+			BLINN_PHONG = 3,
+			BLINN_PHONG_NORMALMAPPED = 4,
+			GIZMO = 5
+		};
+
 		uint32_t PROGRAM = 0;
 		std::map<Hash, uint32_t> uniformLocationCache = {};
+		IlluminationModel illum = IlluminationModel::INVALID;
 
 		void Destroy() override;
 		int32_t GetUniformLocation(const std::string_view name);
@@ -187,13 +203,13 @@ namespace sge
 		VertexBufferHandle normals = {};
 		VertexBufferHandle tangents = {};
 		VertexBufferHandle uvs = {};
-		TextureHandle alphaMap = {};
 		TextureHandle albedoMap = {};
 		TextureHandle specularMap = {};
 		TextureHandle normalMap = {};
 		float shininess = 0.0f;
 		uint32_t nrOfVertices = 0;
 		int32_t indexType = GL_UNSIGNED_SHORT;
+		glm::vec3 color = WHITE;
 		bool isTransparent = false;
 
 		void Destroy() override;

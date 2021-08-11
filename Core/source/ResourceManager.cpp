@@ -56,8 +56,16 @@ namespace sge
 		return returnVal;
 	}
 
-	GltfDataHandle ResourceManager::LoadGltf(const std::string_view path)
+	GltfDataHandle ResourceManager::LoadGltf(const std::string_view path, const GltfAttributes dataToLoad)
 	{
+		// TODO: implement selective loading.
+		assert
+		(
+			dataToLoad ==
+				(GltfAttributes::POSITIONS | GltfAttributes::NORMALS | GltfAttributes::TANGENTS | GltfAttributes::UVS |
+				 GltfAttributes::ALPHA_MAPS | GltfAttributes::ALBEDO_MAPS | GltfAttributes::SPECULAR_MAPS | GltfAttributes::NORMALS)
+		);
+
 		const std::string_view extension = path.substr(path.find_last_of('.'), path.size());
 		assert(extension == ".glb" || extension == ".gltf"); // Make sure we're loading a gltf file.
 		assert(std::filesystem::exists(path));
