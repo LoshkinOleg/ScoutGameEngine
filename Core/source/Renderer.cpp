@@ -263,7 +263,7 @@ namespace sge
 		const size_t queueLen = drawQueue_.size();
 		for(size_t modelIdx = 0; modelIdx < queueLen; modelIdx++)
 		{
-			Model& model = *drawQueue_[modelIdx].model;
+			BlinnPhongModel& model = *drawQueue_[modelIdx].model;
 			Shader& shader = *drawQueue_[modelIdx].shader;
 			const int32_t primitive = drawQueue_[modelIdx].primitive;
 
@@ -277,7 +277,7 @@ namespace sge
 			const size_t meshLen = model.meshes.size();
 			for(size_t meshIdx = 0; meshIdx < meshLen; meshIdx++)
 			{
-				Mesh& mesh = *model.meshes[meshIdx];
+				BlinnPhongMesh& mesh = *model.meshes[meshIdx];
 
 				assert(mesh.VAO > 0);
 				glBindVertexArray(mesh.VAO);
@@ -383,12 +383,12 @@ namespace sge
 		return vertexBuffers_.Access(handle);
 	}
 
-	Mesh& Renderer::GetMesh(const MeshHandle& handle)
+	BlinnPhongMesh& Renderer::GetMesh(const BlinnPhongMeshHandle& handle)
 	{
 		return meshes_.Access(handle);
 	}
 
-	Model& Renderer::GetModel(const ModelHandle& handle)
+	BlinnPhongModel& Renderer::GetModel(const BlinnPhongModelHandle& handle)
 	{
 		return models_.Access(handle);
 	}
@@ -553,34 +553,21 @@ namespace sge
 		return returnVal;
 	}
 
-	VertexBufferHandle Renderer::CreateVertexBuffer(const std::vector<float>& data, const int32_t usage)
+	Handle<VertexBuffer> Renderer::CreateVertexBuffer(const VertexBuffer::Definition& def, const Hash& accumulatedHash)
 	{
-		if(data.size() < 1)
-		{
-			return VertexBufferHandle();
-		}
+		vertexBuffers_.push_back({});
+		auto& vb = vertexBuffers_.back();
+		vb.resourceData.Init(def);
+		vb.hash.Generate(&vb.resourceData.VBO, sizeof(uint32_t));
+		vb.hash.Accumulate(accumulatedHash);
 
-		uint32_t VBO = 0;
-
-		glGenBuffers(1, &VBO);
-		glBindBuffer(GL_ARRAY_BUFFER, VBO);
-		sge_CHECK_GL_ERROR();
-		glBufferData(GL_ARRAY_BUFFER, data.size() * sizeof(float), data.data(), usage);
-		sge_CHECK_GL_ERROR();
-		glBindBuffer(GL_ARRAY_BUFFER, 0);
-
-		VertexBuffer newElement;
-		newElement.VBO = VBO;
-		newElement.hash = XXH32(data.data(), data.size() * sizeof(float), HASHING_SEED);
-		assert(newElement.hash > 0);
-		vertexBuffers_.Insert(newElement);
-
-		VertexBufferHandle returnVal;
-		returnVal.hash = newElement.hash;
-		return returnVal;
+		Handle<VertexBuffer> handle;
+		handle.hash = vb.hash;
+		handle.ptr = &vb;
+		return handle;
 	}
 
-	MeshHandle Renderer::CreateMesh(const MeshData_& data)
+	BlinnPhongMeshHandle Renderer::CreateMesh(const MeshData_& data)
 	{
 		uint32_t VAO = 0, EBO = 0;
 		VertexBufferHandle positions;
@@ -690,7 +677,7 @@ namespace sge
 			normalMap = CreateTexture(data.normalMap);
 		}
 
-		Mesh newElement;
+		BlinnPhongMesh newElement;
 		newElement.positions = positions;
 		assert(newElement.positions->hash > 0);
 		newElement.normals = normals;
@@ -742,17 +729,17 @@ namespace sge
 
 		meshes_.Insert(newElement);
 
-		MeshHandle returnVal;
+		BlinnPhongMeshHandle returnVal;
 		returnVal.hash = newElement.hash;
 		return returnVal;
 	}
 
-	ModelHandle Renderer::CreateModel(const GltfDataHandle& handle, const std::vector<glm::mat4>& transforms)
+	BlinnPhongModelHandle Renderer::CreateModel(const GltfDataHandle& handle, const std::vector<glm::mat4>& transforms)
 	{
-		Model newElement;
+		BlinnPhongModel newElement;
 
 		uint32_t hash = 0;
-		std::vector<MeshHandle> meshes;
+		std::vector<BlinnPhongMeshHandle> meshes;
 		glm::mat4* transformsBegin = nullptr;
 		glm::mat4* transformsEnd = nullptr;
 		VertexBufferHandle transformsVBO;
@@ -801,16 +788,16 @@ namespace sge
 		newElement.transformsVertexBuffer = transformsVBO;
 		models_.Insert(newElement);
 
-		ModelHandle returnVal;
+		BlinnPhongModelHandle returnVal;
 		returnVal.hash = newElement.hash;
 		return returnVal;
 	}
 
-	ModelHandle Renderer::CreateModel(const std::vector<float>& data, const std::vector<uint32_t>& layout, const std::vector<glm::mat4>& transforms, const glm::vec3 color)
+	BlinnPhongModelHandle Renderer::CreateModel(const std::vector<float>& data, const std::vector<uint32_t>& layout, const std::vector<glm::mat4>& transforms, const glm::vec3 color)
 	{
-		Model newElement;
+		BlinnPhongModel newElement;
 
-		std::vector<MeshHandle> meshes;
+		std::vector<BlinnPhongMeshHandle> meshes;
 		glm::mat4* transformsBegin;
 		glm::mat4* transformsEnd;
 		VertexBufferHandle transformsVertexBuffer;
@@ -854,12 +841,12 @@ namespace sge
 		newElement.hash = XXH32(accumulatedData.c_str(), accumulatedData.size(), HASHING_SEED);
 		models_.Insert(newElement);
 
-		ModelHandle returnVal;
+		BlinnPhongModelHandle returnVal;
 		returnVal.hash = newElement.hash;
 		return returnVal;
 	}
 
-	void Renderer::Schedule(const ModelHandle& model, const ShaderHandle& shader, const int32_t primitive)
+	void Renderer::Schedule(const BlinnPhongModelHandle& model, const ShaderHandle& shader, const int32_t primitive)
 	{
 		assert(model->hash > 0 && shader->hash > 0);
 

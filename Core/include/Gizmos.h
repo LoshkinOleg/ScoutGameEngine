@@ -9,7 +9,7 @@ namespace sge
     public: // TODO: encapsulate this in a container, resource, handle too.
         struct GizmoVector
         {
-            ModelHandle model = {};
+            BlinnPhongModelHandle model = {};
             ShaderHandle shader = {};
             glm::mat4* transform = nullptr;
 

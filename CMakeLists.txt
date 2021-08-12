@@ -28,11 +28,10 @@ file(GLOB_RECURSE Game_sources ${PROJECT_SOURCE_DIR}/Game/source/*.cpp ${PROJECT
 file(GLOB_RECURSE Game_shaders ${PROJECT_SOURCE_DIR}/data/shaders/*.*)
 add_library(Game STATIC ${Game_sources})
 target_link_libraries(Game PUBLIC Core)
-source_group("Shaders" FILES ${Game_shaders})
 
-file(GLOB_RECURSE executable_files ${PROJECT_SOURCE_DIR}/App/*.cpp)
-foreach(executable ${executable_files})
-get_filename_component(executable_name ${executable} NAME_WE)
-add_executable(${executable_name} ${executable})
-target_link_libraries(${executable_name} PRIVATE Game)
-endforeach()
+file(GLOB application_files ${PROJECT_SOURCE_DIR}/App/Application.cpp)
+add_executable(Application ${application_files})
+target_link_libraries(Application PRIVATE Game)
+
+file(GLOB simpleMain_files ${PROJECT_SOURCE_DIR}/App/SimpleMain.cpp)
+add_executable(SimpleMain ${simpleMain_files})

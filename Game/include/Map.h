@@ -1,29 +1,20 @@
 #pragma once
-/*
+
+#include "Resources.h"
+#include "PerlinNoise.h"
+#include "Engine.h"
+
 namespace hs
 {
     class Map
     {
     private:
         constexpr static const size_t CHUNK_RESOLUTION_ = 64;
-        constexpr static const float MAP_TILE_MULTIPLIER_ = 20.0f; // Needs to be big enough for the player not to see the chunks updating.
-        constexpr static const float TEXTURE_QUAD_SIDE_LEN_ = 2.0f; // Data in the quad VBO ranges from -1 to 1. Must take this into account when using the map.
-
-        enum ChunkLocation: int
-        {
-            BOTTOM_LEFT = 0,
-            BOTTOM_MIDDLE = 1,
-            BOTTOM_RIGHT = 2,
-            MIDDLE_LEFT = 3,
-            MIDDLE_MIDDLE = 4,
-            MIDDLE_RIGHT = 5,
-            TOP_LEFT = 6,
-            TOP_MIDDLE = 7,
-            TOP_RIGHT = 8
-        };
+        static const siv::BasicPerlinNoise<float> perlinGenerator_; // TODO: move this out of the class.
 
         struct MapChunk_
         {
+
             void Generate(const siv::BasicPerlinNoise<float>& perlinNoiseGenerator)
             {
                 constexpr const float INCREMENT_ = 1.0f / (float)CHUNK_RESOLUTION_;
@@ -49,7 +40,141 @@ namespace hs
             glm::ivec2 offset = { 0,0 };
         };
 
+        constexpr static const float MAP_TILE_MULTIPLIER_ = 20.0f; // Needs to be big enough for the player not to see the chunks updating.
+        constexpr static const float TEXTURE_QUAD_SIDE_LEN_ = 2.0f; // Data in the quad VBO ranges from -1 to 1. Must take this into account when using the map.
+
+        sge::ModelHandle
+            modelBottomLeft_, modelBottomMiddle_, modelBottomRight_,
+            modelMiddleLeft_, modelMiddleMiddle_, modelMiddleRight_,
+            modelTopLeft_, modelTopMiddle_, modelTopRight_;
+        MapChunk_
+            chunkBottomLeft_, chunkBottomMiddle_, chunkBottomRight_,
+            chunkMiddleLeft_, chunkMiddleMiddle_, chunkMiddleRight_,
+            chunkTopLeft_, chunkTopMiddle_, chunkTopRight_;
+        sge::ShaderHandle shader_;
+
     public:
+        void Init()
+        {
+            // Fill out chunks data.
+            const std::array<MapChunk_&, 9> chunks =
+            {
+                chunkBottomLeft_, chunkBottomMiddle_, chunkBottomRight_,
+                chunkMiddleLeft_, chunkMiddleMiddle_, chunkMiddleRight_,
+                chunkTopLeft_, chunkTopMiddle_, chunkTopRight_
+            };
+            for(int y = -1; y < 2; y++)
+            {
+                for(int x = -1; x < 2; x++)
+                {
+                    chunks[(y + 1) * 3 + (x + 1)].offset = { x * MAP_TILE_MULTIPLIER_ * TEXTURE_QUAD_SIDE_LEN_, y * MAP_TILE_MULTIPLIER_ * TEXTURE_QUAD_SIDE_LEN_ };
+                    chunks[(y + 1) * 3 + (x + 1)].Generate(perlinGenerator_);
+                }
+            }
+
+            // Request resources from engine.
+            auto& renderer = sge::Engine::Get().GetRenderer();
+        }
+        void Update(const glm::vec2 playerPos, const unsigned int VAO)
+        {
+            glBindVertexArray(VAO);
+
+            // Must be > 1 + (SQRT_OF_TWO / 2) to avoid updates fighting each other. Defines the radius of the circle the player can navigate in without triggering map updates.
+            constexpr const float TOLERABLE_PLAYER_OFFSET = 1.0f + SQRT_OF_TWO * 0.5f;
+            constexpr const float UPDATE_MAP_THRESHOLD = TOLERABLE_PLAYER_OFFSET * MAP_TILE_MULTIPLIER_ * TEXTURE_QUAD_SIDE_LEN_;
+
+            const bool updateRight = glm::length(chunks_[3].WorldPos() - playerPos) > UPDATE_MAP_THRESHOLD;
+            const bool updateLeft = glm::length(chunks_[5].WorldPos() - playerPos) > UPDATE_MAP_THRESHOLD;
+            const bool updateUp = glm::length(chunks_[1].WorldPos() - playerPos) > UPDATE_MAP_THRESHOLD;
+            const bool updateDown = glm::length(chunks_[7].WorldPos() - playerPos) > UPDATE_MAP_THRESHOLD;
+
+            if(updateRight) // Moving right.
+            {
+                chunks_[0] = chunks_[1];
+                chunks_[1] = chunks_[2];
+                chunks_[3] = chunks_[4];
+                chunks_[4] = chunks_[5];
+                chunks_[6] = chunks_[7];
+                chunks_[7] = chunks_[8];
+                chunks_[2].offset = chunks_[1].offset + glm::ivec2(MAP_TILE_MULTIPLIER_ * TEXTURE_QUAD_SIDE_LEN_, 0);
+                chunks_[5].offset = chunks_[4].offset + glm::ivec2(MAP_TILE_MULTIPLIER_ * TEXTURE_QUAD_SIDE_LEN_, 0);
+                chunks_[8].offset = chunks_[7].offset + glm::ivec2(MAP_TILE_MULTIPLIER_ * TEXTURE_QUAD_SIDE_LEN_, 0);
+                chunks_[2].Generate(perlinGenerator_);
+                chunks_[5].Generate(perlinGenerator_);
+                chunks_[8].Generate(perlinGenerator_);
+            }
+            if(updateLeft) // Moving left.
+            {
+                chunks_[2] = chunks_[1];
+                chunks_[1] = chunks_[0];
+                chunks_[5] = chunks_[4];
+                chunks_[4] = chunks_[3];
+                chunks_[8] = chunks_[7];
+                chunks_[7] = chunks_[6];
+                chunks_[0].offset = chunks_[1].offset - glm::ivec2(MAP_TILE_MULTIPLIER_ * TEXTURE_QUAD_SIDE_LEN_, 0);
+                chunks_[3].offset = chunks_[4].offset - glm::ivec2(MAP_TILE_MULTIPLIER_ * TEXTURE_QUAD_SIDE_LEN_, 0);
+                chunks_[6].offset = chunks_[7].offset - glm::ivec2(MAP_TILE_MULTIPLIER_ * TEXTURE_QUAD_SIDE_LEN_, 0);
+                chunks_[0].Generate(perlinGenerator_);
+                chunks_[3].Generate(perlinGenerator_);
+                chunks_[6].Generate(perlinGenerator_);
+            }
+            if(updateUp) // Moving up.
+            {
+                chunks_[0] = chunks_[3];
+                chunks_[3] = chunks_[6];
+                chunks_[1] = chunks_[4];
+                chunks_[4] = chunks_[7];
+                chunks_[2] = chunks_[5];
+                chunks_[5] = chunks_[8];
+                chunks_[6].offset = chunks_[3].offset + glm::ivec2(0, MAP_TILE_MULTIPLIER_ * TEXTURE_QUAD_SIDE_LEN_);
+                chunks_[7].offset = chunks_[4].offset + glm::ivec2(0, MAP_TILE_MULTIPLIER_ * TEXTURE_QUAD_SIDE_LEN_);
+                chunks_[8].offset = chunks_[5].offset + glm::ivec2(0, MAP_TILE_MULTIPLIER_ * TEXTURE_QUAD_SIDE_LEN_);
+                chunks_[6].Generate(perlinGenerator_);
+                chunks_[7].Generate(perlinGenerator_);
+                chunks_[8].Generate(perlinGenerator_);
+            }
+            if(updateDown) // Moving down.
+            {
+                chunks_[6] = chunks_[3];
+                chunks_[3] = chunks_[0];
+                chunks_[7] = chunks_[4];
+                chunks_[4] = chunks_[1];
+                chunks_[8] = chunks_[5];
+                chunks_[5] = chunks_[2];
+                chunks_[0].offset = chunks_[3].offset - glm::ivec2(0, MAP_TILE_MULTIPLIER_ * TEXTURE_QUAD_SIDE_LEN_);
+                chunks_[1].offset = chunks_[4].offset - glm::ivec2(0, MAP_TILE_MULTIPLIER_ * TEXTURE_QUAD_SIDE_LEN_);
+                chunks_[2].offset = chunks_[5].offset - glm::ivec2(0, MAP_TILE_MULTIPLIER_ * TEXTURE_QUAD_SIDE_LEN_);
+                chunks_[0].Generate(perlinGenerator_);
+                chunks_[1].Generate(perlinGenerator_);
+                chunks_[2].Generate(perlinGenerator_);
+            }
+
+            if(updateRight || updateLeft || updateDown || updateUp)
+            {
+                for(int i = 0; i < 9; i++)
+                {
+                    glBindTexture(GL_TEXTURE_2D, TEXs_[i]);
+                    glTexImage2D(GL_TEXTURE_2D, 0, GL_R32F, CHUNK_RESOLUTION_, CHUNK_RESOLUTION_, 0, GL_RED, GL_FLOAT, &(chunks_[i].data)[0][0]);
+                    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+                    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+                    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+                    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+                }
+            }
+
+            // Draw map.
+            shader_.Bind();
+            for(int i = 0; i < 9; i++)
+            {
+                glm::mat4 model = glm::translate(IDENTITY_MAT4, glm::vec3(chunks_[i].offset.x, chunks_[i].offset.y, 0.0f));
+                model = glm::scale(model, ONE_VEC3 * MAP_TILE_MULTIPLIER_);
+                shader_.SetMat4({ "model", model });
+                glActiveTexture(GL_TEXTURE0);
+                glBindTexture(GL_TEXTURE_2D, TEXs_[i]);
+                glDrawArrays(GL_TRIANGLES, 0, 6);
+            }
+        }
+
         glm::vec2 ComputeTerrainIncline(const glm::vec2 tankPos) const
         {
             constexpr const int DISTANCE_BETWEEN_SAMPLES_ = CHUNK_RESOLUTION_ / CHUNK_RESOLUTION_;
@@ -215,147 +340,5 @@ namespace hs
 
             return accumulatedIncline / 8.0f;
         }
-
-        void Update(const glm::vec2 playerPos, const unsigned int VAO)
-        {
-            glBindVertexArray(VAO);
-
-            // Must be > 1 + (SQRT_OF_TWO / 2) to avoid updates fighting each other. Defines the radius of the circle the player can navigate in without triggering map updates.
-            constexpr const float TOLERABLE_PLAYER_OFFSET = 1.0f + SQRT_OF_TWO * 0.5f;
-            constexpr const float UPDATE_MAP_THRESHOLD = TOLERABLE_PLAYER_OFFSET * MAP_TILE_MULTIPLIER_ * TEXTURE_QUAD_SIDE_LEN_;
-
-            const bool updateRight = glm::length(chunks_[3].WorldPos() - playerPos) > UPDATE_MAP_THRESHOLD;
-            const bool updateLeft = glm::length(chunks_[5].WorldPos() - playerPos) > UPDATE_MAP_THRESHOLD;
-            const bool updateUp = glm::length(chunks_[1].WorldPos() - playerPos) > UPDATE_MAP_THRESHOLD;
-            const bool updateDown = glm::length(chunks_[7].WorldPos() - playerPos) > UPDATE_MAP_THRESHOLD;
-
-            if(updateRight) // Moving right.
-            {
-                chunks_[0] = chunks_[1];
-                chunks_[1] = chunks_[2];
-                chunks_[3] = chunks_[4];
-                chunks_[4] = chunks_[5];
-                chunks_[6] = chunks_[7];
-                chunks_[7] = chunks_[8];
-                chunks_[2].offset = chunks_[1].offset + glm::ivec2(MAP_TILE_MULTIPLIER_ * TEXTURE_QUAD_SIDE_LEN_, 0);
-                chunks_[5].offset = chunks_[4].offset + glm::ivec2(MAP_TILE_MULTIPLIER_ * TEXTURE_QUAD_SIDE_LEN_, 0);
-                chunks_[8].offset = chunks_[7].offset + glm::ivec2(MAP_TILE_MULTIPLIER_ * TEXTURE_QUAD_SIDE_LEN_, 0);
-                chunks_[2].Generate(perlinGenerator_);
-                chunks_[5].Generate(perlinGenerator_);
-                chunks_[8].Generate(perlinGenerator_);
-            }
-            if(updateLeft) // Moving left.
-            {
-                chunks_[2] = chunks_[1];
-                chunks_[1] = chunks_[0];
-                chunks_[5] = chunks_[4];
-                chunks_[4] = chunks_[3];
-                chunks_[8] = chunks_[7];
-                chunks_[7] = chunks_[6];
-                chunks_[0].offset = chunks_[1].offset - glm::ivec2(MAP_TILE_MULTIPLIER_ * TEXTURE_QUAD_SIDE_LEN_, 0);
-                chunks_[3].offset = chunks_[4].offset - glm::ivec2(MAP_TILE_MULTIPLIER_ * TEXTURE_QUAD_SIDE_LEN_, 0);
-                chunks_[6].offset = chunks_[7].offset - glm::ivec2(MAP_TILE_MULTIPLIER_ * TEXTURE_QUAD_SIDE_LEN_, 0);
-                chunks_[0].Generate(perlinGenerator_);
-                chunks_[3].Generate(perlinGenerator_);
-                chunks_[6].Generate(perlinGenerator_);
-            }
-            if(updateUp) // Moving up.
-            {
-                chunks_[0] = chunks_[3];
-                chunks_[3] = chunks_[6];
-                chunks_[1] = chunks_[4];
-                chunks_[4] = chunks_[7];
-                chunks_[2] = chunks_[5];
-                chunks_[5] = chunks_[8];
-                chunks_[6].offset = chunks_[3].offset + glm::ivec2(0, MAP_TILE_MULTIPLIER_ * TEXTURE_QUAD_SIDE_LEN_);
-                chunks_[7].offset = chunks_[4].offset + glm::ivec2(0, MAP_TILE_MULTIPLIER_ * TEXTURE_QUAD_SIDE_LEN_);
-                chunks_[8].offset = chunks_[5].offset + glm::ivec2(0, MAP_TILE_MULTIPLIER_ * TEXTURE_QUAD_SIDE_LEN_);
-                chunks_[6].Generate(perlinGenerator_);
-                chunks_[7].Generate(perlinGenerator_);
-                chunks_[8].Generate(perlinGenerator_);
-            }
-            if(updateDown) // Moving down.
-            {
-                chunks_[6] = chunks_[3];
-                chunks_[3] = chunks_[0];
-                chunks_[7] = chunks_[4];
-                chunks_[4] = chunks_[1];
-                chunks_[8] = chunks_[5];
-                chunks_[5] = chunks_[2];
-                chunks_[0].offset = chunks_[3].offset - glm::ivec2(0, MAP_TILE_MULTIPLIER_ * TEXTURE_QUAD_SIDE_LEN_);
-                chunks_[1].offset = chunks_[4].offset - glm::ivec2(0, MAP_TILE_MULTIPLIER_ * TEXTURE_QUAD_SIDE_LEN_);
-                chunks_[2].offset = chunks_[5].offset - glm::ivec2(0, MAP_TILE_MULTIPLIER_ * TEXTURE_QUAD_SIDE_LEN_);
-                chunks_[0].Generate(perlinGenerator_);
-                chunks_[1].Generate(perlinGenerator_);
-                chunks_[2].Generate(perlinGenerator_);
-            }
-
-            if(updateRight || updateLeft || updateDown || updateUp)
-            {
-                for(int i = 0; i < 9; i++)
-                {
-                    glBindTexture(GL_TEXTURE_2D, TEXs_[i]);
-                    glTexImage2D(GL_TEXTURE_2D, 0, GL_R32F, CHUNK_RESOLUTION_, CHUNK_RESOLUTION_, 0, GL_RED, GL_FLOAT, &(chunks_[i].data)[0][0]);
-                    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-                    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-                    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-                    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-                }
-            }
-
-            // Draw map.
-            shader_.Bind();
-            for(int i = 0; i < 9; i++)
-            {
-                glm::mat4 model = glm::translate(IDENTITY_MAT4, glm::vec3(chunks_[i].offset.x, chunks_[i].offset.y, 0.0f));
-                model = glm::scale(model, ONE_VEC3 * MAP_TILE_MULTIPLIER_);
-                shader_.SetMat4({ "model", model });
-                glActiveTexture(GL_TEXTURE0);
-                glBindTexture(GL_TEXTURE_2D, TEXs_[i]);
-                glDrawArrays(GL_TRIANGLES, 0, 6);
-            }
-        }
-        void Init(const glm::mat4& view)
-        {
-            Shader::Definition sdef;
-            sdef.vertexPath = "../data/shaders/sprite.vert";
-            sdef.fragmentPath = "../data/shaders/sprite_RED.frag";
-            sdef.staticInts.insert({ "ALBEDO", 0 });
-            sdef.dynamicMat4s.insert({ "view", &view });
-            sdef.staticMat4s.insert({ "PROJECTION", ORTHO });
-            shader_.Create(sdef);
-
-            chunks_.resize(9);
-            glGenTextures(9, TEXs_);
-            for(int y = -1; y < 2; y++)
-            {
-                for(int x = -1; x < 2; x++)
-                {
-                    chunks_[(y + 1) * 3 + (x + 1)].offset = { x * MAP_TILE_MULTIPLIER_ * TEXTURE_QUAD_SIDE_LEN_, y * MAP_TILE_MULTIPLIER_ * TEXTURE_QUAD_SIDE_LEN_ };
-                    chunks_[(y + 1) * 3 + (x + 1)].Generate(perlinGenerator_);
-
-                    glBindTexture(GL_TEXTURE_2D, TEXs_[(y + 1) * 3 + (x + 1)]);
-                    glTexImage2D(GL_TEXTURE_2D, 0, GL_R32F, CHUNK_RESOLUTION_, CHUNK_RESOLUTION_, 0, GL_RED, GL_FLOAT, &(chunks_[(y + 1) * 3 + (x + 1)].data)[0][0]);
-                    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-                    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-                    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-                    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-                }
-            }
-            CheckGlError();
-        }
-        void Destroy()
-        {
-            glDeleteTextures(9, TEXs_);
-            glDeleteProgram(shader_.GetPROGRAM());
-        }
-
-    private:
-        unsigned int TEXs_[9] = { 0 };
-        std::vector<MapChunk_> chunks_; // 0: LB, 1: MB, 2: RB, 3: LM, 4: MM, 5: RM, 6: LT, 7: MT, 8: RT 
-        siv::BasicPerlinNoise<float> perlinGenerator_;
-        Shader shader_;
     };
 }//!hs
-
-*/

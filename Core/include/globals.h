@@ -82,9 +82,15 @@ namespace sge
 	constexpr const float WINDOW_PROJECTION_NEAR = 0.01f;
 	constexpr const float WINDOW_PROJECTION_FAR = 100.01f;
 
-	constexpr const uint32_t HASHING_SEED = 0x1337;
-
 	// Global runtime consts.
 	const glm::mat4 WINDOW_PROJECTION = glm::perspective(HORIZONTAL_FULL_FOV, (float)ASPECT[0] / (float)ASPECT[1], WINDOW_PROJECTION_NEAR, WINDOW_PROJECTION_FAR);
 	const glm::mat4 WINDOW_PROJECTION_INVERSE = glm::inverse(WINDOW_PROJECTION);
+
+	// Common enums.
+	enum Mutability: uint32_t
+	{
+		INVALID = 0,
+		STATIC = GL_STATIC_DRAW,
+		DYNAMIC = GL_DYNAMIC_DRAW
+	};
 }//!sge
