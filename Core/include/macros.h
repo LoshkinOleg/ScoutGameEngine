@@ -1,5 +1,7 @@
 #pragma once
 
+#include <iostream>
+
 #ifndef sgeGuard_InstanciationRules
 #define sgeGuard_InstanciationRules
 #define sge_DISALLOW_COPY(type) type(type&) = delete; type& operator=(type&) = delete;

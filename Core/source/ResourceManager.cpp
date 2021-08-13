@@ -25,7 +25,7 @@ namespace sge
 			transforms_[i] = IDENTITY_MAT4;
 		}
 	}
-	void ResourceManager::PostInit()
+	void ResourceManager::FreeResources()
 	{
 		if (FREE_DATA_POST_INIT_)
 		{

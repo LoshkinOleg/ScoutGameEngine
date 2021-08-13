@@ -27,6 +27,19 @@ namespace sge
 			RED_F32,
 			RGBA_B8,
 		};
+		struct Definition
+		{
+			void* data = nullptr;
+			Mutability mutability = Mutability::INVALID;
+			Format format = Format::INVALID;
+			uint32_t width = 0;
+			uint32_t height = 0;
+			uint32_t mipLevels = 0;
+			SamplingMode minifyingMode = SamplingMode::INVALID;
+			SamplingMode magnifyingMode = SamplingMode::INVALID;
+			WrappingMode onS = WrappingMode::INVALID;
+			WrappingMode onT = WrappingMode::INVALID;
+		};
 
 		uint32_t TEX = 0;
 		uint32_t width = 0, height = 0;
@@ -34,16 +47,7 @@ namespace sge
 		SamplingMode minifyingMode = SamplingMode::INVALID, magnifyingMode = SamplingMode::INVALID;
 		WrappingMode wrappingModeS = WrappingMode::INVALID, wrappingModeT = WrappingMode::INVALID;
 
-		void Init(void* data,
-				  const Mutability mutability,
-				  const Format format,
-				  const uint32_t width,
-				  const uint32_t height,
-				  const uint32_t mipLevels,
-				  const SamplingMode minifyingMode,
-				  const SamplingMode magnifyingMode,
-				  const WrappingMode wrappingModeS,
-				  const WrappingMode wrappingModeT);
+		void Init(const Definition& def);
 		void Update(void* data) const;
 		void Destroy();
 

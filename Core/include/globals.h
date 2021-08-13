@@ -5,13 +5,19 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/quaternion.hpp>
-#include <glad/glad.h>
 
 namespace sge
 {
 	// Constexpr static consts. Don't take up space in global scope past compilation.
 	constexpr const glm::ivec2 ZERO_IVEC2 = glm::ivec2(0, 0);
 	constexpr const glm::ivec2 ONE_IVEC2 = glm::ivec2(1, 1);
+
+	constexpr const glm::vec2 ZERO_VEC2 = glm::vec2(0.0f);
+	constexpr const glm::vec2 ONE_VEC2 = glm::vec2(1.0f);
+	constexpr const glm::vec2 EAST_VEC2 = glm::vec2(1.0f, 0.0f);
+	constexpr const glm::vec2 WEST_VEC2 = glm::vec2(-1.0f, 0.0f);
+	constexpr const glm::vec2 NORTH_VEC2 = glm::vec2(0.0f, 1.0f);
+	constexpr const glm::vec2 SOUTH_VEC2 = glm::vec2(0.0f, -1.0f);
 
 	constexpr const glm::vec3 ZERO_VEC3 = glm::vec3(0.0f);
 	constexpr const glm::vec3 ONE_VEC3 = glm::vec3(1.0f);
@@ -90,7 +96,22 @@ namespace sge
 	enum Mutability: uint32_t
 	{
 		INVALID = 0,
-		STATIC = GL_STATIC_DRAW,
-		DYNAMIC = GL_DYNAMIC_DRAW
+		STATIC = 0x88E4, // GL_STATIC_DRAW
+		DYNAMIC = 0x88E8 // GL_DYNAMIC_DRAW
+	};
+	enum ComponentType: uint32_t
+	{
+		INVALID = 0,
+		UINT = 0x1405, // GL_UNSIGNED_INT
+		FLOAT = 0x1406 // GL_FLOAT
+	};
+	enum IllumMode: uint32_t
+	{
+		INVALID = 0,
+		ALBEDO_ONLY,
+		GOOCH,
+		BLINN_PHONG,
+		BLINN_PHONG_NORMALMAPPED,
+		GIZMO
 	};
 }//!sge

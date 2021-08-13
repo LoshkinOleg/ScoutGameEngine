@@ -1,28 +1,23 @@
 #pragma once
 
+#include <string_view>
+
+#include "Hash.h"
 #include "globals.h"
 
 namespace sge
 {
 	struct Shader
 	{
-		enum IlluminationModel : uint32_t
-		{
-			INVALID = 0,
-			GOOCH,
-			ALBEDO_ONLY,
-			BLINN_PHONG,
-			BLINN_PHONG_NORMALMAPPED,
-			GIZMO
-		};
-
 		uint32_t PROGRAM = 0;
-		uint32_t primitive = GL_TRIANGLES;
-		IlluminationModel illum = IlluminationModel::INVALID;
+		uint32_t primitive = GL_TRIANGLES; // Note: 0 is GL_POINTS anyways so might as well set a default value.
+		IllumMode illum = IllumMode::INVALID;
 		std::map<Hash, uint32_t> uniformLocationCache = {};
 
-		void Init(const std::string_view vertexSrc, const std::string_view fragmentSrc, const std::string_view geometrySrc, const IlluminationModel illum, const uint32_t primitive);
+		void Init(const std::string_view vertexSrc, const std::string_view fragmentSrc, const std::string_view geometrySrc, const IllumMode illum, const uint32_t primitive);
 		void Destroy();
+
+		void Bind() const;
 
 		int32_t GetUniformLocation(const std::string_view name);
 		void SetInt(const std::string_view name, const int32_t value);

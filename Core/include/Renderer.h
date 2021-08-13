@@ -1,12 +1,11 @@
 #pragma once
 
-#include <concepts>
-
-#include "Model.h"
-#include "Mesh.h"
+#include "ResourcesAbstracts.h"
+#include "VertexBuffer.h"
+#include "Texture.h"
 #include "Shader.h"
-
-
+#include "Mesh.h"
+#include "Model.h"
 #include "Hash.h"
 #include "macros.h"
 #include "globals.h"
@@ -65,9 +64,15 @@ namespace sge
 		glm::mat4 viewMatrix_ = DEFAULT_VIEW_MATRIX;
 
 		static std::vector<GltfMeshData_> ProcessGltf_(const GltfDataHandle& handle);
-		static std::vector<glm::mat4> FrustumCulling_(const glm::ivec2 resolution, const float horizontalFullFov, const float nearPlane, const float farPlane, const float radius, const glm::mat4* const begin, const glm::mat4* const end);
+		static std::vector<glm::mat4> FrustumCulling_(const glm::ivec2 resolution,
+													  const float horizontalFullFov,
+													  const float nearPlane,
+													  const float farPlane,
+													  );
 		static void SortFrontToBack_(std::vector<glm::mat4>& transforms);
 		static void SortBackToFront_(std::vector<glm::mat4>& transforms);
+
+		Handle<Mesh> MeshFromGltf_(const GltfMeshData_& data);
 
 	public:
 		sge_DISALLOW_COPY(Renderer);
@@ -77,11 +82,12 @@ namespace sge
 		void Update();
 
 		Handle<Shader> CreateShader(const Handle<ShaderData>& handle, const Shader::IlluminationModel illum);
-		Handle<Texture> CreateTexture(const KtxDataHandle& handle);
 		Handle<VertexBuffer> CreateVertexBuffer(const VertexBuffer::Definition& def, const Hash& accumulatedHash);
-		Handle<Mesh> CreateMesh(const MeshData_& data);
-		Handle<Model> CreateModel(const std::vector<float>& data, const std::vector<uint32_t>& layout, const std::vector<glm::mat4>& transforms, const glm::vec3 color);
+		Handle<Texture> CreateTexture(const Texture::Definition& def, const Hash& accumulatedHash);
+		Handle<Mesh> CreateMesh(void* data, const Hash& accumulatedHash);
+		Handle<Model> CreateModel(void* data, const Hash& accumulatedHash);
 
+		Handle<Texture> TextureFromKtx(const KtxDataHandle& handle);
 		Handle<Model> ModelFromGltf(const GltfDataHandle& handle, const std::vector<glm::mat4>& transforms);
 
 		void Schedule(const Handle<Model>& model, const Handle<Shader>& shader);

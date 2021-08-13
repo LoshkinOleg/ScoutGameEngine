@@ -1,6 +1,11 @@
 #pragma once
 
-#include "Resources.h"
+#include <nlohmann/json.hpp>
+using json = nlohmann::json;
+#include <gli/gli.hpp>
+#include <tiny_gltf.h>
+
+#include "ResourcesAbstracts.h"
 #include "macros.h"
 
 namespace sge
@@ -24,49 +29,80 @@ namespace sge
 			NORMAL_MAPS = 1 << 6,
 			SPECULAR_MAPS = 1 << 7
 		};
+		struct JsonData
+		{
+			json data = json::value_t::discarded;
+		};
+		struct KtxData
+		{
+			gli::texture data = {};
+		};
+		struct ShaderData
+		{
+			std::string vertexCode = "";
+			std::string fragmentCode = "";
+		};
+		struct GltfData
+		{
+			tinygltf::Model model = {};
+			Handle<KtxData> alphaMap = {};
+			Handle<KtxData> albedoMap = {};
+			Handle<KtxData> specularMap = {};
+			Handle<KtxData> normalMap = {};
+		};
+		struct TransformsBuffer
+		{
+			glm::mat4* begin = nullptr;
+			glm::mat4* end = nullptr;
+
+			inline uint32_t NrOfTransforms() const
+			{
+				return end - begin;
+			}
+		};
 
 		void Init();
-		void PostInit();
+		void FreeResources();
 
-		JsonDataHandle LoadJson(const std::string_view path);
-		GltfDataHandle LoadGltf(const std::string_view path, const GltfAttributes dataToLoad);
-		KtxDataHandle LoadKtx(const std::string_view path);
-		ShaderDataHandle LoadShader(const std::string_view vertexPath, const std::string_view fragmentPath);
+		Handle<JsonData> LoadJson(const std::string_view path);
+		Handle<KtxData> LoadKtx(const std::string_view path);
+		Handle<ShaderData> LoadShader(const std::string_view vertexPath, const std::string_view fragmentPath);
+		Handle<GltfData> LoadGltf(const std::string_view path, const GltfAttributes dataToLoad);
 
-		void FreeJson(const JsonDataHandle& handle);
-		void FreeGltf(GltfDataHandle handle);
-		void FreeKtx(KtxDataHandle handle);
-		void FreeShader(ShaderDataHandle handle);
+		void FreeJson(Handle<JsonData>& handle);
+		void FreeKtx(Handle<KtxData>& handle);
+		void FreeShader(Handle<ShaderData>& handle);
+		void FreeGltf(Handle<GltfData>& handle);
+		void FreeTransforms(Handle<TransformsBuffer>& handle);
 
-		JsonData& GetJsonData(const JsonDataHandle& handle);
-		KtxData& GetKtxData(const KtxDataHandle& handle);
-		GltfData& GetGltfData(const GltfDataHandle& handle);
-		ShaderData& GetShaderData(const ShaderDataHandle& handle);
-
-		glm::mat4* const AllocateTransforms(const std::vector<glm::mat4>& transforms);
-		void FreeTransforms(glm::mat4* const begin, glm::mat4* const end);
+		Handle<TransformsBuffer> const AllocateTransforms(void* data, const uint32_t byteLen);
 
 		void Shutdown();
 
 	private:
+		struct TransformsPool_
+		{
+			sge_DISALLOW_COPY(TransformsPool_);
+
+			constexpr static const uint32_t TRANSFORMS_POOL_SIZE_ = 256;
+			glm::mat4* transforms = nullptr;
+			glm::mat4* currentTransformsEnd = nullptr;
+
+			TransformsPool_();
+			~TransformsPool_();
+			glm::mat4* const Allocate(void* data, const uint32_t byteLen);
+			void FreeTransforms(glm::mat4* const begin, glm::mat4* const end);
+		};
 
 		friend class Engine;
 		sge_ALLOW_CONSTRUCTION(ResourceManager);
 
-		static std::string LoadFile_(const std::string_view path);
-		static uint32_t HashString_(const std::string_view str);
-		static uint32_t HashGltf_(const tinygltf::Model& model, const std::array<const KtxDataHandle, 4> textures);
-		static uint32_t HashKtx_(const gli::texture& ktx);
-
 		constexpr static const bool FREE_DATA_POST_INIT_ = true;
-		constexpr static const uint32_t TRANSFORMS_POOL_SIZE_ = 256;
 
-		ResourceContainer<JsonData, JsonDataHandle> jsons_ = {};
-		ResourceContainer<GltfData, GltfDataHandle> gltfs_ = {};
-		ResourceContainer<KtxData, KtxDataHandle> ktxs_ = {};
-		ResourceContainer<ShaderData, ShaderDataHandle> shaderSrcs_ = {};
-
-		glm::mat4* transforms_ = nullptr;
-		glm::mat4* currentTransformsEnd_ = nullptr;
+		std::vector<Resource<JsonData>> jsons_ = {};
+		std::vector<Resource<KtxData>> ktxs_ = {};
+		std::vector<Resource<ShaderData>> shaderSrcs_ = {};
+		std::vector<Resource<GltfData>> gltfs_ = {};
+		TransformsPool_ transforms = {};
 	};
 }//!sge

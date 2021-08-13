@@ -1,16 +1,15 @@
 #include "Shader.h"
 
 #include <map>
-#include <string_view>
 #include <iostream>
 
-#include <xxhash.h>
+#include <glad/glad.h>
 
 #include "macros.h"
 
 namespace sge
 {
-	void Shader::Init(const std::string_view vertexSrc, const std::string_view fragmentSrc, const std::string_view geometrySrc, const IlluminationModel illum, const uint32_t primitive)
+	void Shader::Init(const std::string_view vertexSrc, const std::string_view fragmentSrc, const std::string_view geometrySrc, const IllumMode illum, const uint32_t primitive)
 	{
 		this->illum = illum;
 		this->primitive = primitive;
@@ -82,20 +81,21 @@ namespace sge
 
 		switch(illum)
 		{
-			case Shader::IlluminationModel::BLINN_PHONG_NORMALMAPPED:
+			// Should be updated once per program's lifetime.
+			case IllumMode::BLINN_PHONG_NORMALMAPPED:
 			{
 				SetInt("albedoMap", 0);
 				SetInt("specularMap", 1);
 				SetInt("normalMap", 2);
 			}break;
-			case Shader::IlluminationModel::BLINN_PHONG:
+			case IllumMode::BLINN_PHONG:
 			{
 				SetInt("albedoMap", 0);
 				SetInt("specularMap", 1);
 			}break;
-			case Shader::IlluminationModel::GOOCH: break;
-			case Shader::IlluminationModel::GIZMO: break;
-			case Shader::IlluminationModel::ALBEDO_ONLY:
+			case IllumMode::GOOCH: break;
+			case IllumMode::GIZMO: break;
+			case IllumMode::ALBEDO_ONLY:
 			{
 				SetInt("albedoMap", 0);
 			}break;
@@ -119,7 +119,7 @@ namespace sge
 	}
 	int32_t Shader::GetUniformLocation(const std::string_view name)
 	{
-		const uint32_t hash = XXH32(name.data(), name.size(), HASHING_SEED);
+		const Hash hash = Hash(name.data(), (uint32_t)name.size(), 0);
 		const auto match = uniformLocationCache.find(hash);
 		if(match != uniformLocationCache.end()) // Name of uniform already known, use it.
 		{
@@ -168,5 +168,16 @@ namespace sge
 		const int location = GetUniformLocation(name);
 		glUniformMatrix3fv(location, 1, GL_FALSE, &value[0][0]);
 		sge_CHECK_GL_ERROR();
+	}
+	void Shader::Bind() const
+	{
+		if(IsValid())
+		{
+			glUseProgram(PROGRAM);
+		}
+		else
+		{
+			sge_ERROR("Trying to use invalid shader!");
+		}
 	}
 }//!sge

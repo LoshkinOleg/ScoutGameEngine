@@ -11,6 +11,11 @@ union SDL_Event;
 
 namespace sge
 {
+	struct ControlScheme
+	{
+
+	};
+
 	struct Command
 	{
 	public:
