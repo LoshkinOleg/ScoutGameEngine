@@ -1,0 +1,36 @@
+#pragma once
+
+#include <vector>
+
+#include <glm/glm.hpp>
+
+#include <ResourcesAbstracts.h>
+#include <Texture.h>
+#include <Shader.h>
+
+namespace sge
+{
+	struct Material
+	{
+		struct Definition
+		{
+			std::vector<Texture::Definition> texDefs;
+			std::vector<glm::vec3> vec3s = {};
+			std::vector<float> floats = {};
+			ShadingMode shadingMode = ShadingMode::INVALID;
+		};
+
+		std::vector<Handle<Texture>> textures = {};
+		std::vector<glm::vec3> vec3s = {};
+		std::vector<float> floats = {};
+		ShadingMode shadingMode = ShadingMode::INVALID;
+
+		void Bind() const;
+
+		bool IsValid() const;
+
+	private:
+		friend class Renderer;
+		void Init_(const Definition& def);
+	};
+}//!sge

@@ -9,6 +9,11 @@ namespace sge
 	{
 		Hash hash = 0;
 		Type resourceData = {};
+
+		bool IsValid() const
+		{
+			return hash.IsValid() && resourceData.IsValid();
+		}
 	};
 
 	template <typename Type>
@@ -38,7 +43,7 @@ namespace sge
 
 		inline bool IsValid() const
 		{
-			return hash && ptr;
+			return hash && ptr && ptr->IsValid();
 		}
 		inline void Reset()
 		{

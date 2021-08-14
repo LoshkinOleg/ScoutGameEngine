@@ -9,9 +9,8 @@
 
 namespace sge
 {
-	void Shader::Init(const std::string_view vertexSrc, const std::string_view fragmentSrc, const std::string_view geometrySrc, const IllumMode illum, const uint32_t primitive)
+	void Shader::Init(const std::string_view vertexSrc, const std::string_view fragmentSrc, const std::string_view geometrySrc, const ShadingMode illum, const uint32_t primitive)
 	{
-		this->illum = illum;
 		this->primitive = primitive;
 
 		uint32_t VERT = 0, FRAG = 0, GEO = 0;
@@ -78,44 +77,6 @@ namespace sge
 			glDeleteShader(GEO);
 		}
 		sge_CHECK_GL_ERROR();
-
-		switch(illum)
-		{
-			// Should be updated once per program's lifetime.
-			case IllumMode::BLINN_PHONG_NORMALMAPPED:
-			{
-				SetInt("albedoMap", 0);
-				SetInt("specularMap", 1);
-				SetInt("normalMap", 2);
-			}break;
-			case IllumMode::BLINN_PHONG:
-			{
-				SetInt("albedoMap", 0);
-				SetInt("specularMap", 1);
-			}break;
-			case IllumMode::GOOCH: break;
-			case IllumMode::GIZMO: break;
-			case IllumMode::ALBEDO_ONLY:
-			{
-				SetInt("albedoMap", 0);
-			}break;
-			default:
-			{
-				sge_ERROR("Unexpected illumination mode set for shader!");
-			}break;
-		}
-	}
-	void Shader::Destroy()
-	{
-		if(IsValid())
-		{
-			glDeleteProgram(PROGRAM);
-			Reset();
-		}
-		else
-		{
-			sge_WARNING("Trying to delete an invalid shader!");
-		}
 	}
 	int32_t Shader::GetUniformLocation(const std::string_view name)
 	{

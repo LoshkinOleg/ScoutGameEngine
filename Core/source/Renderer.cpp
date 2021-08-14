@@ -9,182 +9,6 @@
 
 namespace sge
 {
-	std::vector<Renderer::MeshData_> Renderer::ProcessGltf_(const GltfDataHandle& handle)
-	{
-		std::vector<Renderer::MeshData_> returnVal;
-		tinygltf::Model& model = handle->model;
-
-		for(uint32_t meshIdx = 0; meshIdx < model.meshes.size(); meshIdx++)
-		{
-			tinygltf::Mesh& mesh = model.meshes[meshIdx];
-			returnVal.push_back(Renderer::MeshData_());
-			Renderer::MeshData_& meshData = returnVal.back();
-
-			// TODO: load per mesh textures
-			meshData.albedoMap = handle->albedoMap;
-			meshData.specularMap = handle->specularMap;
-			meshData.normalMap = handle->normalMap;
-			meshData.shininess = 64.0f; // TODO: read that from file
-
-			assert(mesh.primitives.size() == 1 && mesh.primitives[0].attributes.size() == 4);
-
-			auto& attributes = mesh.primitives[0].attributes;
-			const auto indicesIdx = mesh.primitives[0].indices;
-			auto& materialIdx = mesh.primitives[0].material;
-
-			for(const auto& pair : attributes)
-			{
-				assert // Expecting the gltf to have all the data needed for normalmapped Blinn-Phong.
-				(
-					pair.first == "POSITION" ||
-					pair.first == "NORMAL" ||
-					pair.first == "TANGENT" ||
-					pair.first == "TEXCOORD_0"
-				);
-			}
-
-			glm::mat4 modelMatrix = (model.nodes[meshIdx].matrix.size() > 0) ?
-				glm::mat4(
-					model.nodes[meshIdx].matrix[0], model.nodes[meshIdx].matrix[1], model.nodes[meshIdx].matrix[2], model.nodes[meshIdx].matrix[3],
-					model.nodes[meshIdx].matrix[4], model.nodes[meshIdx].matrix[5], model.nodes[meshIdx].matrix[6], model.nodes[meshIdx].matrix[7],
-					model.nodes[meshIdx].matrix[8], model.nodes[meshIdx].matrix[9], model.nodes[meshIdx].matrix[10], model.nodes[meshIdx].matrix[11],
-					model.nodes[meshIdx].matrix[12], model.nodes[meshIdx].matrix[13], model.nodes[meshIdx].matrix[14], model.nodes[meshIdx].matrix[15]) :
-				IDENTITY_MAT4;
-
-			if(modelMatrix == IDENTITY_MAT4)
-			{
-				const glm::vec3 translation = (model.nodes[meshIdx].translation.size() > 0) ?
-					glm::vec3(model.nodes[meshIdx].translation[0], model.nodes[meshIdx].translation[1], model.nodes[meshIdx].translation[2]) :
-					ZERO_VEC3;
-				const glm::quat rotation = (model.nodes[meshIdx].rotation.size() > 0) ?
-					glm::quat(model.nodes[meshIdx].rotation[0], model.nodes[meshIdx].rotation[1], model.nodes[meshIdx].rotation[2], model.nodes[meshIdx].rotation[3]) :
-					IDENTITY_QUAT;
-				const glm::vec3 scale = (model.nodes[meshIdx].scale.size() > 0) ?
-					glm::vec3(model.nodes[meshIdx].scale[0], model.nodes[meshIdx].scale[1], model.nodes[meshIdx].scale[2]) :
-					ONE_VEC3;
-				modelMatrix = glm::translate(IDENTITY_MAT4, translation);
-				modelMatrix = modelMatrix * glm::toMat4(rotation);
-				modelMatrix = glm::scale(modelMatrix, scale);
-			}
-
-			const glm::mat3 normalMatrix = glm::transpose(glm::inverse(glm::mat3(modelMatrix)));
-			const glm::mat3 tangentMatrix = glm::mat3(modelMatrix);
-
-			{ // Positions.
-				auto& accessor = model.accessors[attributes["POSITION"]];
-				auto& bufferView = model.bufferViews[accessor.bufferView];
-				auto& buffer = model.buffers[bufferView.buffer];
-
-				assert(accessor.componentType == TINYGLTF_COMPONENT_TYPE_FLOAT && accessor.type == TINYGLTF_TYPE_VEC3);
-				assert(model.meshes.size() == model.nodes.size()); // Note: this DOES NOT guarantee that there is a one-to-one matching between nodes and meshes, we just assume it does... Note: this really necessary now that I'm putting meshes into separate VAOs?
-
-				std::vector<glm::vec3> positions;
-				positions.insert
-				(
-					positions.end(),
-					reinterpret_cast<glm::vec3*>(buffer.data.data()) + (bufferView.byteOffset / sizeof(glm::vec3)),
-					reinterpret_cast<glm::vec3*>(buffer.data.data()) + (bufferView.byteOffset / sizeof(glm::vec3)) + (bufferView.byteLength / sizeof(glm::vec3))
-				);
-
-				for(size_t i = 0; i < positions.size(); i++)
-				{
-					positions[i] = modelMatrix * glm::vec4(positions[i], 1.0f);
-				}
-
-				meshData.positions.insert
-				(
-					meshData.positions.end(),
-					positions.begin(),
-					positions.end()
-				);
-			}
-
-			{ // Indices.
-				auto& accessor = model.accessors[indicesIdx];
-				auto& bufferView = model.bufferViews[accessor.bufferView];
-				auto& buffer = model.buffers[bufferView.buffer];
-
-				assert(accessor.componentType == TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT && accessor.type == TINYGLTF_TYPE_SCALAR);
-				meshData.indexType = Renderer::MeshData_::IndexType::UNSIGNED_SHORT;
-				size_t currentMeshIndices = meshData.indices.end() - meshData.indices.begin();
-				meshData.indices.insert
-				(
-					meshData.indices.end(),
-					reinterpret_cast<uint16_t*>(buffer.data.data()) + (bufferView.byteOffset / sizeof(uint16_t)),
-					reinterpret_cast<uint16_t*>(buffer.data.data()) + (bufferView.byteOffset / sizeof(uint16_t)) + (bufferView.byteLength / sizeof(uint16_t))
-				);
-			}
-
-			{ // Normals, tangents and bitangents.
-				auto& accessorNormals = model.accessors[attributes["NORMAL"]];
-				auto& accessorTangents = model.accessors[attributes["TANGENT"]];
-				auto& bufferViewNormals = model.bufferViews[accessorNormals.bufferView];
-				auto& bufferViewTangents = model.bufferViews[accessorTangents.bufferView];
-				auto& bufferNormals = model.buffers[bufferViewNormals.buffer];
-				auto& bufferTangents = model.buffers[bufferViewTangents.buffer];
-
-				assert(accessorNormals.componentType == TINYGLTF_COMPONENT_TYPE_FLOAT && accessorNormals.type == TINYGLTF_TYPE_VEC3);
-				assert(accessorTangents.componentType == TINYGLTF_COMPONENT_TYPE_FLOAT && accessorTangents.type == TINYGLTF_TYPE_VEC4);
-
-				std::vector<glm::vec3> normals;
-				std::vector<float> tangentsVec4;
-				normals.insert
-				(
-					normals.end(),
-					reinterpret_cast<glm::vec3*>(bufferNormals.data.data()) + (bufferViewNormals.byteOffset / sizeof(glm::vec3)),
-					reinterpret_cast<glm::vec3*>(bufferNormals.data.data()) + (bufferViewNormals.byteOffset / sizeof(glm::vec3)) + (bufferViewNormals.byteLength / sizeof(glm::vec3))
-				);
-				tangentsVec4.insert
-				(
-					tangentsVec4.end(),
-					reinterpret_cast<float*>(bufferTangents.data.data()) + (bufferViewTangents.byteOffset / sizeof(float)),
-					reinterpret_cast<float*>(bufferTangents.data.data()) + (bufferViewTangents.byteOffset / sizeof(float)) + (bufferViewTangents.byteLength / sizeof(float))
-				);
-				assert(normals.size() * 4 == tangentsVec4.size());
-				std::vector<glm::vec3> tangents = std::vector<glm::vec3>(normals.size());
-
-				for(size_t i = 0; i < normals.size(); i++)
-				{
-					const glm::vec3 tangent = glm::vec3(tangentsVec4[i * 4 + 0], tangentsVec4[i * 4 + 1], tangentsVec4[i * 4 + 2]);
-					assert(glm::length(tangent) > 0.99f);
-
-					normals[i] = glm::normalize(normalMatrix * glm::normalize(normals[i]));
-					tangents[i] = glm::normalize(tangentMatrix * glm::normalize(tangent));
-
-					assert(glm::dot(normals[i], tangents[i]) < 0.0001f);
-				}
-
-				meshData.normals.insert
-				(
-					meshData.normals.end(),
-					normals.begin(),
-					normals.end()
-				);
-				meshData.tangents.insert
-				(
-					meshData.tangents.end(),
-					tangents.begin(),
-					tangents.end()
-				);
-			}
-
-			{ // Uvs.
-				auto& accessor = model.accessors[attributes["TEXCOORD_0"]];
-				auto& bufferView = model.bufferViews[accessor.bufferView];
-				auto& buffer = model.buffers[bufferView.buffer];
-
-				assert(accessor.componentType == TINYGLTF_COMPONENT_TYPE_FLOAT && accessor.type == TINYGLTF_TYPE_VEC2);
-				meshData.uvs.insert
-				(
-					meshData.uvs.end(),
-					reinterpret_cast<glm::vec2*>(buffer.data.data()) + (bufferView.byteOffset / sizeof(glm::vec2)),
-					reinterpret_cast<glm::vec2*>(buffer.data.data()) + (bufferView.byteOffset / sizeof(glm::vec2)) + (bufferView.byteLength / sizeof(glm::vec2))
-				);
-			}
-		}
-
-		return returnVal;
-	}
 
 	std::vector<glm::mat4> Renderer::FrustumCulling_(const glm::ivec2 resolution, const float horizontalFullFov, const float nearPlane, const float farPlane, const float radius, const glm::mat4* const begin, const glm::mat4* const end)
 	{
@@ -283,7 +107,7 @@ namespace sge
 				glBindVertexArray(mesh.VAO);
 				sge_CHECK_GL_ERROR();
 
-				switch(shader.illum)
+				switch(shader.shadingMode)
 				{
 					case Shader::IlluminationModel::BLINN_PHONG_NORMALMAPPED:
 					{
@@ -443,32 +267,8 @@ namespace sge
 		newElement.PROGRAM = PROGRAM;
 		newElement.hash = handle.hash;
 		assert(newElement.hash > 0);
-		newElement.illum = illum;
+		newElement.shadingMode = illum;
 
-		switch(illum)
-		{
-			case Shader::IlluminationModel::BLINN_PHONG_NORMALMAPPED:
-			{
-				newElement.SetInt("albedoMap", 0);
-				newElement.SetInt("specularMap", 1);
-				newElement.SetInt("normalMap", 2);
-			}break;
-			case Shader::IlluminationModel::BLINN_PHONG:
-			{
-				newElement.SetInt("albedoMap", 0);
-				newElement.SetInt("specularMap", 1);
-			}break;
-			case Shader::IlluminationModel::GOOCH: break;
-			case Shader::IlluminationModel::GIZMO: break;
-			case Shader::IlluminationModel::ALBEDO_ONLY:
-			{
-				newElement.SetInt("albedoMap", 0);
-			}break;
-			default:
-			{
-				sge_ERROR("Unexpected illumination mode set for shader!");
-			}break;
-		}
 
 		shaders_.Insert(newElement);
 

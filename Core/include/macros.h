@@ -1,6 +1,7 @@
 #pragma once
 
 #include <iostream>
+#include <string>
 
 #ifndef sgeGuard_InstanciationRules
 #define sgeGuard_InstanciationRules
@@ -23,3 +24,18 @@
 #define sge_CHECK_GL_ERROR() [](){}
 #endif //!_DEBUG
 #endif //!sgeGuard_StdOutput
+
+#ifndef sgeGuard_Paths
+#define sgeGuard_Paths
+#ifdef _DEBUG
+#define sge_DATA_PATH std::string("../data/")
+#define sge_SHADERS_PATH std::string("../data/shaders")
+#define sge_GLTFS_PATH std::string("../data/gltf")
+#define sge_KTXS_PATH std::string("../data/ktx")
+#else
+#define sge_DATA_PATH std::string("data/")
+#define sge_SHADERS_PATH std::string("data/shaders")
+#define sge_GLTFS_PATH std::string("data/gltf")
+#define sge_KTXS_PATH std::string("data/ktx")
+#endif //!_DEBUG
+#endif //!sgeGuard_Paths

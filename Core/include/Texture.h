@@ -1,5 +1,7 @@
 #pragma once
 
+#include <glad/glad.h>
+
 #include "globals.h"
 
 namespace sge
@@ -39,6 +41,11 @@ namespace sge
 			SamplingMode magnifyingMode = SamplingMode::INVALID;
 			WrappingMode onS = WrappingMode::INVALID;
 			WrappingMode onT = WrappingMode::INVALID;
+
+			inline bool IsValid() const
+			{
+				return data && mutability && width && height && minifyingMode && magnifyingMode && onS && onT;
+			}
 		};
 
 		uint32_t TEX = 0;
@@ -47,9 +54,12 @@ namespace sge
 		SamplingMode minifyingMode = SamplingMode::INVALID, magnifyingMode = SamplingMode::INVALID;
 		WrappingMode wrappingModeS = WrappingMode::INVALID, wrappingModeT = WrappingMode::INVALID;
 
-		void Init(const Definition& def);
-		void Update(void* data) const;
-		void Destroy();
+		void UpdateData(void* data) const;
+		void Bind(const uint32_t textureUnit) const
+		{
+			glActiveTexture(GL_TEXTURE0 + (GLenum)textureUnit);
+			glBindTexture(GL_TEXTURE_2D, TEX);
+		}
 
 		inline bool IsValid() const
 		{
@@ -59,5 +69,9 @@ namespace sge
 		{
 			*this = {};
 		}
+
+	private:
+		friend class Renderer;
+		void Init_(const Definition& def);
 	};
 }//!sge

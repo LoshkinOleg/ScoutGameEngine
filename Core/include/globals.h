@@ -96,22 +96,42 @@ namespace sge
 	enum Mutability: uint32_t
 	{
 		INVALID = 0,
+
 		STATIC = 0x88E4, // GL_STATIC_DRAW
 		DYNAMIC = 0x88E8 // GL_DYNAMIC_DRAW
 	};
 	enum ComponentType: uint32_t
 	{
 		INVALID = 0,
+
 		UINT = 0x1405, // GL_UNSIGNED_INT
 		FLOAT = 0x1406 // GL_FLOAT
 	};
-	enum IllumMode: uint32_t
+	enum ShadingMode: uint8_t
 	{
 		INVALID = 0,
-		ALBEDO_ONLY,
-		GOOCH,
-		BLINN_PHONG,
-		BLINN_PHONG_NORMALMAPPED,
-		GIZMO
+
+		GIZMO = 1 << 0,
+		ALBEDO_ONLY = 1 << 1,
+		GOOCH = 1 << 2,
+		BLINN_PHONG = 1 << 3,
+
+		BLINN_PHONG_NORMALMAPPED = 1 << 4,
+		SHADOW_PASS = 1 << 5,
+		POST_PROCESS_PASS = 1 << 6,
+		DEFERRED_PASS = 1 << 7,
+
+		MAX_VALUE = DEFERRED_PASS
+	};
+	enum ImageType: uint8_t
+	{
+		INVALID = 0,
+
+		ALBEDO_MAP = 1 << 0,
+		SPECULAR_MAP = 1 << 1,
+		NORMAL_MAP = 1 << 2,
+		OTHER = 1 << 3,
+
+		MAX_VALUE = OTHER
 	};
 }//!sge

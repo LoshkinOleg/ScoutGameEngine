@@ -6,6 +6,7 @@
 #include "VertexBuffer.h"
 #include "Texture.h"
 #include "Shader.h"
+#include "Material.h"
 #include "globals.h"
 #include "macros.h"
 
@@ -19,11 +20,8 @@ namespace sge
 		struct Definition
 		{
 			std::vector<VertexBuffer::Definition> vboDefs = {};
-			std::vector<Texture::Definition> texDefs = {};
 			VertexBuffer::Definition eboDef = {};
-			IllumMode illum = IllumMode::INVALID;
-			glm::vec3 color = WHITE;
-			float shininess = 0.0f;
+			std::vector<Material::Definition> matDefs = {}; // At most 1 material per illumination model.
 
 			bool IsValid() const;
 		};
@@ -31,22 +29,21 @@ namespace sge
 		uint32_t VAO = 0;
 		Handle<VertexBuffer> indexVBO = {};
 		std::vector<Handle<VertexBuffer>> vertexBuffers = {};
-		std::vector<Handle<Texture>> textures = {};
+		Handle<Material> material = {};
 		uint32_t nrOfVertices = 0;
 		float radius = 0.0f;
-		IllumMode illum = IllumMode::INVALID;
-		glm::vec3 color = WHITE;
-		float shininess = 0.0f;
 
-		void Init(const Definition& def);
 		void Update(const std::vector<std::pair<void*, uint32_t>>& dataAndByteLen) const;
-		void Draw(const Handle<Shader>& shader, const uint32_t nrOfInstances, const glm::mat4& viewMatrix, const bool updateLightingUniforms) const;
-		void Destroy();
+		void Draw(const Handle<Shader>& shader, const uint32_t nrOfInstances) const;
 
 		bool IsValid() const;
 		inline void Reset()
 		{
 			*this = {};
 		}
+
+	private:
+		friend class Renderer;
+		void Init_(const Definition& def);
 	};
 }//!sge

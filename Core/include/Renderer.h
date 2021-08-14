@@ -27,52 +27,23 @@ namespace sge
 			int32_t primitive = GL_TRIANGLES;
 		};
 
-		struct GltfMeshData_
-		{
-			// Value matches the size of the type in bytes.
-			enum IndexType : uint32_t
-			{
-				INVALID = 0,
-				UNSIGNED_BYTE = 1,
-				SIGNED_BYTE = 1,
-				UNSIGNED_SHORT = 2,
-				SIGNED_SHORT = 2,
-				UNSIGNED_INT = 4,
-				SIGNED_INT = 4
-			};
-
-			std::vector<glm::vec3> positions = {};
-			std::vector<glm::vec3> normals = {};
-			std::vector<glm::vec3> tangents = {};
-			std::vector<glm::vec2> uvs = {};
-			std::vector<uint16_t> indices = {};
-			KtxDataHandle albedoMap = {};
-			KtxDataHandle specularMap = {};
-			KtxDataHandle normalMap = {};
-			float shininess = 0.0f;
-			IndexType indexType = IndexType::INVALID;
-		};
-
 		std::vector<Resource<Shader>> shaders_ = {};
 		std::vector<Resource<VertexBuffer>> vertexBuffers_ = {};
 		std::vector<Resource<Texture>> textures_ = {};
-		std::vector<Resource<Mesh>> meshes_ = {};
+		std::vector<Resource<IndexedMesh>> indexedMeshes_ = {};
 		std::vector<Resource<Model>> models_ = {};
 
 		std::vector<DrawCall_> drawQueue_ = {};
 
 		glm::mat4 viewMatrix_ = DEFAULT_VIEW_MATRIX;
 
-		static std::vector<GltfMeshData_> ProcessGltf_(const GltfDataHandle& handle);
+		// TODO: implement this
 		static std::vector<glm::mat4> FrustumCulling_(const glm::ivec2 resolution,
 													  const float horizontalFullFov,
 													  const float nearPlane,
-													  const float farPlane,
-													  );
+													  const float farPlane);
 		static void SortFrontToBack_(std::vector<glm::mat4>& transforms);
 		static void SortBackToFront_(std::vector<glm::mat4>& transforms);
-
-		Handle<Mesh> MeshFromGltf_(const GltfMeshData_& data);
 
 	public:
 		sge_DISALLOW_COPY(Renderer);
@@ -81,14 +52,13 @@ namespace sge
 		void Shutdown();
 		void Update();
 
-		Handle<Shader> CreateShader(const Handle<ShaderData>& handle, const Shader::IlluminationModel illum);
-		Handle<VertexBuffer> CreateVertexBuffer(const VertexBuffer::Definition& def, const Hash& accumulatedHash);
-		Handle<Texture> CreateTexture(const Texture::Definition& def, const Hash& accumulatedHash);
-		Handle<Mesh> CreateMesh(void* data, const Hash& accumulatedHash);
-		Handle<Model> CreateModel(void* data, const Hash& accumulatedHash);
+		Handle<Shader> CreateShader(const Handle<ShaderData>& handle);
+		Handle<VertexBuffer> CreateVertexBuffer(const VertexBuffer::Definition& def);
+		Handle<Texture> CreateTexture(const Texture::Definition& def);
+		Handle<IndexedMesh> CreateMesh(void* data);
+		Handle<Model> CreateModel(void* data);
 
-		Handle<Texture> TextureFromKtx(const KtxDataHandle& handle);
-		Handle<Model> ModelFromGltf(const GltfDataHandle& handle, const std::vector<glm::mat4>& transforms);
+		Handle<Shader> GetShaderForShadingMode(const ShadingMode& mode);
 
 		void Schedule(const Handle<Model>& model, const Handle<Shader>& shader);
 	};

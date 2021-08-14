@@ -17,9 +17,37 @@ namespace sge
 		{
 			return value == other.value;
 		}
-		inline bool operator==(const Hash& other) const
+		inline bool operator==(const uint64_t other) const
 		{
-			return value == other.value;
+			return value == other;
+		}
+		inline bool operator>(const uint64_t other) const
+		{
+			return value > other;
+		}
+		inline bool operator<(const uint64_t other) const
+		{
+			return value < other;
+		}
+		inline bool operator>=(const uint64_t other) const
+		{
+			return value >= other;
+		}
+		inline bool operator<=(const uint64_t other) const
+		{
+			return value <= other;
+		}
+		inline bool operator&(const uint64_t other) const
+		{
+			return value & other;
+		}
+		inline bool operator&&(const bool other) const
+		{
+			return value && other;
+		}
+		inline bool IsValid() const
+		{
+			return bool(value);
 		}
 	};
 }//!sge

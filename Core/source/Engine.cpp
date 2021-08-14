@@ -50,7 +50,7 @@ namespace sge
 		resourceManager_.Init();
 		renderer_.Init();
 		app_->Init();
-		resourceManager_.FreeResources();
+		resourceManager_.FreeAssetResources();
 	}
 	void Engine::Shutdown()
 	{

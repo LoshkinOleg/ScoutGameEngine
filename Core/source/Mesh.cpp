@@ -8,32 +8,9 @@ namespace sge
 	{
 		bool returnVal = false;
 		returnVal = returnVal && vboDefs.size();
-		returnVal = returnVal && illum;
 		returnVal = returnVal && eboDef.IsValid();
 		returnVal = returnVal && eboDef.componentsPerElement == 1;
-		switch(illum)
-		{
-			case sge::ALBEDO_ONLY:
-			{
-				returnVal = returnVal && texDefs.size() == 1;
-			}break;
-			case sge::GOOCH: break;
-			case sge::GIZMO: break;
-			case sge::BLINN_PHONG:
-			{
-				returnVal = returnVal && texDefs.size() == 2;
-				returnVal = returnVal && shininess;
-			}break;
-			case sge::BLINN_PHONG_NORMALMAPPED:
-			{
-				returnVal = returnVal && texDefs.size() == 3;
-				returnVal = returnVal && shininess;
-			}break;
-			default:
-			{
-				returnVal = false;
-			}break;
-		}
+		returnVal = returnVal && matDef.IsValid();
 		return returnVal;
 	}
 
@@ -139,6 +116,7 @@ namespace sge
 			sge_CHECK_GL_ERROR();
 		}
 	}
+
 	void IndexedMesh::Update(const std::vector<std::pair<void*, uint32_t>>& dataAndByteLen) const
 	{
 		uint32_t idx = 0;
@@ -160,59 +138,11 @@ namespace sge
 			}
 		}
 	}
-	void IndexedMesh::Draw(const Handle<Shader>& shader, const uint32_t nrOfInstances, const glm::mat4& viewMatrix, const bool updateLightingUniforms) const
+
+	void IndexedMesh::Draw(const Handle<Shader>& shader, const uint32_t nrOfInstances) const
 	{
-		assert(shader->illum == illum);
+		material->Bind(); // Note: shader in the material does not necesserely match the one passed as argument!
 		shader->Bind();
-		switch(illum) // Should get updated for every mesh.
-		{
-			case sge::ALBEDO_ONLY: break;
-			case sge::GOOCH:
-			{
-				shader->SetVec3("color", color);
-			}break;
-			case sge::GIZMO:
-			{
-				shader->SetVec3("color", color);
-			}break;
-			case sge::BLINN_PHONG:
-			{
-				shader->SetFloat("shininess", shininess);
-			}break;
-			case sge::BLINN_PHONG_NORMALMAPPED:
-			{
-				shader->SetFloat("shininess", shininess);
-			}break;
-			default:
-			{
-				sge_ERROR("Unexpected illum value!");
-			}break;
-		}
-		if(updateLightingUniforms) // Should be updated once per frame.
-		{
-			switch(illum)
-			{
-				case sge::ALBEDO_ONLY: break;
-				case sge::GOOCH:; break;
-				case sge::GIZMO:; break;
-				case sge::BLINN_PHONG:
-				{
-					const glm::mat4 cameraMatrix = WINDOW_PROJECTION * viewMatrix;
-					shader->SetMat4("cameraMatrix", cameraMatrix);
-					shader->SetVec3("viewPos", glm::vec3(viewMatrix[3]));
-				}break;
-				case sge::BLINN_PHONG_NORMALMAPPED:
-				{
-					const glm::mat4 cameraMatrix = WINDOW_PROJECTION * viewMatrix;
-					shader->SetMat4("cameraMatrix", cameraMatrix);
-					shader->SetVec3("viewPos", glm::vec3(viewMatrix[3]));
-				}break;
-				default:
-				{
-					sge_ERROR("Unexpected illum value!");
-				}break;
-			}
-		}
 		glBindVertexArray(VAO);
 		if(nrOfInstances)
 		{
@@ -223,26 +153,7 @@ namespace sge
 			glDrawElements((GLenum)shader->primitive, (GLsizei)nrOfVertices, (GLenum)indexVBO->componentType, 0);
 		}
 	}
-	void IndexedMesh::Destroy()
-	{
-		if(IsValid())
-		{
-			for(auto& texture : textures)
-			{
-				texture->Destroy();
-			}
-			for(auto& buffer : vertexBuffers)
-			{
-				buffer->Destroy();
-			}
-			indexVBO->Destroy();
-			Reset();
-		}
-		else
-		{
-			sge_WARNING("Trying to delete an invalid IndexedMesh!");
-		}
-	}
+
 	bool IndexedMesh::IsValid() const
 	{
 		bool returnVal = false;

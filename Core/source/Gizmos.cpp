@@ -4,7 +4,7 @@
 
 namespace sge
 {
-    void Gizmos::GizmoVector::Update(const glm::vec3 newOrigin, const glm::vec3 newEnd) const
+    /*void Gizmos::GizmoVector::Update(const glm::vec3 newOrigin, const glm::vec3 newEnd) const
     {
         sge_ERROR("Fix this shit");
 
@@ -57,5 +57,5 @@ namespace sge
         gizmo.transform = gizmo.model->transformsBegin;
 
         return gizmo;
-    }
+    }*/
 }//!sge

@@ -3,21 +3,34 @@
 #include <vector>
 #include <utility>
 
-#include "ResourceManager.h"
 #include "Mesh.h"
 #include "Shader.h"
-#include "globals.h"
+#include "Engine.h"
 
 namespace sge
 {
 	struct Model
 	{
-		Handle<ResourceManager::TransformsBuffer> transforms = {};
-		// std::vector<std::pair<Handle<IndexedMesh>, Handle<Shader>>> indexedMeshes = {};
+		struct Definition
+		{
+			std::vector<glm::mat4> transforms = {};
+			std::vector<IndexedMesh::Definition> meshDefs = {};
 
-		// TODO: address the issue of having multiple shaders for different meshes and not updating them all excessively
+			bool IsValid() const
+			{
+				bool returnVal = transforms.size() > 0;
+				for(const auto& def : meshDefs)
+				{
+					returnVal &= def.IsValid();
+				}
+				return returnVal;
+			}
+		};
 
-		void Init()
+		Handle<TransformsBuffer> transforms = {};
+		std::vector<Handle<IndexedMesh>> indexedMeshes = {};
+
+		void Init(const Definition& def)
 		{
 
 		}
@@ -25,23 +38,23 @@ namespace sge
 		{
 
 		}
-		void Draw(const glm::mat4& viewMatrix) const
+		void Draw(const Handle<Shader>& shader) const
 		{
-			indexedMeshes[0]->Draw(shader, transforms->NrOfTransforms(), viewMatrix, true);
-			const uint32_t len = indexedMeshes.size();
-			for(uint32_t i = 1; i < len; i++)
+			assert(IsValid());
+			for(const auto& mesh : indexedMeshes)
 			{
-				indexedMeshes[i]->Draw(shader, transforms->NrOfTransforms(), viewMatrix, false);
+				mesh->Draw(shader, transforms->NrOfTransforms());
 			}
-		}
-		void Destroy()
-		{
-
 		}
 
 		bool IsValid() const
 		{
-
+			bool returnVal = transforms->IsValid();
+			for(const auto& mesh : indexedMeshes)
+			{
+				returnVal = returnVal && mesh->IsValid();
+			}
+			return returnVal;
 		}
 		inline void Reset()
 		{
