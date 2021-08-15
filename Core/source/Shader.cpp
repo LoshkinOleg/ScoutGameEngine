@@ -1,18 +1,13 @@
 #include "Shader.h"
 
-#include <map>
-#include <iostream>
-
 #include <glad/glad.h>
 
 #include "macros.h"
 
 namespace sge
 {
-	void Shader::Init(const std::string_view vertexSrc, const std::string_view fragmentSrc, const std::string_view geometrySrc, const ShadingMode illum, const uint32_t primitive)
+	void Shader::Init_(const std::string_view vertexSrc, const std::string_view fragmentSrc, const std::string_view geometrySrc, const ShadingMode shadingMode)
 	{
-		this->primitive = primitive;
-
 		uint32_t VERT = 0, FRAG = 0, GEO = 0;
 		int32_t success = false;
 		const bool usingGeometryShader = !geometrySrc.empty();
@@ -77,6 +72,8 @@ namespace sge
 			glDeleteShader(GEO);
 		}
 		sge_CHECK_GL_ERROR();
+
+		assert(IsValid());
 	}
 	int32_t Shader::GetUniformLocation(const std::string_view name)
 	{
@@ -139,6 +136,52 @@ namespace sge
 		else
 		{
 			sge_ERROR("Trying to use invalid shader!");
+		}
+	}
+	void Shader::UpdatePerFrameUniforms_(const glm::mat4& viewMatrix, const ShadingMode mode)
+	{
+		assert(IsValid());
+		switch(mode)
+		{
+			case ShadingMode::GIZMO:
+			{
+				SetMat4("cameraMatrix", WINDOW_PROJECTION * viewMatrix);
+			}break;
+			case ShadingMode::GOOCH:
+			{
+				SetMat4("cameraMatrix", WINDOW_PROJECTION * viewMatrix);
+				SetVec3("viewPos", glm::vec3(viewMatrix[3]));
+			}break;
+			case ShadingMode::ALBEDO_ONLY:
+			{
+				SetMat4("cameraMatrix", WINDOW_PROJECTION * viewMatrix);
+			}break;
+			case ShadingMode::BLINN_PHONG:
+			{
+				SetMat4("cameraMatrix", WINDOW_PROJECTION * viewMatrix);
+				SetVec3("viewPos", glm::vec3(viewMatrix[3]));
+			}break;
+			case ShadingMode::BLINN_PHONG_NORMALMAPPED:
+			{
+				SetMat4("cameraMatrix", WINDOW_PROJECTION * viewMatrix);
+				SetVec3("viewPos", glm::vec3(viewMatrix[3]));
+			}break;
+			default:
+			{
+				sge_ERROR("Invalid IllumMode in Shader!");
+			}break;
+		}
+	}
+	void Shader::Destroy_()
+	{
+		if(IsValid())
+		{
+			glDeleteProgram(PROGRAM);
+			Reset();
+		}
+		else
+		{
+			sge_WARNING("Trying to destroy an invalid shader!");
 		}
 	}
 }//!sge

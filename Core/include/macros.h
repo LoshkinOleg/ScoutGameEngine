@@ -1,6 +1,8 @@
 #pragma once
 
+#ifdef _DEBUG
 #include <iostream>
+#endif//!_DEBUG
 #include <string>
 
 #ifndef sgeGuard_InstanciationRules

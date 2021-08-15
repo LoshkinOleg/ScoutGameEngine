@@ -35,6 +35,8 @@ namespace sge
 	constexpr const glm::vec3 BLACK = glm::vec3(0.0f);
 	constexpr const glm::vec3 GREEN = glm::vec3(0.0f, 1.0f, 0.0f);
 	constexpr const glm::vec3 BLUE = glm::vec3(0.0f, 0.0f, 1.0f);
+	constexpr const glm::vec3 DEFAULT_COLOR = glm::vec3(0.3f, 0.0f, 0.3f);
+	constexpr const glm::vec3 INVERSE_DEFAULT_COLOR = glm::vec3(0.6f, 1.0f, 0.6f);
 
 	constexpr const glm::mat4 IDENTITY_MAT4 = glm::mat4(1.0f);
 	constexpr const glm::mat4 DEFAULT_VIEW_MATRIX = IDENTITY_MAT4;
@@ -100,7 +102,7 @@ namespace sge
 		STATIC = 0x88E4, // GL_STATIC_DRAW
 		DYNAMIC = 0x88E8 // GL_DYNAMIC_DRAW
 	};
-	enum ComponentType: uint32_t
+	enum NumberType: uint32_t
 	{
 		INVALID = 0,
 

@@ -111,6 +111,27 @@ namespace sge
 		assert(IsValid());
 	}
 
+	bool Material::Definition::IsValid() const
+	{
+		bool returnVal = shadingMode;
+		for(const auto& def : texDefs)
+		{
+			returnVal &= def.IsValid();
+		}
+		return returnVal;
+	}
+	Hash Material::Definition::ComputeHash() const
+	{
+		Hash hash = 0;
+		for(const auto& element : texDefs)
+		{
+			hash.Accumulate(element.datas[0], element.ByteSize(0));
+		}
+		hash.Accumulate(vec3s.data(), sizeof(glm::vec3) * vec3s.size());
+		hash.Accumulate(floats.data(), sizeof(float) * floats.size());
+		hash.Accumulate(&shadingMode, sizeof(ShadingMode));
+		return hash;
+	}
 	void Material::Bind() const
 	{
 		assert(IsValid());

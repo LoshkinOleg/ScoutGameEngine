@@ -6,22 +6,34 @@ namespace sge
 {
 	bool IndexedMesh::Definition::IsValid() const
 	{
-		bool returnVal = false;
-		returnVal = returnVal && vboDefs.size();
-		returnVal = returnVal && eboDef.IsValid();
-		returnVal = returnVal && eboDef.componentsPerElement == 1;
-		returnVal = returnVal && matDef.IsValid();
+		bool returnVal = vboDefs.size();
+		returnVal &= eboDef.IsValid();
+		returnVal &= eboDef.componentsPerElement == 1;
+		for(const auto& matDef : matDefs)
+		{
+			returnVal &= matDef.IsValid();
+		}
 		return returnVal;
 	}
-
-	void IndexedMesh::Init(const Definition& def)
+	Hash IndexedMesh::Definition::ComputeHash() const
+	{
+		Hash hash = 0;
+		for(const auto& element : vboDefs)
+		{
+			hash.Accumulate(element.begin, element.byteLen);
+		}
+		hash.Accumulate(eboDef.begin, eboDef.byteLen);
+		for(const auto& element : matDefs)
+		{
+			hash.Accumulate(element.ComputeHash());
+		}
+		return hash;
+	}
+	void IndexedMesh::Init_(const Definition& def)
 	{
 		assert(def.IsValid());
 		auto& renderer = Engine::Get().GetRenderer();
 		const uint32_t nrOfVbos = def.vboDefs.size();
-
-		shininess = def.shininess;
-		color = def.color;
 		
 		// Note: we're assuming the first buffer is always the one with positions.
 		const VertexBuffer::Definition& vbdef = def.vboDefs[0];
@@ -87,22 +99,23 @@ namespace sge
 		{
 			assert(def.vboDefs[i].IsValid());
 			assert(def.vboDefs[i].componentType == GL_FLOAT); // Not handling any other type of vertex data yet.
-			vertexBuffers[i] = renderer.CreateVertexBuffer(def.vboDefs[i], 0);
+			vertexBuffers[i] = renderer.CreateVertexBuffer(def.vboDefs[i]);
 			sge_CHECK_GL_ERROR();
 		}
 
 		glGenVertexArrays(1, &VAO);
 		glBindVertexArray(VAO);
-		indexVBO = renderer.CreateVertexBuffer(def.eboDef, 0);
+		indexVBO = renderer.CreateVertexBuffer(def.eboDef);
 		sge_CHECK_GL_ERROR();
 
-		const uint32_t nrOfTextures = def.texDefs.size();
-		for(uint32_t i = 0; i < nrOfTextures; i++)
+		const uint32_t nrOfMaterials = def.matDefs.size();
+		for(uint32_t i = 0; i < nrOfMaterials; i++)
 		{
-			textures[i] = renderer.CreateTexture(def.texDefs[i], 0);
+			materials.insert({ def.matDefs[i].shadingMode, renderer.CreateMaterial(def.matDefs[i]) });
 			sge_CHECK_GL_ERROR();
 		}
 
+		// Set up VAO ptrs.
 		for(uint32_t i = 0; i < vertexBuffers.size(); i++)
 		{
 			sge_CHECK_GL_ERROR();
@@ -139,61 +152,36 @@ namespace sge
 		}
 	}
 
-	void IndexedMesh::Draw(const Handle<Shader>& shader, const uint32_t nrOfInstances) const
+	void IndexedMesh::Draw_(const uint32_t nrOfInstances, const uint32_t primitive, const ShadingMode mode)
 	{
-		material->Bind(); // Note: shader in the material does not necesserely match the one passed as argument!
-		shader->Bind();
+		materials[mode]->Bind();
 		glBindVertexArray(VAO);
 		if(nrOfInstances)
 		{
-			glDrawElementsInstanced((GLenum)shader->primitive, (GLsizei)nrOfVertices, (GLenum)indexVBO->componentType, 0, (GLsizei)nrOfInstances);
+			glDrawElementsInstanced((GLenum)primitive, (GLsizei)nrOfVertices, (GLenum)indexVBO->componentType, 0, (GLsizei)nrOfInstances);
 		}
 		else
 		{
-			glDrawElements((GLenum)shader->primitive, (GLsizei)nrOfVertices, (GLenum)indexVBO->componentType, 0);
+			glDrawElements((GLenum)primitive, (GLsizei)nrOfVertices, (GLenum)indexVBO->componentType, 0);
 		}
 	}
 
 	bool IndexedMesh::IsValid() const
 	{
-		bool returnVal = false;
-		returnVal = returnVal && VAO;
-		returnVal = returnVal && indexVBO.IsValid();
-		returnVal = returnVal && indexVBO->IsValid();
+		bool returnVal = VAO;
+		returnVal &= indexVBO.IsValid();
+		returnVal &= indexVBO->IsValid();
 		for(const auto& handle : vertexBuffers)
 		{
-			returnVal = returnVal && handle.IsValid();
-			returnVal = returnVal && handle->IsValid();
+			returnVal &= handle.IsValid();
+			returnVal &= handle->IsValid();
 		}
-		for(const auto& handle : textures)
+		for(const auto& pair : materials)
 		{
-			returnVal = returnVal && handle.IsValid();
-			returnVal = returnVal && handle->IsValid();
+			returnVal &= pair.second.IsValid();
+			returnVal &= pair.second->IsValid();
 		}
-		returnVal = returnVal && nrOfVertices;
-		switch(illum)
-		{
-			case sge::ALBEDO_ONLY:
-			{
-				returnVal = returnVal && textures.size() == 1;
-			}break;
-			case sge::GOOCH: break;
-			case sge::BLINN_PHONG:
-			{
-				returnVal = returnVal && textures.size() == 2;
-				returnVal = returnVal && shininess;
-			}break;
-			case sge::BLINN_PHONG_NORMALMAPPED:
-			{
-				returnVal = returnVal && textures.size() == 3;
-				returnVal = returnVal && shininess;
-			}break;
-			default:
-			{
-				returnVal = false;
-			}break;
-		}
-
+		returnVal &= nrOfVertices;
 		return returnVal;
 	}
 }//!sge

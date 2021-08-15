@@ -18,6 +18,9 @@ namespace sge
 			std::vector<glm::vec3> vec3s = {};
 			std::vector<float> floats = {};
 			ShadingMode shadingMode = ShadingMode::INVALID;
+
+			bool IsValid() const;
+			Hash ComputeHash() const;
 		};
 
 		std::vector<Handle<Texture>> textures = {};

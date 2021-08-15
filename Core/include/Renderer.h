@@ -1,14 +1,6 @@
 #pragma once
 
-#include "ResourcesAbstracts.h"
-#include "VertexBuffer.h"
-#include "Texture.h"
-#include "Shader.h"
-#include "Mesh.h"
 #include "Model.h"
-#include "Hash.h"
-#include "macros.h"
-#include "globals.h"
 
 namespace sge
 {
@@ -17,19 +9,28 @@ namespace sge
 		friend class Engine;
 		sge_ALLOW_CONSTRUCTION(Renderer);
 
-		constexpr static const int32_t CLEAR_FLAGS_ = GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT;
-		constexpr static const float CLEAR_COLOR_[4] = { 0.3f, 0.0f, 0.3f, 1.0f };
+		constexpr static const int32_t CLEAR_FLAGS_ = 0x00004000 | 0x00000100;
 
 		struct DrawCall_
 		{
 			Handle<Model> model = {};
-			Handle<Shader> shader = {};
-			int32_t primitive = GL_TRIANGLES;
+			ShadingMode mode = {};
+			int32_t primitive = GL_TRIANGLES; // 0 is GL_POINTS so might as well give it a default value.
 		};
 
-		std::vector<Resource<Shader>> shaders_ = {};
+		// std::vector<Resource<Shader>> shaders_ = {};
+		Resource<Shader> gizmoShader_ = {};
+		Resource<Shader> goochShader_ = {};
+		Resource<Shader> albedoOnlyShader_ = {};
+		Resource<Shader> blinnPhongShader_ = {};
+		Resource<Shader> blinnPhongNormalmappedShader_ = {};
+		Resource<Shader> shadowPassShader_ = {};
+		Resource<Shader> deferredPassShader_ = {};
+		Resource<Shader> postprocessPassShader_ = {};
+
 		std::vector<Resource<VertexBuffer>> vertexBuffers_ = {};
 		std::vector<Resource<Texture>> textures_ = {};
+		std::vector<Resource<Material>> materials_ = {};
 		std::vector<Resource<IndexedMesh>> indexedMeshes_ = {};
 		std::vector<Resource<Model>> models_ = {};
 
@@ -55,11 +56,12 @@ namespace sge
 		Handle<Shader> CreateShader(const Handle<ShaderData>& handle);
 		Handle<VertexBuffer> CreateVertexBuffer(const VertexBuffer::Definition& def);
 		Handle<Texture> CreateTexture(const Texture::Definition& def);
-		Handle<IndexedMesh> CreateMesh(void* data);
-		Handle<Model> CreateModel(void* data);
+		Handle<Material> CreateMaterial(const Material::Definition& def);
+		Handle<IndexedMesh> CreateMesh(const IndexedMesh::Definition& def);
+		Handle<Model> CreateModel(const Model::Definition& def);
 
-		Handle<Shader> GetShaderForShadingMode(const ShadingMode& mode);
+		Handle<Shader> GetShaderForShadingMode(const ShadingMode mode);
 
-		void Schedule(const Handle<Model>& model, const Handle<Shader>& shader);
+		void Schedule(const Handle<Model>& model, const uint32_t primitive, const ShadingMode mode);
 	};
 }//!sge

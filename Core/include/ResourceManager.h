@@ -103,7 +103,14 @@ namespace sge
 		Handle<ShaderData> LoadShader(const std::string_view vertexPath, const std::string_view fragmentPath, const std::string_view geometryPath);
 		Handle<GltfData> LoadGltf(const std::string_view path);
 
-		Model::Definition GenerateDefinitionFrom(const Handle<GltfData>& handle, const GltfAttributes relevantData, const ShadingMode shadingModesNeeded);
+		Model::Definition GenerateDefinitionFrom(const Handle<GltfData>& handle, const GltfAttributes relevantData, const ShadingMode shadingModesNeeded) const;
+		Texture::Definition GenerateDefinitionFrom(const Handle<KtxData>& handle,
+												   const Texture::SamplingMode minifyingMode,
+												   const Texture::SamplingMode magnifyingMode,
+												   const Texture::WrappingMode onS,
+												   const Texture::WrappingMode onT,
+												   const Mutability mutability,
+												   const bool generateMipMaps) const;
 
 		TransformsBuffer AllocateTransforms(const void* const data, const uint32_t byteLen);
 

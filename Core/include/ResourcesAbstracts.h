@@ -10,7 +10,7 @@ namespace sge
 		Hash hash = 0;
 		Type resourceData = {};
 
-		bool IsValid() const
+		inline bool IsValid() const
 		{
 			return hash.IsValid() && resourceData.IsValid();
 		}
@@ -22,21 +22,21 @@ namespace sge
 		Hash hash = 0;
 		Resource<Type>* ptr = nullptr;
 
-		Type* operator->() const
+		inline Type* operator->() const
 		{
 			assert(hash == ptr->hash);
 			return &ptr->resourceData;
 		}
-		Type& operator*() const
+		inline Type& operator*() const
 		{
 			assert(hash == ptr->hash);
 			return ptr->resourceData;
 		}
-		bool operator==(const Handle<Type>& other) const
+		inline bool operator==(const Handle<Type>& other) const
 		{
 			return hash == other.hash;
 		}
-		bool operator==(const Resource<Type>& resource) const
+		inline bool operator==(const Resource<Type>& resource) const
 		{
 			return hash == resource.hash;
 		}

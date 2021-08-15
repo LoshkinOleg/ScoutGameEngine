@@ -1,12 +1,10 @@
 #include "VertexBuffer.h"
 
-#include <iostream>
-
-#include "macros.h"
+#include <glad/glad.h>
 
 namespace sge
 {
-	void VertexBuffer::Init(const Definition& def)
+	void VertexBuffer::Init_(const Definition& def)
 	{
 		usage = def.usage;
 		componentType = def.componentType;
@@ -21,19 +19,23 @@ namespace sge
 			glGetIntegerv(GL_VERTEX_ARRAY_BINDING, &current);
 			assert(current);
 		}
-		glBindBuffer(Target(), VBO);
-		glBufferData(Target(), (GLsizeiptr)def.byteLen, def.begin, (GLenum)def.usage);
+		const GLenum target = Target_();
+		glBindBuffer(target, VBO);
+		glBufferData(target, (GLsizeiptr)def.byteLen, def.begin, (GLenum)def.usage);
 		sge_CHECK_GL_ERROR();
+
+		assert(IsValid());
 	}
 	void VertexBuffer::Update(void* data, const uint32_t byteLen) const
 	{
 		assert(IsValid());
-		assert(usage == Mutability::DYNAMIC && Target() == GL_ARRAY_BUFFER); // Not handling dynamic indices.
-		glBindBuffer(Target(), VBO);
-		glBufferSubData(Target(), 0, (GLsizeiptr)byteLen, data);
+		const GLenum target = Target_();
+		assert(usage == Mutability::DYNAMIC && target == GL_ARRAY_BUFFER); // Not handling dynamic indices.
+		glBindBuffer(target, VBO);
+		glBufferSubData(target, 0, (GLsizeiptr)byteLen, data);
 		sge_CHECK_GL_ERROR();
 	}
-	void VertexBuffer::Destroy()
+	void VertexBuffer::Destroy_()
 	{
 		if(IsValid())
 		{
@@ -53,11 +55,11 @@ namespace sge
 	{
 		switch(componentType)
 		{
-			case ComponentType::FLOAT:
+			case NumberType::FLOAT:
 			{
 				return sizeof(float) * componentsPerElement;
 			}break;
-			case ComponentType::UINT:
+			case NumberType::UINT:
 			{
 				return sizeof(uint32_t) * componentsPerElement;
 			}break;

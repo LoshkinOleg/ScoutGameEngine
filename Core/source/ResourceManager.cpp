@@ -180,7 +180,7 @@ namespace sge
 		return handle;
 	}
 
-	Model::Definition ResourceManager::GenerateDefinitionFrom(const Handle<GltfData>& handle, const GltfAttributes relevantData, const ShadingMode requiredShadingModes)
+	Model::Definition ResourceManager::GenerateDefinitionFrom(const Handle<GltfData>& handle, const GltfAttributes relevantData, const ShadingMode requiredShadingModes) const
 	{
 		assert(relevantData > 0); // Need at least something to load.
 
@@ -192,8 +192,8 @@ namespace sge
 		for(uint32_t meshIdx = 0; meshIdx < nrOfMeshes; meshIdx++)
 		{
 			modDef.meshDefs.push_back(IndexedMesh::Definition());
-			auto& newMeshDef = modDef.meshDefs.front(); // TODO
-			auto& newMaterialDefs = newMeshDef.matDefs; // TODO
+			auto& newMeshDef = modDef.meshDefs.front();
+			auto& newMaterialDefs = newMeshDef.matDefs;
 			auto& newVboDefs = newMeshDef.vboDefs;
 			auto& newEboDef = newMeshDef.eboDef;
 			tinygltf::Mesh& mesh = model.meshes[meshIdx];
@@ -203,6 +203,8 @@ namespace sge
 			auto& attributes = mesh.primitives[0].attributes;
 			const auto indicesIdx = mesh.primitives[0].indices;
 			const auto materialIdx = mesh.primitives[0].material;
+			const std::string_view meshName = mesh.name;
+			const Hash hashedMeshName = Hash(meshName.data(), meshName.length(), 0);
 
 			for(const auto& pair : attributes)
 			{
@@ -271,7 +273,7 @@ namespace sge
 				positionsBuffer.begin = new uint8_t[bufferView.byteLength]; // Note: Must be deleted in CreateVertexBuffer() method!!!
 				positionsBuffer.byteLen = bufferView.byteLength;
 				positionsBuffer.componentsPerElement = TINYGLTF_TYPE_VEC3;
-				positionsBuffer.componentType = (ComponentType)TINYGLTF_COMPONENT_TYPE_FLOAT;
+				positionsBuffer.componentType = (NumberType)TINYGLTF_COMPONENT_TYPE_FLOAT;
 				positionsBuffer.isIndexBuffer = false;
 				positionsBuffer.usage = (Mutability)GL_STATIC_DRAW;
 				positionsBuffer.type = VertexBuffer::Definition::Type::POSITIONS_VEC3;
@@ -292,7 +294,7 @@ namespace sge
 				newEboDef.begin = new uint8_t[bufferView.byteLength]; // Note: Must be deleted in CreateVertexBuffer() method!!!
 				newEboDef.byteLen = bufferView.byteLength;
 				newEboDef.componentsPerElement = 1;
-				newEboDef.componentType = ComponentType::UINT;
+				newEboDef.componentType = NumberType::UINT;
 				newEboDef.isIndexBuffer = true;
 				newEboDef.usage = (Mutability)GL_STATIC_DRAW;
 				newEboDef.type = VertexBuffer::Definition::Type::INDICES_UINT32;
@@ -353,7 +355,7 @@ namespace sge
 					normalsBuffer.begin = new uint8_t[bufferViewNormals.byteLength]; // Note: Must be deleted in CreateVertexBuffer() method!!!
 					normalsBuffer.byteLen = bufferViewNormals.byteLength;
 					normalsBuffer.componentsPerElement = TINYGLTF_TYPE_VEC3;
-					normalsBuffer.componentType = (ComponentType)TINYGLTF_COMPONENT_TYPE_FLOAT;
+					normalsBuffer.componentType = (NumberType)TINYGLTF_COMPONENT_TYPE_FLOAT;
 					normalsBuffer.isIndexBuffer = false;
 					normalsBuffer.usage = (Mutability)GL_STATIC_DRAW;
 					normalsBuffer.type = VertexBuffer::Definition::Type::NORMALS;
@@ -369,7 +371,7 @@ namespace sge
 					tangentsBuffer.begin = new uint8_t[tangents.size() * sizeof(glm::vec3)]; // Note: Must be deleted in CreateVertexBuffer() method!!!
 					tangentsBuffer.byteLen = tangents.size() * sizeof(glm::vec3);
 					tangentsBuffer.componentsPerElement = TINYGLTF_TYPE_VEC3;
-					tangentsBuffer.componentType = (ComponentType)TINYGLTF_COMPONENT_TYPE_FLOAT;
+					tangentsBuffer.componentType = (NumberType)TINYGLTF_COMPONENT_TYPE_FLOAT;
 					tangentsBuffer.isIndexBuffer = false;
 					tangentsBuffer.usage = (Mutability)GL_STATIC_DRAW;
 					tangentsBuffer.type = VertexBuffer::Definition::Type::TANGENTS;
@@ -393,7 +395,7 @@ namespace sge
 				uvsBuffer.begin = new uint8_t[bufferView.byteLength]; // Note: Must be deleted in CreateVertexBuffer() method!!!
 				uvsBuffer.byteLen = bufferView.byteLength;
 				uvsBuffer.componentsPerElement = TINYGLTF_TYPE_VEC3;
-				uvsBuffer.componentType = (ComponentType)TINYGLTF_COMPONENT_TYPE_FLOAT;
+				uvsBuffer.componentType = (NumberType)TINYGLTF_COMPONENT_TYPE_FLOAT;
 				uvsBuffer.isIndexBuffer = false;
 				uvsBuffer.usage = (Mutability)GL_STATIC_DRAW;
 				uvsBuffer.type = VertexBuffer::Definition::Type::NORMALS;
@@ -401,44 +403,196 @@ namespace sge
 				assert(uvsBuffer.IsValid());
 			}
 
-			const uint32_t len = std::bit_width((uint64_t)ShadingMode::MAX_VALUE);
-			for(uint32_t i = 0; i < len; i++)
+			if(requiredShadingModes != ShadingMode::INVALID)
 			{
-				// Load appropriate materials
-				if(requiredShadingModes & ShadingMode::GIZMO)
+				const uint32_t len = std::bit_width((uint64_t)ShadingMode::MAX_VALUE);
+				for(uint32_t i = 0; i < len; i++)
 				{
-
-				}
-				if(requiredShadingModes & ShadingMode::ALBEDO_ONLY)
-				{
-
-				}
-				if(requiredShadingModes & ShadingMode::GOOCH)
-				{
-
-				}
-				if(requiredShadingModes & ShadingMode::BLINN_PHONG)
-				{
-
-				}
-				if(requiredShadingModes & ShadingMode::BLINN_PHONG_NORMALMAPPED)
-				{
-
-				}
-				if(requiredShadingModes & ShadingMode::SHADOW_PASS)
-				{
-
-				}
-				if(requiredShadingModes & ShadingMode::POST_PROCESS_PASS)
-				{
-
-				}
-				if(requiredShadingModes & ShadingMode::DEFERRED_PASS)
-				{
-
+					if(requiredShadingModes & ShadingMode::GIZMO)
+					{
+						newMaterialDefs.push_back(Material::Definition());
+						auto& newMaterialDef = newMaterialDefs.front();
+						newMaterialDef.vec3s.push_back(INVERSE_DEFAULT_COLOR);
+					}
+					if(requiredShadingModes & ShadingMode::ALBEDO_ONLY)
+					{
+						newMaterialDefs.push_back(Material::Definition());
+						auto& newMaterialDef = newMaterialDefs.front();
+						newMaterialDef.shadingMode = ShadingMode::ALBEDO_ONLY;
+						newMaterialDef.texDefs.push_back(Texture::Definition());
+						auto& newTextureDef = newMaterialDef.texDefs.front();
+						bool albedoMapFound = false;
+						for(const auto& image : handle->images)
+						{
+							if(image->associatedMesh == hashedMeshName)
+							{
+								if(image->type == ImageType::ALBEDO_MAP)
+								{
+									albedoMapFound = true;
+									newTextureDef = GenerateDefinitionFrom
+										 (image,
+										 (Texture::SamplingMode)((image->data.levels() > 1) ? GL_LINEAR_MIPMAP_LINEAR : GL_LINEAR),
+										 (Texture::SamplingMode)GL_LINEAR,
+										 (Texture::WrappingMode)GL_MIRRORED_REPEAT,
+										 (Texture::WrappingMode)GL_MIRRORED_REPEAT,
+										 (Mutability)GL_STATIC_DRAW,
+										 false);
+								}
+							}
+						}
+						if(!albedoMapFound) sge_ERROR("Couldn't find an appropriate texture in the list of images provided!");
+						assert(newMaterialDef.IsValid());
+					}
+					if(requiredShadingModes & ShadingMode::GOOCH)
+					{
+						newMaterialDefs.push_back(Material::Definition());
+						auto& newMaterialDef = newMaterialDefs.front();
+						newMaterialDef.vec3s.push_back(INVERSE_DEFAULT_COLOR);
+					}
+					if(requiredShadingModes & ShadingMode::BLINN_PHONG)
+					{
+						newMaterialDefs.push_back(Material::Definition());
+						auto& newMaterialDef = newMaterialDefs.front();
+						newMaterialDef.shadingMode = ShadingMode::BLINN_PHONG;
+						newMaterialDef.texDefs.push_back(Texture::Definition());
+						auto& newAlbedoDef = newMaterialDef.texDefs.front();
+						newMaterialDef.texDefs.push_back(Texture::Definition());
+						auto& newSpecularDef = newMaterialDef.texDefs.front();
+						bool albedoMapFound = false;
+						bool specularMapFound = false;
+						for(const auto& image : handle->images)
+						{
+							if(image->associatedMesh == hashedMeshName)
+							{
+								if(image->type == ImageType::ALBEDO_MAP)
+								{
+									albedoMapFound = true;
+									newAlbedoDef = GenerateDefinitionFrom
+									(image,
+									 (Texture::SamplingMode)((image->data.levels() > 1) ? GL_LINEAR_MIPMAP_LINEAR : GL_LINEAR),
+									 (Texture::SamplingMode)GL_LINEAR,
+									 (Texture::WrappingMode)GL_MIRRORED_REPEAT,
+									 (Texture::WrappingMode)GL_MIRRORED_REPEAT,
+									 (Mutability)GL_STATIC_DRAW,
+									 false);
+								}
+								else if(image->type == ImageType::SPECULAR_MAP)
+								{
+									// TODO: use single channel texture for speculars.
+									specularMapFound = true;
+									newSpecularDef = GenerateDefinitionFrom
+									(image,
+									 (Texture::SamplingMode)((image->data.levels() > 1) ? GL_LINEAR_MIPMAP_LINEAR : GL_LINEAR),
+									 (Texture::SamplingMode)GL_LINEAR,
+									 (Texture::WrappingMode)GL_MIRRORED_REPEAT,
+									 (Texture::WrappingMode)GL_MIRRORED_REPEAT,
+									 (Mutability)GL_STATIC_DRAW,
+									 false);
+								}
+							}
+						}
+						if(!albedoMapFound || !specularMapFound) sge_ERROR("Couldn't find an appropriate texture in the list of images provided!");
+						newMaterialDef.floats.push_back(64.0f); // TODO: load shininess from gltf.
+						assert(newMaterialDef.IsValid());
+					}
+					if(requiredShadingModes & ShadingMode::BLINN_PHONG_NORMALMAPPED)
+					{
+						newMaterialDefs.push_back(Material::Definition());
+						auto& newMaterialDef = newMaterialDefs.front();
+						newMaterialDef.shadingMode = ShadingMode::BLINN_PHONG_NORMALMAPPED;
+						newMaterialDef.texDefs.push_back(Texture::Definition());
+						auto& newAlbedoDef = newMaterialDef.texDefs.front();
+						newMaterialDef.texDefs.push_back(Texture::Definition());
+						auto& newSpecularDef = newMaterialDef.texDefs.front();
+						newMaterialDef.texDefs.push_back(Texture::Definition());
+						auto& newNormalmapDef = newMaterialDef.texDefs.front();
+						bool albedoMapFound = false;
+						bool specularMapFound = false;
+						bool normalMapFound = false;
+						for(const auto& image : handle->images)
+						{
+							if(image->associatedMesh == hashedMeshName)
+							{
+								if(image->type == ImageType::ALBEDO_MAP)
+								{
+									albedoMapFound = true;
+									newAlbedoDef = GenerateDefinitionFrom
+									(image,
+									 (Texture::SamplingMode)((image->data.levels() > 1) ? GL_LINEAR_MIPMAP_LINEAR : GL_LINEAR),
+									 (Texture::SamplingMode)GL_LINEAR,
+									 (Texture::WrappingMode)GL_MIRRORED_REPEAT,
+									 (Texture::WrappingMode)GL_MIRRORED_REPEAT,
+									 (Mutability)GL_STATIC_DRAW,
+									 false);
+								}
+								else if(image->type == ImageType::SPECULAR_MAP)
+								{
+									// TODO: use single channel texture for speculars.
+									specularMapFound = true;
+									newSpecularDef = GenerateDefinitionFrom
+									(image,
+									 (Texture::SamplingMode)((image->data.levels() > 1) ? GL_LINEAR_MIPMAP_LINEAR : GL_LINEAR),
+									 (Texture::SamplingMode)GL_LINEAR,
+									 (Texture::WrappingMode)GL_MIRRORED_REPEAT,
+									 (Texture::WrappingMode)GL_MIRRORED_REPEAT,
+									 (Mutability)GL_STATIC_DRAW,
+									 false);
+								}
+								else if(image->type == ImageType::NORMAL_MAP)
+								{
+									normalMapFound = true;
+									newNormalmapDef = GenerateDefinitionFrom
+									(image,
+									 (Texture::SamplingMode)((image->data.levels() > 1) ? GL_LINEAR_MIPMAP_LINEAR : GL_LINEAR),
+									 (Texture::SamplingMode)GL_LINEAR,
+									 (Texture::WrappingMode)GL_MIRRORED_REPEAT,
+									 (Texture::WrappingMode)GL_MIRRORED_REPEAT,
+									 (Mutability)GL_STATIC_DRAW,
+									 false);
+								}
+							}
+						}
+						if(!albedoMapFound || !specularMapFound || !normalMapFound) sge_ERROR("Couldn't find an appropriate texture in the list of images provided!");
+						newMaterialDef.floats.push_back(64.0f); // TODO: load shininess from gltf.
+						assert(newMaterialDef.IsValid());
+					}
 				}
 			}
+			assert(newMeshDef.IsValid());
 		}
+	}
+
+	Texture::Definition ResourceManager::GenerateDefinitionFrom
+		(const Handle<KtxData>& handle,
+		 const Texture::SamplingMode minifyingMode,
+		 const Texture::SamplingMode magnifyingMode,
+		 const Texture::WrappingMode onS,
+		 const Texture::WrappingMode onT,
+		 const Mutability mutability,
+		 const bool generateMipMaps) const
+	{
+		assert(handle->IsValid());
+		if(generateMipMaps) sge_ERROR("Implement this before using it!");
+
+		const auto& image = handle->data;
+		const uint32_t nrOfMipLevels = image.layers();
+		Texture::Definition newTextureDef;
+
+		for(uint32_t level = 0; level < nrOfMipLevels; level++)
+		{
+			// TODO: handle cubemaps
+			newTextureDef.datas.push_back(image.data(0, 0, level));
+			newTextureDef.widths.push_back(image.extent(level).x);
+			newTextureDef.heights.push_back(image.extent(level).y);
+		}
+		newTextureDef.format = Texture::Format::RGBA_B8; // TODO: add support for more formats.
+		newTextureDef.generateMipMaps = false;
+		newTextureDef.minifyingMode = minifyingMode;
+		newTextureDef.magnifyingMode = magnifyingMode;
+		newTextureDef.mipLevels = nrOfMipLevels - 1; // Note: using 0 for a single mipmap level for simpler conditionals.
+		newTextureDef.mutability = mutability;
+		newTextureDef.onS = onS;
+		newTextureDef.onT = onT;
 	}
 
 	Handle<KtxData> ResourceManager::LoadKtx(const std::string_view path)

@@ -27,4 +27,10 @@ namespace sge
 			value = XXH64(accumulatedData.c_str(), accumulatedData.size(), HASHING_SEED_);
 		}
 	}
+	void Hash::Accumulate(const void* const data, const uint32_t byteLen)
+	{
+		std::string accumulatedData = std::to_string(value);
+		accumulatedData += std::to_string(XXH64(data, (size_t)byteLen, HASHING_SEED_));
+		value = XXH64(accumulatedData.c_str(), accumulatedData.size(), HASHING_SEED_);
+	}
 }//!sge

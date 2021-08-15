@@ -6,24 +6,19 @@
 
 namespace sge
 {
-	void Texture::Init(void* data,
-			  const Mutability mutability,
-			  const Format format,
-			  const uint32_t width,
-			  const uint32_t height,
-			  const uint32_t mipLevels,
-			  const SamplingMode minifyingMode,
-			  const SamplingMode magnifyingMode,
-			  const WrappingMode wrappingModeS,
-			  const WrappingMode wrappingModeT)
+	void Texture::Init_(const Definition& def)
 	{
-		this->width = width;
-		this->height = height;
-		this->mutability = mutability;
-		this->minifyingMode = minifyingMode;
-		this->magnifyingMode = magnifyingMode;
-		this->wrappingModeS = wrappingModeS;
-		this->wrappingModeT = wrappingModeT;
+		assert(def.IsValid());
+
+		widths = def.widths;
+		heights = def.heights;
+		mutability = def.mutability;
+		minifyingMode = def.minifyingMode;
+		magnifyingMode = def.magnifyingMode;
+		wrappingModeS = def.onS;
+		wrappingModeT = def.onT;
+
+		if(def.generateMipMaps) sge_ERROR("Implement generation of mip maps!");
 
 		glGenTextures(1, &TEX);
 		glBindTexture(GL_TEXTURE_2D, TEX);
@@ -31,9 +26,10 @@ namespace sge
 		if(mutability == Mutability::DYNAMIC)
 		{
 			sge_CHECK_GL_ERROR();
-			assert(format == Format::RED_F32);
-			assert(!mipLevels);
-			glTexImage2D(GL_TEXTURE_2D, 0, GL_R32F, (GLsizei)width, (GLsizei)height, 0, GL_RED, GL_FLOAT, data);
+			assert(def.format == Format::RED_F32); // Supporting only single channel float textures for dynamic ones.
+			assert(!def.mipLevels && !def.generateMipMaps); // Not supporting mip mapping for dynamic textures.
+			assert(def.widths.size() == 1);
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_R32F, (GLsizei)widths[0], (GLsizei)heights[0], 0, GL_RED, GL_FLOAT, def.datas[0]);
 			sge_CHECK_GL_ERROR();
 			assert(minifyingMode < LINEAR_MIPMAP_NEAREST && magnifyingMode < LINEAR_MIPMAP_NEAREST);
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, (GLint)minifyingMode);
@@ -46,17 +42,17 @@ namespace sge
 		{
 			// TODO: add support for compressed textures.
 
-			assert(format == Format::RGBA_B8);
+			assert(def.format == Format::RGBA_B8); // Supporting only uint8_t type for each color channel in RGBA.
+			if(minifyingMode > SamplingMode::NEAREST) assert(def.mipLevels > 0);
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_BASE_LEVEL, 0);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, (GLint)(mipLevels));
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, (GLint)(def.mipLevels));
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, (GLint)wrappingModeS);
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, (GLint)wrappingModeT);
-			if(minifyingMode > SamplingMode::NEAREST) assert(mipLevels > 0);
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, (GLint)minifyingMode);
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, (GLint)magnifyingMode);
-			glTexStorage2D(GL_TEXTURE_2D, (GLsizei)mipLevels, GL_RGBA8, (GLsizei)width, (GLsizei)height);
+			glTexStorage2D(GL_TEXTURE_2D, (GLsizei)def.mipLevels, GL_RGBA8, (GLsizei)def.widths[0], (GLsizei)def.heights[0]);
 			sge_CHECK_GL_ERROR();
-			for(size_t level = 0; level < mipLevels + 1; level++)
+			for(uint32_t level = 0; level < def.mipLevels + 1; level++)
 			{
 				glTexSubImage2D
 				(
@@ -64,28 +60,39 @@ namespace sge
 					(GLint)level,
 					0,
 					0,
-					(GLint)width,
-					(GLint)height,
+					(GLint)def.widths[level],
+					(GLint)def.heights[level],
 					GL_RGBA,
 					GL_UNSIGNED_BYTE,
-					data
+					def.datas[level]
 				);
 				sge_CHECK_GL_ERROR();
 			}
 		}
 	}
-	void Texture::Update(void* data) const
+	uint32_t Texture::Definition::ByteSize(const uint32_t mipLevel) const
 	{
-		assert(mutability == Mutability::DYNAMIC);
-
-		glBindTexture(GL_TEXTURE_2D, TEX);
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_R32F, (GLsizei)width, (GLsizei)height, 0, GL_RED, GL_FLOAT, data);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, (GLint)minifyingMode);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, (GLint)magnifyingMode);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, (GLint)wrappingModeS);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, (GLint)wrappingModeT);
+		size_t sizeOfElement = 0;
+		switch(format)
+		{
+			case sge::Texture::RED_F32:
+			{
+				sizeOfElement = sizeof(float);
+			}break;
+			case sge::Texture::RGBA_B8:
+			{
+				sizeOfElement = sizeof(char) * 4;
+			}break;
+			default:
+			{
+				sge_ERROR("Unexpected pixel format!");
+			}break;
+		}
+		const size_t width = (size_t)widths[mipLevel];
+		const size_t height = (size_t)heights[mipLevel];
+		return (uint32_t)(width * height * sizeOfElement);
 	}
-	void Texture::Destroy()
+	void Texture::Destroy_()
 	{
 		if(IsValid())
 		{
@@ -94,7 +101,24 @@ namespace sge
 		}
 		else
 		{
-			sge_WARNING("Trying to destroy an invalid texture!");
+			sge_WARNING("Attempting to delete an invalid Texture!");
 		}
+	}
+	void Texture::UpdateData(const void* const data) const
+	{
+		assert(IsValid());
+		assert(mutability == Mutability::DYNAMIC && widths.size() == 1);
+		// Note: if using dynamic mutability, mipmaps aren't used.
+		glBindTexture(GL_TEXTURE_2D, TEX);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_R32F, (GLsizei)widths[0], (GLsizei)heights[0], 0, GL_RED, GL_FLOAT, data);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, (GLint)minifyingMode);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, (GLint)magnifyingMode);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, (GLint)wrappingModeS);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, (GLint)wrappingModeT);
+	}
+	void Texture::Bind(const uint32_t textureUnit) const
+	{
+		glActiveTexture(GL_TEXTURE0 + (GLenum)textureUnit);
+		glBindTexture(GL_TEXTURE_2D, TEX);
 	}
 }//!sge

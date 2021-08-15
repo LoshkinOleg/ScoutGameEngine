@@ -1,7 +1,6 @@
 #pragma once
 
-using uint64_t = unsigned long long;
-using uint32_t = unsigned int;
+#include <cstdint>
 
 namespace sge
 {
@@ -13,6 +12,7 @@ namespace sge
 		Hash(const uint64_t value): value(value) {}
 		void Generate(const void* const data, const uint32_t byteLen);
 		void Accumulate(const Hash other);
+		void Accumulate(const void* const data, const uint32_t byteLen);
 		inline bool operator==(const Hash other) const
 		{
 			return value == other.value;

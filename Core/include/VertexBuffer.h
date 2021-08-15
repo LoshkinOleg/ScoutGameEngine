@@ -1,7 +1,5 @@
 #pragma once
 
-#include <glad/glad.h>
-
 #include "globals.h"
 #include "macros.h"
 
@@ -9,20 +7,33 @@ namespace sge
 {
 	struct VertexBuffer
 	{
+		enum Target: uint32_t
+		{
+			INVALID = 0,
+
+			VBO = 0x8892, // GL_ARRAY_BUFFER
+			EBO = 0x8893, // GL_ELEMENT_ARRAY_BUFFER
+
+			MAX_VALUE = EBO
+		};
+
 		struct Definition
 		{
-			enum Type: uint32_t
+			enum Type: uint8_t
 			{
 				INVALID = 0,
 
-				POSITIONS_VEC3,
-				POSITIONS_VEC2,
-				NORMALS,
-				TANGENTS,
-				BITANGENTS,
-				UVS,
-				INDICES_UINT32,
-				OTHER
+				POSITIONS_VEC3 = 1 << 0,
+				POSITIONS_VEC2 = 1 << 1,
+				NORMALS = 1 << 2,
+				TANGENTS = 1 << 3,
+
+				BITANGENTS = 1 << 4,
+				UVS = 1 << 5,
+				INDICES_UINT32 = 1 << 6,
+				OTHER = 1 << 7,
+
+				MAX_VALUE = OTHER
 			};
 
 			sge_ALLOW_CONSTRUCTION(Definition);
@@ -32,7 +43,7 @@ namespace sge
 			uint8_t* begin = nullptr;
 			uint32_t byteLen = 0;
 			Mutability usage = Mutability::INVALID;
-			ComponentType componentType = ComponentType::INVALID;
+			NumberType componentType = NumberType::INVALID;
 			uint32_t componentsPerElement = 0;
 			Type type = Type::INVALID;
 			bool isIndexBuffer = false;
@@ -45,7 +56,7 @@ namespace sge
 
 		uint32_t VBO = 0;
 		Mutability usage = Mutability::INVALID;
-		ComponentType componentType = ComponentType::INVALID;
+		NumberType componentType = NumberType::INVALID;
 		uint32_t componentsPerElement = 0;
 		bool isIndexBuffer = false;
 
@@ -61,14 +72,16 @@ namespace sge
 		{
 			*this = {};
 		}
-		inline GLenum Target() const
-		{
-			return isIndexBuffer ? GL_ELEMENT_ARRAY_BUFFER : GL_ARRAY_BUFFER;
-		}
 		uint32_t Stride() const;
 
 	private:
 		friend class Renderer;
 		void Init_(const Definition& def);
+		void Destroy_();
+
+		inline Target Target_() const
+		{
+			return isIndexBuffer ? Target::EBO : Target::VBO;
+		}
 	};
 }//!sge
