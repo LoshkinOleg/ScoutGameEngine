@@ -2,10 +2,7 @@
 
 #include "Renderer.h"
 #include "InputManager.h"
-#include "ResourceManager.h"
 #include "PhysicsEngine.h"
-#include "macros.h"
-
 struct SDL_Window;
 
 namespace sge

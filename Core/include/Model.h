@@ -1,9 +1,7 @@
 #pragma once
 
-#include <vector>
-
 #include "Mesh.h"
-#include "Engine.h"
+#include "Transform.h"
 
 namespace sge
 {
@@ -19,7 +17,7 @@ namespace sge
 			Hash ComputeHash() const;
 		};
 
-		TransformsBuffer transforms = {};
+		sge::TransformsBuffer transforms = {};
 		std::vector<Handle<IndexedMesh>> indexedMeshes = {};
 
 		bool IsValid() const;

@@ -1,14 +1,10 @@
 #pragma once
 
-#include <string>
-#include <string_view>
-
 #include <nlohmann/json.hpp>
 using json = nlohmann::json;
 #include <gli/gli.hpp>
 #include <tiny_gltf.h>
 
-#include "ResourcesAbstracts.h"
 #include "Model.h"
 #include "macros.h"
 
@@ -31,7 +27,7 @@ namespace sge
 
 		inline bool IsValid() const
 		{
-			return !data.empty() && type && associatedMesh.value;
+			return !data.empty() && (uint32_t)type && associatedMesh.value;
 		}
 	};
 	struct ShaderData
@@ -47,41 +43,7 @@ namespace sge
 	};
 	struct GltfData
 	{
-		tinygltf::Model model = {};
-		std::vector<Handle<KtxData>> images = {};
-
-		bool IsValid() const
-		{
-			bool returnVal = model != tinygltf::Model();
-			for(const auto& image : images)
-			{
-				returnVal &= image->IsValid();
-			}
-			return returnVal;
-		}
-	};
-	struct TransformsBuffer
-	{
-		glm::mat4* begin = nullptr;
-		glm::mat4* end = nullptr;
-
-		uint32_t NrOfTransforms() const
-		{
-			assert(end - begin > 0);
-			return end - begin;
-		}
-		inline bool IsValid() const
-		{
-			return end > begin;
-		}
-	};
-
-	class ResourceManager
-	{
-	public:
-		sge_DISALLOW_COPY(ResourceManager);
-
-		enum GltfAttributes: uint8_t
+		enum class GltfAttributes: uint8_t
 		{
 			INVALID = 0,
 
@@ -92,8 +54,20 @@ namespace sge
 
 			INDICES = 1 << 4,
 
+			EVERYTHING = POSITIONS | NORMALS | TANGENTS | UVS,
 			MAX_VALUE = INDICES
 		};
+
+		tinygltf::Model model = {};
+		std::vector<Handle<KtxData>> images = {};
+
+		bool IsValid() const;
+	};
+
+	class ResourceManager
+	{
+	public:
+		sge_DISALLOW_COPY(ResourceManager);
 
 		void Init();
 		void FreeAssetResources();
@@ -103,7 +77,7 @@ namespace sge
 		Handle<ShaderData> LoadShader(const std::string_view vertexPath, const std::string_view fragmentPath, const std::string_view geometryPath);
 		Handle<GltfData> LoadGltf(const std::string_view path);
 
-		Model::Definition GenerateDefinitionFrom(const Handle<GltfData>& handle, const GltfAttributes relevantData, const ShadingMode shadingModesNeeded) const;
+		Model::Definition GenerateDefinitionFrom(const Handle<GltfData>& handle, const GltfData::GltfAttributes relevantData, const ShadingMode shadingModesNeeded) const;
 		Texture::Definition GenerateDefinitionFrom(const Handle<KtxData>& handle,
 												   const Texture::SamplingMode minifyingMode,
 												   const Texture::SamplingMode magnifyingMode,

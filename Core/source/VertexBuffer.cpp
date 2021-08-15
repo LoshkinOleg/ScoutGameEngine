@@ -2,11 +2,13 @@
 
 #include <glad/glad.h>
 
+#include "macros.h"
+
 namespace sge
 {
 	void VertexBuffer::Init_(const Definition& def)
 	{
-		usage = def.usage;
+		mutability = def.mutability;
 		componentType = def.componentType;
 		componentsPerElement = def.componentsPerElement;
 		isIndexBuffer = def.isIndexBuffer;
@@ -19,18 +21,20 @@ namespace sge
 			glGetIntegerv(GL_VERTEX_ARRAY_BINDING, &current);
 			assert(current);
 		}
-		const GLenum target = Target_();
+		const GLenum target = (GLenum)Target_();
 		glBindBuffer(target, VBO);
-		glBufferData(target, (GLsizeiptr)def.byteLen, def.begin, (GLenum)def.usage);
+		glBufferData(target, (GLsizeiptr)def.byteLen, def.begin, (GLenum)def.mutability);
 		sge_CHECK_GL_ERROR();
+
+		delete[] def.begin; // Free buffer data stored on heap.
 
 		assert(IsValid());
 	}
 	void VertexBuffer::Update(void* data, const uint32_t byteLen) const
 	{
 		assert(IsValid());
-		const GLenum target = Target_();
-		assert(usage == Mutability::DYNAMIC && target == GL_ARRAY_BUFFER); // Not handling dynamic indices.
+		const GLenum target = (GLenum)Target_();
+		assert(mutability == Mutability::DYNAMIC && target == GL_ARRAY_BUFFER); // Not handling dynamic indices.
 		glBindBuffer(target, VBO);
 		glBufferSubData(target, 0, (GLsizeiptr)byteLen, data);
 		sge_CHECK_GL_ERROR();
@@ -49,7 +53,7 @@ namespace sge
 	}
 	void VertexBuffer::Bind() const
 	{
-		glBindBuffer(Target(), VBO);
+		glBindBuffer((GLenum)Target_(), VBO);
 	}
 	uint32_t VertexBuffer::Stride() const
 	{

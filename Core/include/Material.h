@@ -1,12 +1,7 @@
 #pragma once
 
-#include <vector>
-
-#include <glm/glm.hpp>
-
-#include <ResourcesAbstracts.h>
-#include <Texture.h>
-#include <Shader.h>
+#include "Texture.h"
+#include "Resources.h"
 
 namespace sge
 {

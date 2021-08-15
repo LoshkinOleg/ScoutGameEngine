@@ -1,7 +1,5 @@
 #include "Gizmos.h"
 
-#include <glm/gtx/quaternion.hpp>
-
 namespace sge
 {
     /*void Gizmos::GizmoVector::Update(const glm::vec3 newOrigin, const glm::vec3 newEnd) const

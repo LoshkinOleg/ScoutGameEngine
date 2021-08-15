@@ -1,7 +1,6 @@
 #include "Material.h"
 
 #include "Engine.h"
-#include "macros.h"
 
 namespace sge
 {
@@ -113,7 +112,7 @@ namespace sge
 
 	bool Material::Definition::IsValid() const
 	{
-		bool returnVal = shadingMode;
+		bool returnVal = (bool)shadingMode;
 		for(const auto& def : texDefs)
 		{
 			returnVal &= def.IsValid();
@@ -127,15 +126,15 @@ namespace sge
 		{
 			hash.Accumulate(element.datas[0], element.ByteSize(0));
 		}
-		hash.Accumulate(vec3s.data(), sizeof(glm::vec3) * vec3s.size());
-		hash.Accumulate(floats.data(), sizeof(float) * floats.size());
-		hash.Accumulate(&shadingMode, sizeof(ShadingMode));
+		hash.Accumulate(vec3s.data(), (uint32_t)(sizeof(glm::vec3) * vec3s.size()));
+		hash.Accumulate(floats.data(), (uint32_t)(sizeof(float) * floats.size()));
+		hash.Accumulate(&shadingMode, (uint32_t)(sizeof(ShadingMode)));
 		return hash;
 	}
 	void Material::Bind() const
 	{
 		assert(IsValid());
-		const uint32_t len = textures.size();
+		const uint32_t len = (uint32_t)textures.size();
 		for(uint32_t i = 0; i < len; i++)
 		{
 			textures[i]->Bind(i);

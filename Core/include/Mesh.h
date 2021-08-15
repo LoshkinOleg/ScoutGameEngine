@@ -1,5 +1,7 @@
 #pragma once
 
+#include <map>
+
 #include "VertexBuffer.h"
 #include "Material.h"
 
@@ -38,7 +40,7 @@ namespace sge
 
 	private:
 		friend class Renderer;
-		friend class Model;
+		friend struct Model;
 		void Init_(const Definition& def);
 		void Draw_(const uint32_t nrOfInstances, const uint32_t primitive, const ShadingMode mode);
 	};

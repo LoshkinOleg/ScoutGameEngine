@@ -1,17 +1,23 @@
 #include "ResourceManager.h"
 
 #include <filesystem>
-#include <fstream>
-#include <bit>
 
 #define TINYGLTF_IMPLEMENTATION
 #include <tiny_gltf.h>
 #include <glm/gtx/quaternion.hpp>
-
-#include "globals.h"
+#include <glad/glad.h>
 
 namespace sge
 {
+	bool GltfData::IsValid() const
+	{
+		bool returnVal = model != tinygltf::Model();
+		for(const auto& image : images)
+		{
+			returnVal &= image->IsValid();
+		}
+		return returnVal;
+	}
 	ResourceManager::TransformsPool_::TransformsPool_()
 	{
 		sge_MESSAGE("ResourceManager::TransformsPool_() called.");
@@ -65,7 +71,7 @@ namespace sge
 
 		const std::string str = LoadFile_(path);
 
-		newElement.hash = Hash(str.c_str(), str.length(), 0);
+		newElement.hash = Hash(str.c_str(), (uint32_t)str.length(), 0);
 		newJson.data = json::parse(str);
 		assert(newElement.hash.IsValid());
 		assert(newJson.IsValid());
@@ -129,7 +135,7 @@ namespace sge
 			assert(mesh.primitives[0].attributes.size() == 4); // Expecting all data necessary for blinn-phong.
 		}
 
-		const uint32_t nrOfImages = newGltf.model.images.size();
+		const uint32_t nrOfImages = (uint32_t)newGltf.model.images.size();
 		for(uint32_t i = 0; i < nrOfImages; i++)
 		{
 			const std::string_view imagePath = newGltf.model.images[i].uri;
@@ -171,7 +177,7 @@ namespace sge
 			}
 		}
 		assert(newGltf.IsValid());
-		newElement.hash = Hash(path.data(), path.length(), 0);
+		newElement.hash = Hash(path.data(), (uint32_t)path.length(), 0);
 		assert(newElement.IsValid());
 
 		Handle<GltfData> handle;
@@ -180,15 +186,15 @@ namespace sge
 		return handle;
 	}
 
-	Model::Definition ResourceManager::GenerateDefinitionFrom(const Handle<GltfData>& handle, const GltfAttributes relevantData, const ShadingMode requiredShadingModes) const
+	Model::Definition ResourceManager::GenerateDefinitionFrom(const Handle<GltfData>& handle, const GltfData::GltfAttributes relevantData, const ShadingMode requiredShadingModes) const
 	{
-		assert(relevantData > 0); // Need at least something to load.
+		assert((uint32_t)relevantData > 0); // Need at least something to load.
 
 		Model::Definition modDef;
 		modDef.transforms.push_back(IDENTITY_MAT4);
 		tinygltf::Model& model = handle->model;
 
-		const uint32_t nrOfMeshes = model.meshes.size();
+		const uint32_t nrOfMeshes = (uint32_t)model.meshes.size();
 		for(uint32_t meshIdx = 0; meshIdx < nrOfMeshes; meshIdx++)
 		{
 			modDef.meshDefs.push_back(IndexedMesh::Definition());
@@ -204,7 +210,7 @@ namespace sge
 			const auto indicesIdx = mesh.primitives[0].indices;
 			const auto materialIdx = mesh.primitives[0].material;
 			const std::string_view meshName = mesh.name;
-			const Hash hashedMeshName = Hash(meshName.data(), meshName.length(), 0);
+			const Hash hashedMeshName = Hash(meshName.data(), (uint32_t)meshName.length(), 0);
 
 			for(const auto& pair : attributes)
 			{
@@ -228,13 +234,13 @@ namespace sge
 			if(modelMatrix == IDENTITY_MAT4)
 			{
 				const glm::vec3 translation = (model.nodes[meshIdx].translation.size() > 0) ?
-					glm::vec3(model.nodes[meshIdx].translation[0], model.nodes[meshIdx].translation[1], model.nodes[meshIdx].translation[2]) :
+					glm::vec3((float)model.nodes[meshIdx].translation[0], (float)model.nodes[meshIdx].translation[1], (float)model.nodes[meshIdx].translation[2]) :
 					ZERO_VEC3;
 				const glm::quat rotation = (model.nodes[meshIdx].rotation.size() > 0) ?
-					glm::quat(model.nodes[meshIdx].rotation[0], model.nodes[meshIdx].rotation[1], model.nodes[meshIdx].rotation[2], model.nodes[meshIdx].rotation[3]) :
+					glm::quat((float)model.nodes[meshIdx].rotation[0], (float)model.nodes[meshIdx].rotation[1], (float)model.nodes[meshIdx].rotation[2], (float)model.nodes[meshIdx].rotation[3]) :
 					IDENTITY_QUAT;
 				const glm::vec3 scale = (model.nodes[meshIdx].scale.size() > 0) ?
-					glm::vec3(model.nodes[meshIdx].scale[0], model.nodes[meshIdx].scale[1], model.nodes[meshIdx].scale[2]) :
+					glm::vec3((float)model.nodes[meshIdx].scale[0], (float)model.nodes[meshIdx].scale[1], (float)model.nodes[meshIdx].scale[2]) :
 					ONE_VEC3;
 				modelMatrix = glm::translate(IDENTITY_MAT4, translation);
 				modelMatrix = modelMatrix * glm::toMat4(rotation);
@@ -244,9 +250,9 @@ namespace sge
 			const glm::mat3 normalMatrix = glm::transpose(glm::inverse(glm::mat3(modelMatrix)));
 			const glm::mat3 tangentMatrix = glm::mat3(modelMatrix);
 
-			if(relevantData & GltfAttributes::POSITIONS)
+			if((uint32_t)relevantData & (uint32_t)GltfData::GltfAttributes::POSITIONS)
 			{
-				assert(relevantData & GltfAttributes::INDICES); // All gltf are indexed.
+				assert((uint32_t)relevantData & (uint32_t)GltfData::GltfAttributes::INDICES); // All gltf are indexed.
 
 				auto& accessor = model.accessors[attributes["POSITION"]];
 				auto& bufferView = model.bufferViews[accessor.bufferView];
@@ -271,19 +277,19 @@ namespace sge
 				newVboDefs.push_back(VertexBuffer::Definition());
 				auto& positionsBuffer = newVboDefs.front();
 				positionsBuffer.begin = new uint8_t[bufferView.byteLength]; // Note: Must be deleted in CreateVertexBuffer() method!!!
-				positionsBuffer.byteLen = bufferView.byteLength;
+				positionsBuffer.byteLen = (uint32_t)bufferView.byteLength;
 				positionsBuffer.componentsPerElement = TINYGLTF_TYPE_VEC3;
 				positionsBuffer.componentType = (NumberType)TINYGLTF_COMPONENT_TYPE_FLOAT;
 				positionsBuffer.isIndexBuffer = false;
-				positionsBuffer.usage = (Mutability)GL_STATIC_DRAW;
+				positionsBuffer.mutability = (Mutability)GL_STATIC_DRAW;
 				positionsBuffer.type = VertexBuffer::Definition::Type::POSITIONS_VEC3;
 				memcpy(positionsBuffer.begin, positions.data(), bufferView.byteLength);
 				assert(positionsBuffer.IsValid());
 			}
 
-			if(relevantData & GltfAttributes::INDICES)
+			if((uint32_t)relevantData & (uint32_t)GltfData::GltfAttributes::INDICES)
 			{
-				assert(relevantData & GltfAttributes::POSITIONS); // No sense in loading indices without loading the positions.
+				assert((uint32_t)relevantData & (uint32_t)GltfData::GltfAttributes::POSITIONS); // No sense in loading indices without loading the positions.
 
 				auto& accessor = model.accessors[indicesIdx];
 				auto& bufferView = model.bufferViews[accessor.bufferView];
@@ -292,19 +298,19 @@ namespace sge
 				assert(accessor.componentType == TINYGLTF_COMPONENT_TYPE_UNSIGNED_INT && accessor.type == TINYGLTF_TYPE_SCALAR);
 
 				newEboDef.begin = new uint8_t[bufferView.byteLength]; // Note: Must be deleted in CreateVertexBuffer() method!!!
-				newEboDef.byteLen = bufferView.byteLength;
+				newEboDef.byteLen = (uint32_t)bufferView.byteLength;
 				newEboDef.componentsPerElement = 1;
 				newEboDef.componentType = NumberType::UINT;
 				newEboDef.isIndexBuffer = true;
-				newEboDef.usage = (Mutability)GL_STATIC_DRAW;
+				newEboDef.mutability = (Mutability)GL_STATIC_DRAW;
 				newEboDef.type = VertexBuffer::Definition::Type::INDICES_UINT32;
 				memcpy(newEboDef.begin, buffer.data.data() + bufferView.byteOffset, bufferView.byteLength);
 				assert(newEboDef.IsValid());
 			}
 
-			if((relevantData & GltfAttributes::NORMALS) || (relevantData & GltfAttributes::TANGENTS))
+			if(((uint32_t)relevantData & (uint32_t)GltfData::GltfAttributes::NORMALS) || ((uint32_t)relevantData & (uint32_t)GltfData::GltfAttributes::TANGENTS))
 			{
-				assert((relevantData & GltfAttributes::INDICES) || (relevantData & GltfAttributes::POSITIONS)); // All normals and tangents are indexed in gltf.
+				assert(((uint32_t)relevantData & (uint32_t)GltfData::GltfAttributes::INDICES) || ((uint32_t)relevantData & (uint32_t)GltfData::GltfAttributes::POSITIONS)); // All normals and tangents are indexed in gltf.
 
 				auto& accessorNormals = model.accessors[attributes["NORMAL"]];
 				auto& accessorTangents = model.accessors[attributes["TANGENT"]];
@@ -348,41 +354,41 @@ namespace sge
 #endif //!_DEBUG
 				}
 
-				if(relevantData & GltfAttributes::NORMALS)
+				if((uint32_t)relevantData & (uint32_t)GltfData::GltfAttributes::NORMALS)
 				{
 					newVboDefs.push_back(VertexBuffer::Definition());
 					auto& normalsBuffer = newVboDefs.front();
 					normalsBuffer.begin = new uint8_t[bufferViewNormals.byteLength]; // Note: Must be deleted in CreateVertexBuffer() method!!!
-					normalsBuffer.byteLen = bufferViewNormals.byteLength;
+					normalsBuffer.byteLen = (uint32_t)bufferViewNormals.byteLength;
 					normalsBuffer.componentsPerElement = TINYGLTF_TYPE_VEC3;
 					normalsBuffer.componentType = (NumberType)TINYGLTF_COMPONENT_TYPE_FLOAT;
 					normalsBuffer.isIndexBuffer = false;
-					normalsBuffer.usage = (Mutability)GL_STATIC_DRAW;
+					normalsBuffer.mutability = (Mutability)GL_STATIC_DRAW;
 					normalsBuffer.type = VertexBuffer::Definition::Type::NORMALS;
 					memcpy(normalsBuffer.begin, normals.data(), bufferViewNormals.byteLength);
 					assert(normalsBuffer.IsValid());
 				}
-				if(relevantData & GltfAttributes::TANGENTS)
+				if((uint32_t)relevantData & (uint32_t)GltfData::GltfAttributes::TANGENTS)
 				{
-					assert(relevantData & GltfAttributes::NORMALS); // Something really fishy goes on if the user asks for the tangents but NOT for the normals...
+					assert((uint32_t)relevantData & (uint32_t)GltfData::GltfAttributes::NORMALS); // Something really fishy goes on if the user asks for the tangents but NOT for the normals...
 
 					newVboDefs.push_back(VertexBuffer::Definition());
 					auto& tangentsBuffer = newVboDefs.front();
 					tangentsBuffer.begin = new uint8_t[tangents.size() * sizeof(glm::vec3)]; // Note: Must be deleted in CreateVertexBuffer() method!!!
-					tangentsBuffer.byteLen = tangents.size() * sizeof(glm::vec3);
+					tangentsBuffer.byteLen = (uint32_t)(tangents.size() * sizeof(glm::vec3));
 					tangentsBuffer.componentsPerElement = TINYGLTF_TYPE_VEC3;
 					tangentsBuffer.componentType = (NumberType)TINYGLTF_COMPONENT_TYPE_FLOAT;
 					tangentsBuffer.isIndexBuffer = false;
-					tangentsBuffer.usage = (Mutability)GL_STATIC_DRAW;
+					tangentsBuffer.mutability = (Mutability)GL_STATIC_DRAW;
 					tangentsBuffer.type = VertexBuffer::Definition::Type::TANGENTS;
 					memcpy(tangentsBuffer.begin, tangents.data(), tangents.size() * sizeof(glm::vec3));
 					assert(tangentsBuffer.IsValid());
 				}
 			}
 
-			if(relevantData & GltfAttributes::UVS)
+			if((uint32_t)relevantData & (uint32_t)GltfData::GltfAttributes::UVS)
 			{
-				assert((relevantData & GltfAttributes::INDICES) || (relevantData & GltfAttributes::POSITIONS)); // Uvs are indexed in gltf. Something wierd is going on if the user ONLY needs uvs.
+				assert(((uint32_t)relevantData & (uint32_t)GltfData::GltfAttributes::INDICES) || ((uint32_t)relevantData & (uint32_t)GltfData::GltfAttributes::POSITIONS)); // Uvs are indexed in gltf. Something wierd is going on if the user ONLY needs uvs.
 
 				auto& accessor = model.accessors[attributes["TEXCOORD_0"]];
 				auto& bufferView = model.bufferViews[accessor.bufferView];
@@ -393,11 +399,11 @@ namespace sge
 				newVboDefs.push_back(VertexBuffer::Definition());
 				auto& uvsBuffer = newVboDefs.front();
 				uvsBuffer.begin = new uint8_t[bufferView.byteLength]; // Note: Must be deleted in CreateVertexBuffer() method!!!
-				uvsBuffer.byteLen = bufferView.byteLength;
+				uvsBuffer.byteLen = (uint32_t)bufferView.byteLength;
 				uvsBuffer.componentsPerElement = TINYGLTF_TYPE_VEC3;
 				uvsBuffer.componentType = (NumberType)TINYGLTF_COMPONENT_TYPE_FLOAT;
 				uvsBuffer.isIndexBuffer = false;
-				uvsBuffer.usage = (Mutability)GL_STATIC_DRAW;
+				uvsBuffer.mutability = (Mutability)GL_STATIC_DRAW;
 				uvsBuffer.type = VertexBuffer::Definition::Type::NORMALS;
 				memcpy(uvsBuffer.begin, buffer.data.data(), bufferView.byteLength);
 				assert(uvsBuffer.IsValid());
@@ -405,16 +411,16 @@ namespace sge
 
 			if(requiredShadingModes != ShadingMode::INVALID)
 			{
-				const uint32_t len = std::bit_width((uint64_t)ShadingMode::MAX_VALUE);
+				constexpr const uint32_t len = (uint32_t)std::bit_width((uint64_t)ShadingMode::MAX_VALUE);
 				for(uint32_t i = 0; i < len; i++)
 				{
-					if(requiredShadingModes & ShadingMode::GIZMO)
+					if((uint32_t)requiredShadingModes & (uint32_t)ShadingMode::GIZMO)
 					{
 						newMaterialDefs.push_back(Material::Definition());
 						auto& newMaterialDef = newMaterialDefs.front();
 						newMaterialDef.vec3s.push_back(INVERSE_DEFAULT_COLOR);
 					}
-					if(requiredShadingModes & ShadingMode::ALBEDO_ONLY)
+					if((uint32_t)requiredShadingModes & (uint32_t)ShadingMode::ALBEDO_ONLY)
 					{
 						newMaterialDefs.push_back(Material::Definition());
 						auto& newMaterialDef = newMaterialDefs.front();
@@ -443,13 +449,13 @@ namespace sge
 						if(!albedoMapFound) sge_ERROR("Couldn't find an appropriate texture in the list of images provided!");
 						assert(newMaterialDef.IsValid());
 					}
-					if(requiredShadingModes & ShadingMode::GOOCH)
+					if((uint32_t)requiredShadingModes & (uint32_t)ShadingMode::GOOCH)
 					{
 						newMaterialDefs.push_back(Material::Definition());
 						auto& newMaterialDef = newMaterialDefs.front();
 						newMaterialDef.vec3s.push_back(INVERSE_DEFAULT_COLOR);
 					}
-					if(requiredShadingModes & ShadingMode::BLINN_PHONG)
+					if((uint32_t)requiredShadingModes & (uint32_t)ShadingMode::BLINN_PHONG)
 					{
 						newMaterialDefs.push_back(Material::Definition());
 						auto& newMaterialDef = newMaterialDefs.front();
@@ -495,7 +501,7 @@ namespace sge
 						newMaterialDef.floats.push_back(64.0f); // TODO: load shininess from gltf.
 						assert(newMaterialDef.IsValid());
 					}
-					if(requiredShadingModes & ShadingMode::BLINN_PHONG_NORMALMAPPED)
+					if((uint32_t)requiredShadingModes & (uint32_t)ShadingMode::BLINN_PHONG_NORMALMAPPED)
 					{
 						newMaterialDefs.push_back(Material::Definition());
 						auto& newMaterialDef = newMaterialDefs.front();
@@ -560,6 +566,7 @@ namespace sge
 			}
 			assert(newMeshDef.IsValid());
 		}
+		return modDef;
 	}
 
 	Texture::Definition ResourceManager::GenerateDefinitionFrom
@@ -575,13 +582,13 @@ namespace sge
 		if(generateMipMaps) sge_ERROR("Implement this before using it!");
 
 		const auto& image = handle->data;
-		const uint32_t nrOfMipLevels = image.layers();
+		const uint32_t nrOfMipLevels = (uint32_t)image.layers();
 		Texture::Definition newTextureDef;
 
 		for(uint32_t level = 0; level < nrOfMipLevels; level++)
 		{
 			// TODO: handle cubemaps
-			newTextureDef.datas.push_back(image.data(0, 0, level));
+			newTextureDef.datas.push_back(const_cast<void*>(image.data(0, 0, level))); // Note: Storing data ptrs in std::vector which forbids const elements.
 			newTextureDef.widths.push_back(image.extent(level).x);
 			newTextureDef.heights.push_back(image.extent(level).y);
 		}
@@ -617,7 +624,7 @@ namespace sge
 		auto& newKtx = newElement.resourceData;
 
 		newKtx.data = gli::load(path.data());
-		newKtx.associatedMesh = Hash(meshName.data(), meshName.length(), 0);
+		newKtx.associatedMesh = Hash(meshName.data(), (uint32_t)meshName.length(), 0);
 		if(imageType == "albedoMap")
 		{
 			newKtx.type = ImageType::ALBEDO_MAP;
@@ -636,7 +643,7 @@ namespace sge
 		}
 		assert(newKtx.IsValid());
 
-		newElement.hash = Hash(newKtx.data.data(), newKtx.data.size(), 0);
+		newElement.hash = Hash(newKtx.data.data(), (uint32_t)newKtx.data.size(), 0);
 		assert(newElement.IsValid());
 
 		Handle<KtxData> handle;
@@ -662,9 +669,9 @@ namespace sge
 		newShaderSrc.geometryCode = LoadFile_(geometryPath);
 		assert(newShaderSrc.IsValid());
 
-		newElement.hash = Hash(vertexPath.data(), vertexPath.length(), 0);
-		newElement.hash = Hash(fragmentPath.data(), fragmentPath.length(), newElement.hash);
-		newElement.hash = Hash(geometryPath.data(), geometryPath.length(), newElement.hash);
+		newElement.hash = Hash(vertexPath.data(), (uint32_t)vertexPath.length(), 0);
+		newElement.hash = Hash(fragmentPath.data(), (uint32_t)fragmentPath.length(), newElement.hash);
+		newElement.hash = Hash(geometryPath.data(), (uint32_t)geometryPath.length(), newElement.hash);
 		assert(newElement.IsValid());
 
 		Handle<ShaderData> handle;

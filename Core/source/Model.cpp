@@ -1,5 +1,7 @@
 #include "Model.h"
 
+#include "Engine.h"
+
 namespace sge
 {
 	bool Model::Definition::IsValid() const
@@ -34,7 +36,7 @@ namespace sge
 	{
 		auto& rm = Engine::Get().GetResourceManager();
 		auto& renderer = Engine::Get().GetRenderer();
-		transforms = rm.AllocateTransforms(def.transforms.data(), sizeof(glm::mat4) * def.transforms.size());
+		transforms = rm.AllocateTransforms(def.transforms.data(), (uint32_t)(sizeof(glm::mat4) * def.transforms.size()));
 		for(const auto& meshDef : def.meshDefs)
 		{
 			indexedMeshes.push_back(renderer.CreateMesh(meshDef));

@@ -2,7 +2,7 @@
 
 #include <string>
 
-#include <xxHash.h>
+#include <xxhash.h>
 
 namespace sge
 {

@@ -3,8 +3,6 @@
 #include <string_view>
 #include <map>
 
-#include <glm/glm.hpp>
-
 #include "Hash.h"
 #include "globals.h"
 

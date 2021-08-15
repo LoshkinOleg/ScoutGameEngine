@@ -2,12 +2,10 @@
 
 #include <array>
 
-#include <SDL_keycode.h>
-#include <SDL_mouse.h>
+#include <glm/glm.hpp>
+union SDL_Event;
 
 #include "globals.h"
-
-union SDL_Event;
 
 namespace sge
 {
@@ -19,21 +17,22 @@ namespace sge
 	struct Command
 	{
 	public:
-		enum Type : uint32_t
+		enum Type : uint64_t
 		{
 			INVALID = 0,
-			EAST = SDLK_d,
-			WEST = SDLK_a,
-			NORTH = SDLK_w,
-			SOUTH = SDLK_s,
-			UP = SDLK_SPACE,
-			DOWN = SDLK_LCTRL,
-			CONFIRM = SDLK_RETURN,
-			CANCEL = SDLK_ESCAPE,
-			MODIFIER = SDLK_LSHIFT,
-			LMB = SDL_BUTTON_LEFT,
-			MMB = SDL_BUTTON_MIDDLE,
-			RMB = SDL_BUTTON_RIGHT
+
+			EAST = 'd', // SDLK_d
+			WEST = 'a', // SDLK_a
+			NORTH = 'w', // SDLK_w
+			SOUTH = 's', // SDLK_s
+			UP = ' ', // SDLK_SPACE
+			DOWN = ( 224 | (1<<30) ), // SDLK_LCTRL
+			CONFIRM = '\r', // SDLK_RETURN
+			CANCEL = '\033', // SDLK_ESCAPE
+			MODIFIER = (225 | (1 << 30)), // SDLK_LSHIFT
+			LMB = 1, // SDL_BUTTON_LEFT
+			MMB = 2, // SDL_BUTTON_MIDDLE
+			RMB = 3 // SDL_BUTTON_RIGHT
 		};
 
 		Type type = Type::INVALID;

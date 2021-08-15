@@ -95,21 +95,21 @@ namespace sge
 	const glm::mat4 WINDOW_PROJECTION_INVERSE = glm::inverse(WINDOW_PROJECTION);
 
 	// Common enums.
-	enum Mutability: uint32_t
+	enum class Mutability: uint32_t
 	{
 		INVALID = 0,
 
 		STATIC = 0x88E4, // GL_STATIC_DRAW
 		DYNAMIC = 0x88E8 // GL_DYNAMIC_DRAW
 	};
-	enum NumberType: uint32_t
+	enum class NumberType: uint32_t
 	{
 		INVALID = 0,
 
 		UINT = 0x1405, // GL_UNSIGNED_INT
 		FLOAT = 0x1406 // GL_FLOAT
 	};
-	enum ShadingMode: uint8_t
+	enum class ShadingMode: uint8_t
 	{
 		INVALID = 0,
 
@@ -125,7 +125,7 @@ namespace sge
 
 		MAX_VALUE = DEFERRED_PASS
 	};
-	enum ImageType: uint8_t
+	enum class ImageType: uint8_t
 	{
 		INVALID = 0,
 
@@ -135,5 +135,14 @@ namespace sge
 		OTHER = 1 << 3,
 
 		MAX_VALUE = OTHER
+	};
+	enum class Primitive: uint32_t
+	{
+		POINTS = 0, // GL_POINTS
+		LINES = 1, // GL_LINES
+		LINE_STRIP = 3, // GL_LINE_STRIP
+		TRIANGLES = 4, // GL_TRIANGLES
+
+		MAX_VALUE = TRIANGLES
 	};
 }//!sge

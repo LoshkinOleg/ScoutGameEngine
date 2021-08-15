@@ -1,5 +1,9 @@
 #include "Renderer.h"
 
+#include <glad/glad.h>
+
+#include "Engine.h"
+
 namespace sge
 {
 	void Renderer::Init()
@@ -10,14 +14,14 @@ namespace sge
 		glEnable(GL_BLEND);
 		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-		const std::string_view GIZMO_SHADER_PATH[2] = { sge_SHADERS_PATH + "gizmo.vert", sge_SHADERS_PATH + "gizmo.frag"};
-		const std::string_view GOOCH_SHADER_PATH[2] = { sge_SHADERS_PATH + "gooch.vert", sge_SHADERS_PATH + "gooch.frag"};
-		const std::string_view ALBEDO_ONLY_SHADER_PATH[2] = { sge_SHADERS_PATH + "albedyOnly.vert", sge_SHADERS_PATH + "albedyOnly.frag"};
-		const std::string_view BLINN_PHONG_SHADER_PATH[2] = { sge_SHADERS_PATH + "blinnPhong.vert", sge_SHADERS_PATH + "blinnPhong.frag"};
-		const std::string_view BLINN_PHONG_NORMALMAPPED_SHADER_PATH[2] = { sge_SHADERS_PATH + "blinnPhongNormalmapped.vert", sge_SHADERS_PATH + "blinnPhongNormalmapped.frag"};
-		const std::string_view SHADOW_PASS_SHADER_PATH[2] = { sge_SHADERS_PATH + "shadowPass.vert", sge_SHADERS_PATH + "shadowPass.frag"};
-		const std::string_view DEFERRED_PASS_SHADER_PATH[2] = { sge_SHADERS_PATH + "deferredPass.vert", sge_SHADERS_PATH + "deferredPass.frag"};
-		const std::string_view POSTPROCESS_PASS_SHADER_PATH[2] = { sge_SHADERS_PATH + "postprocessPass.vert", sge_SHADERS_PATH + "postprocessPass.frag"};
+		const std::string GIZMO_SHADER_PATH[2] = { sge_SHADERS_PATH + "gizmo.vert", sge_SHADERS_PATH + "gizmo.frag"};
+		const std::string GOOCH_SHADER_PATH[2] = { sge_SHADERS_PATH + "gooch.vert", sge_SHADERS_PATH + "gooch.frag"};
+		const std::string ALBEDO_ONLY_SHADER_PATH[2] = { sge_SHADERS_PATH + "albedyOnly.vert", sge_SHADERS_PATH + "albedyOnly.frag"};
+		const std::string BLINN_PHONG_SHADER_PATH[2] = { sge_SHADERS_PATH + "blinnPhong.vert", sge_SHADERS_PATH + "blinnPhong.frag"};
+		const std::string BLINN_PHONG_NORMALMAPPED_SHADER_PATH[2] = { sge_SHADERS_PATH + "blinnPhongNormalmapped.vert", sge_SHADERS_PATH + "blinnPhongNormalmapped.frag"};
+		const std::string SHADOW_PASS_SHADER_PATH[2] = { sge_SHADERS_PATH + "shadowPass.vert", sge_SHADERS_PATH + "shadowPass.frag"};
+		const std::string DEFERRED_PASS_SHADER_PATH[2] = { sge_SHADERS_PATH + "deferredPass.vert", sge_SHADERS_PATH + "deferredPass.frag"};
+		const std::string POSTPROCESS_PASS_SHADER_PATH[2] = { sge_SHADERS_PATH + "postprocessPass.vert", sge_SHADERS_PATH + "postprocessPass.frag"};
 
 		auto& rm = Engine::Get().GetResourceManager();
 		auto gizmoSrcHandle = rm.LoadShader(GIZMO_SHADER_PATH[0], GIZMO_SHADER_PATH[1], "");
@@ -97,7 +101,7 @@ namespace sge
 		deferredPassShader_.resourceData.UpdatePerFrameUniforms_(viewMatrix_, ShadingMode::DEFERRED_PASS);
 		postprocessPassShader_.resourceData.UpdatePerFrameUniforms_(viewMatrix_, ShadingMode::POST_PROCESS_PASS);
 
-		const uint32_t len = drawQueue_.size();
+		const uint32_t len = (uint32_t)drawQueue_.size();
 		for(uint32_t i = 0; i < len; i++)
 		{
 			const DrawCall_& drawCall = drawQueue_[i];
@@ -125,8 +129,8 @@ namespace sge
 		vertexBuffers_.push_back(Resource<VertexBuffer>());
 		auto& newElement = vertexBuffers_.front();
 		auto& newValue = newElement.resourceData;
-		newValue.Init_(def);
 		newElement.hash = Hash(def.begin, def.byteLen, 0);
+		newValue.Init_(def);
 		Handle<VertexBuffer> handle;
 		handle.hash = newElement.hash;
 		handle.ptr = &newElement;
@@ -248,13 +252,13 @@ namespace sge
 		return handle;
 	}
 
-	void Renderer::Schedule(const Handle<Model>& model, const uint32_t primitive, const ShadingMode mode)
+	void Renderer::Schedule(const Handle<Model>& model, const Primitive primitive, const ShadingMode mode)
 	{
-		assert(model->IsValid() && mode);
+		assert(model->IsValid() && (uint32_t)mode);
 		drawQueue_.push_back(DrawCall_());
 		auto& drawCall = drawQueue_.front();
 		drawCall.model = model;
-		drawCall.primitive = primitive;
+		drawCall.primitive = (int32_t)primitive;
 		drawCall.mode = mode;
 	}
 }//!sge

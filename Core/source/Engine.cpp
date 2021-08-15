@@ -1,12 +1,9 @@
 #include "Engine.h"
 
 #include <chrono>
-#include <iostream>
 
 #include <glad/glad.h>
 #include <SDL2/SDL.h>
-
-#include "globals.h"
 
 namespace sge
 {

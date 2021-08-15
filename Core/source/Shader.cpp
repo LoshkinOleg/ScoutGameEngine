@@ -1,6 +1,6 @@
 #include "Shader.h"
 
-#include <glad/glad.h>
+#include "glad/glad.h"
 
 #include "macros.h"
 

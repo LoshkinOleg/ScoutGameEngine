@@ -3,6 +3,7 @@
 #include <SDL2/SDL.h>
 
 #include "utility.h"
+#include "globals.h"
 
 namespace sge
 {

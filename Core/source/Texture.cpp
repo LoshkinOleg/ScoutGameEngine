@@ -1,6 +1,6 @@
 #include "Texture.h"
 
-#include <iostream>
+#include <glad/glad.h>
 
 #include "macros.h"
 
@@ -31,7 +31,7 @@ namespace sge
 			assert(def.widths.size() == 1);
 			glTexImage2D(GL_TEXTURE_2D, 0, GL_R32F, (GLsizei)widths[0], (GLsizei)heights[0], 0, GL_RED, GL_FLOAT, def.datas[0]);
 			sge_CHECK_GL_ERROR();
-			assert(minifyingMode < LINEAR_MIPMAP_NEAREST && magnifyingMode < LINEAR_MIPMAP_NEAREST);
+			assert((uint32_t)minifyingMode < GL_LINEAR_MIPMAP_NEAREST && (uint32_t)magnifyingMode < GL_LINEAR_MIPMAP_NEAREST);
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, (GLint)minifyingMode);
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, (GLint)magnifyingMode);
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, (GLint)wrappingModeS);
@@ -75,11 +75,11 @@ namespace sge
 		size_t sizeOfElement = 0;
 		switch(format)
 		{
-			case sge::Texture::RED_F32:
+			case sge::Texture::Format::RED_F32:
 			{
 				sizeOfElement = sizeof(float);
 			}break;
-			case sge::Texture::RGBA_B8:
+			case sge::Texture::Format::RGBA_B8:
 			{
 				sizeOfElement = sizeof(char) * 4;
 			}break;

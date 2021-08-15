@@ -1,13 +1,13 @@
 #pragma once
 
 #include "globals.h"
-#include "macros.h"
+// #include "macros.h"
 
 namespace sge
 {
 	struct VertexBuffer
 	{
-		enum Target: uint32_t
+		enum class Target: uint32_t
 		{
 			INVALID = 0,
 
@@ -19,7 +19,7 @@ namespace sge
 
 		struct Definition
 		{
-			enum Type: uint8_t
+			enum class Type: uint8_t
 			{
 				INVALID = 0,
 
@@ -36,13 +36,13 @@ namespace sge
 				MAX_VALUE = OTHER
 			};
 
-			sge_ALLOW_CONSTRUCTION(Definition);
-			sge_DISALLOW_COPY(Definition);
+			// sge_ALLOW_CONSTRUCTION(Definition);
+			// sge_DISALLOW_COPY(Definition);
 
 			// Note: this points heap! Use Renderer's CreateVertexBuffer() method to ensure the heap gets freed!
 			uint8_t* begin = nullptr;
 			uint32_t byteLen = 0;
-			Mutability usage = Mutability::INVALID;
+			Mutability mutability = Mutability::INVALID;
 			NumberType componentType = NumberType::INVALID;
 			uint32_t componentsPerElement = 0;
 			Type type = Type::INVALID;
@@ -50,12 +50,12 @@ namespace sge
 
 			inline bool IsValid() const
 			{
-				return begin && byteLen && usage && componentType && componentsPerElement && type;
+				return begin && byteLen && (uint32_t)mutability && (uint32_t)componentType && componentsPerElement && (uint32_t)type;
 			}
 		};
 
 		uint32_t VBO = 0;
-		Mutability usage = Mutability::INVALID;
+		Mutability mutability = Mutability::INVALID;
 		NumberType componentType = NumberType::INVALID;
 		uint32_t componentsPerElement = 0;
 		bool isIndexBuffer = false;
@@ -66,7 +66,7 @@ namespace sge
 
 		inline bool IsValid() const
 		{
-			return VBO && usage && componentType && componentsPerElement;
+			return VBO && (uint32_t)mutability && (uint32_t)componentType && componentsPerElement;
 		}
 		inline void Reset()
 		{

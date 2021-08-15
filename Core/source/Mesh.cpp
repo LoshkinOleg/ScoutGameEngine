@@ -1,5 +1,7 @@
 #include "Mesh.h"
 
+#include <glad/glad.h>
+
 #include "Engine.h"
 
 namespace sge
@@ -33,11 +35,11 @@ namespace sge
 	{
 		assert(def.IsValid());
 		auto& renderer = Engine::Get().GetRenderer();
-		const uint32_t nrOfVbos = def.vboDefs.size();
+		const uint32_t nrOfVbos = (uint32_t)def.vboDefs.size();
 		
 		// Note: we're assuming the first buffer is always the one with positions.
 		const VertexBuffer::Definition& vbdef = def.vboDefs[0];
-		assert(vbdef.IsValid() && (vbdef.componentsPerElement == 2 || vbdef.componentsPerElement == 3) && vbdef.componentType == GL_FLOAT && !vbdef.isIndexBuffer && vbdef.usage == GL_STATIC_DRAW);
+		assert(vbdef.IsValid() && (vbdef.componentsPerElement == 2 || vbdef.componentsPerElement == 3) && vbdef.componentType == (NumberType)GL_FLOAT && !vbdef.isIndexBuffer && vbdef.mutability == (Mutability)GL_STATIC_DRAW);
 		const uint32_t componentsPerElement = vbdef.componentsPerElement;
 
 		float largestRadius = 0.0f;
@@ -90,7 +92,7 @@ namespace sge
 		radius = largestRadius;
 
 		// Not handling any type other type of index yet.
-		assert(def.eboDef.componentType == GL_UNSIGNED_INT);
+		assert(def.eboDef.componentType == (NumberType)GL_UNSIGNED_INT);
 		nrOfVertices = def.eboDef.byteLen / sizeof(uint32_t);
 
 		vertexBuffers.resize(nrOfVbos); // One is for the indices.
@@ -98,7 +100,7 @@ namespace sge
 		for(uint32_t i = 0; i < nrOfVbos; i++)
 		{
 			assert(def.vboDefs[i].IsValid());
-			assert(def.vboDefs[i].componentType == GL_FLOAT); // Not handling any other type of vertex data yet.
+			assert(def.vboDefs[i].componentType == (NumberType)GL_FLOAT); // Not handling any other type of vertex data yet.
 			vertexBuffers[i] = renderer.CreateVertexBuffer(def.vboDefs[i]);
 			sge_CHECK_GL_ERROR();
 		}
@@ -108,7 +110,7 @@ namespace sge
 		indexVBO = renderer.CreateVertexBuffer(def.eboDef);
 		sge_CHECK_GL_ERROR();
 
-		const uint32_t nrOfMaterials = def.matDefs.size();
+		const uint32_t nrOfMaterials = (uint32_t)def.matDefs.size();
 		for(uint32_t i = 0; i < nrOfMaterials; i++)
 		{
 			materials.insert({ def.matDefs[i].shadingMode, renderer.CreateMaterial(def.matDefs[i]) });
@@ -122,7 +124,7 @@ namespace sge
 			vertexBuffers[i]->Bind();
 			glEnableVertexAttribArray((GLuint)i);
 			glVertexAttribPointer((GLuint)i, (GLint)vertexBuffers[i]->componentsPerElement, GL_FLOAT, GL_FALSE, (GLsizei)vertexBuffers[i]->Stride(), 0);
-			if(vertexBuffers[i]->usage == GL_DYNAMIC_DRAW)
+			if(vertexBuffers[i]->mutability == (Mutability)GL_DYNAMIC_DRAW)
 			{
 				glVertexAttribDivisor((GLuint)i, 1); // Note: only supports per-mesh instancing.
 			}
@@ -133,11 +135,11 @@ namespace sge
 	void IndexedMesh::Update(const std::vector<std::pair<void*, uint32_t>>& dataAndByteLen) const
 	{
 		uint32_t idx = 0;
-		const uint32_t len = vertexBuffers.size();
+		const uint32_t len = (uint32_t)vertexBuffers.size();
 		for(uint32_t i = 0; i < len; i++)
 		{
 			const auto& buffer = *vertexBuffers[i];
-			if(buffer.usage == GL_DYNAMIC_DRAW)
+			if(buffer.mutability == (Mutability)GL_DYNAMIC_DRAW)
 			{
 				const auto& pair = dataAndByteLen[idx++];
 				buffer.Update(pair.first, pair.second);
@@ -181,7 +183,7 @@ namespace sge
 			returnVal &= pair.second.IsValid();
 			returnVal &= pair.second->IsValid();
 		}
-		returnVal &= nrOfVertices;
+		returnVal &= (bool)nrOfVertices;
 		return returnVal;
 	}
 }//!sge

@@ -1,6 +1,7 @@
 #pragma once
 
-#include "Model.h"
+#include "Shader.h"
+#include "ResourceManager.h"
 
 namespace sge
 {
@@ -15,7 +16,7 @@ namespace sge
 		{
 			Handle<Model> model = {};
 			ShadingMode mode = {};
-			int32_t primitive = GL_TRIANGLES; // 0 is GL_POINTS so might as well give it a default value.
+			int32_t primitive = 0;
 		};
 
 		// std::vector<Resource<Shader>> shaders_ = {};
@@ -62,6 +63,6 @@ namespace sge
 
 		Handle<Shader> GetShaderForShadingMode(const ShadingMode mode);
 
-		void Schedule(const Handle<Model>& model, const uint32_t primitive, const ShadingMode mode);
+		void Schedule(const Handle<Model>& model, const Primitive primitive, const ShadingMode mode);
 	};
 }//!sge
