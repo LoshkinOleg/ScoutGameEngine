@@ -40,7 +40,7 @@ namespace sge
 		};
 		struct Definition
 		{
-			std::vector<void*> datas = {}; // one per mipmap level
+			std::vector<void*> datas = {};
 			Mutability mutability = Mutability::INVALID;
 			Format format = Format::INVALID;
 			std::vector<uint32_t> widths = {}; // one per mipmap level
@@ -51,6 +51,12 @@ namespace sge
 			WrappingMode onS = WrappingMode::INVALID;
 			WrappingMode onT = WrappingMode::INVALID;
 			bool generateMipMaps = false;
+
+			// Definition() = default;
+			// ~Definition() = default;
+			// Definition(Definition&) = default;
+			// Definition(Definition&&) = default;
+			// Definition& operator=(Definition&&) = default;
 
 			inline bool IsValid() const
 			{

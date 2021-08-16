@@ -77,8 +77,7 @@ namespace sge
 		assert(extension == ".json"); // Make sure we're loading a .json
 		if (extension == ".gltf") { sge_ERROR("Please use LoadGltf to load composite gltf files instead."); };
 
-		jsons_.push_back(Resource<JsonData>());
-		auto& newElement = jsons_.back();
+		Resource<JsonData> newElement;
 		auto& newJson = newElement.resourceData;
 
 		const std::string str = LoadFile_(path);
@@ -87,10 +86,12 @@ namespace sge
 		newJson.data = json::parse(str);
 		assert(newElement.hash.IsValid());
 		assert(newJson.IsValid());
+		assert(!ElementExists_<JsonData>(jsons_, newElement.hash));
+		jsons_.push_back(newElement);
 
 		Handle<JsonData> handle;
 		handle.hash = newElement.hash;
-		handle.ptr = &newElement;
+		handle.ptr = &jsons_.back();
 		assert(handle.IsValid());
 		return handle;
 	}
@@ -117,8 +118,7 @@ namespace sge
 		}
 		assert(std::filesystem::exists(path));
 
-		gltfs_.push_back(Resource<GltfData>());
-		auto& newElement = gltfs_.back();
+		Resource<GltfData> newElement;
 		auto& newGltf = newElement.resourceData;
 
 		tinygltf::TinyGLTF loader;
@@ -194,10 +194,12 @@ namespace sge
 		assert(newGltf.IsValid());
 		newElement.hash = Hash(path.data(), (uint32_t)path.length(), 0);
 		assert(newElement.IsValid());
+		assert(!ElementExists_<GltfData>(gltfs_, newElement.hash));
+		gltfs_.push_back(newElement);
 
 		Handle<GltfData> handle;
 		handle.hash = newElement.hash;
-		handle.ptr = &newElement;
+		handle.ptr = &gltfs_.back();
 		return handle;
 	}
 
@@ -494,10 +496,14 @@ namespace sge
 										 (Texture::WrappingMode)GL_MIRRORED_REPEAT,
 										 (Mutability)GL_STATIC_DRAW,
 										 false);
+									break;
 								}
 							}
 						}
-						if(!albedoMapFound) sge_ERROR("Couldn't find an appropriate texture in the list of images provided!");
+						if(!albedoMapFound)
+						{
+							sge_ERROR("Couldn't find an appropriate texture in the list of images provided!");
+						}
 						assert(newMaterialDef.IsValid());
 					}
 					if((uint32_t)requiredShadingModes & (uint32_t)ShadingMode::GOOCH)
@@ -630,16 +636,22 @@ namespace sge
 		 const bool generateMipMaps) const
 	{
 		assert(handle->IsValid());
-		if(generateMipMaps) sge_ERROR("Implement this before using it!");
+		if(generateMipMaps)
+		{
+			sge_ERROR("Implement this before using it!");
+		}
 
 		const auto& image = handle->data;
-		const uint32_t nrOfMipLevels = (uint32_t)image.layers();
+		const uint32_t nrOfMipLevels = (uint32_t)image.levels();
 		Texture::Definition newTextureDef;
 
+		newTextureDef.datas.resize(nrOfMipLevels);
 		for(uint32_t level = 0; level < nrOfMipLevels; level++)
 		{
 			// TODO: handle cubemaps
-			newTextureDef.datas.push_back(const_cast<void*>(image.data(0, 0, level))); // Note: Storing data ptrs in std::vector which forbids const elements.
+			// newTextureDef.datas.push_back(const_cast<void*>(image.data(0,0,level)));
+			newTextureDef.datas[level] = new uint8_t[image.size(level)];
+			memcpy(newTextureDef.datas[level], image.data(0, 0, level), image.size(level));
 			newTextureDef.widths.push_back(image.extent(level).x);
 			newTextureDef.heights.push_back(image.extent(level).y);
 		}
@@ -651,6 +663,8 @@ namespace sge
 		newTextureDef.mutability = mutability;
 		newTextureDef.onS = onS;
 		newTextureDef.onT = onT;
+		assert(newTextureDef.IsValid());
+		return newTextureDef;
 	}
 
 	Handle<KtxData> ResourceManager::LoadKtx(const std::string_view path)
@@ -678,38 +692,56 @@ namespace sge
 		assert(extension == ".ktx"); // Make sure we're loading a .ktx
 		assert(std::filesystem::exists(path));
 
-		ktxs_.push_back(Resource<KtxData>());
-		auto& newElement = ktxs_.back();
+
+		Resource<KtxData> newElement;
 		auto& newKtx = newElement.resourceData;
 
 		newKtx.data = gli::load(path.data());
-		newKtx.associatedMesh = Hash(meshName.data(), (uint32_t)meshName.length(), 0);
-		if(imageType == "albedoMap")
+		newElement.hash = Hash(newKtx.data.data(), (uint32_t)newKtx.data.size(), 0);
+		newElement.hash.Accumulate(imageType.c_str(), imageType.length());
+		Hash associatedMesh = Hash(meshName.data(), (uint32_t)meshName.length(), 0);
+		newKtx.associatedMesh = associatedMesh;
+		newElement.hash.Accumulate(associatedMesh);
+
+		if(!ElementExists_<KtxData>(ktxs_, newElement.hash))
 		{
-			newKtx.type = ImageType::ALBEDO_MAP;
-		}
-		else if(imageType == "specularMap")
-		{
-			newKtx.type = ImageType::SPECULAR_MAP;
-		}
-		else if(imageType == "normalMap")
-		{
-			newKtx.type = ImageType::NORMAL_MAP;
+			if(imageType == "albedoMap")
+			{
+				newKtx.type = ImageType::ALBEDO_MAP;
+			}
+			else if(imageType == "specularMap")
+			{
+				newKtx.type = ImageType::SPECULAR_MAP;
+			}
+			else if(imageType == "normalMap")
+			{
+				newKtx.type = ImageType::NORMAL_MAP;
+			}
+			else
+			{
+				sge_ERROR("Unexpected texture type retireved from image's path!");
+			}
+			assert(newKtx.IsValid());
+
+			assert(newElement.IsValid());
+			ktxs_.push_back(newElement);
+
+			Handle<KtxData> handle;
+			handle.hash = newElement.hash;
+			handle.ptr = &ktxs_.back();
+			assert(handle.IsValid());
+			return handle;
 		}
 		else
 		{
-			sge_ERROR("Unexpected texture type retireved from image's path!");
+			sge_WARNING("Element already in a resource manager's list! Returning handle to existing element.");
+			auto& existingElement = GetElement_<KtxData>(ktxs_, newElement.hash);
+			Handle<KtxData> handle;
+			handle.hash = existingElement.hash;
+			handle.ptr = &existingElement;
+			assert(handle.IsValid());
+			return handle;
 		}
-		assert(newKtx.IsValid());
-
-		newElement.hash = Hash(newKtx.data.data(), (uint32_t)newKtx.data.size(), 0);
-		assert(newElement.IsValid());
-
-		Handle<KtxData> handle;
-		handle.hash = newElement.hash;
-		handle.ptr = &newElement;
-		assert(handle.IsValid());
-		return handle;
 	}
 
 	Handle<ShaderData> ResourceManager::LoadShader(const std::string_view vertexPath, const std::string_view fragmentPath, const std::string_view geometryPath)
@@ -731,6 +763,15 @@ namespace sge
 			assert(geometryPath.substr(geometryPath.find_last_of('.'), geometryPath.size() - geometryPath.find_last_of('.')) == ".geo");
 		}
 
+		Hash hash = 0;
+		hash.Accumulate(vertexPath.data(), (uint32_t)vertexPath.length());
+		hash.Accumulate(fragmentPath.data(), (uint32_t)fragmentPath.length());
+		if(usingGeometryShader)
+		{
+			hash.Accumulate(geometryPath.data(), (uint32_t)geometryPath.length());
+		}
+		assert(!ElementExists_<ShaderData>(shaderSrcs_, hash));
+
 		shaderSrcs_.push_back(Resource<ShaderData>());
 		auto& newElement = shaderSrcs_.back();
 		auto& newShaderSrc = newElement.resourceData;
@@ -743,12 +784,7 @@ namespace sge
 		}
 		assert(newShaderSrc.IsValid());
 
-		newElement.hash = Hash(vertexPath.data(), (uint32_t)vertexPath.length(), 0);
-		newElement.hash = Hash(fragmentPath.data(), (uint32_t)fragmentPath.length(), newElement.hash);
-		if(usingGeometryShader)
-		{
-			newElement.hash = Hash(geometryPath.data(), (uint32_t)geometryPath.length(), newElement.hash);
-		}
+		newElement.hash = hash;
 		assert(newElement.IsValid());
 
 		Handle<ShaderData> handle;

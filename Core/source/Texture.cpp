@@ -69,6 +69,10 @@ namespace sge
 				sge_CHECK_GL_ERROR();
 			}
 		}
+		for(uint32_t i = 0; i < def.datas.size(); i++)
+		{
+			delete[] def.datas[i];
+		}
 	}
 	uint32_t Texture::Definition::ByteSize(const uint32_t mipLevel) const
 	{

@@ -23,7 +23,7 @@ namespace sge
 	{
 		gli::texture data = {};
 		ImageType type = ImageType::INVALID;
-		Hash associatedMesh = 0;
+		Hash associatedMesh = 0; // TODO: shouldn't be here. Makes no sense for an image to have a reference to a mesh.
 
 		inline bool IsValid() const
 		{
@@ -121,5 +121,29 @@ namespace sge
 		TransformsPool_ transformsPool_ = {};
 
 		static std::string LoadFile_(const std::string_view path);
+		template<typename Type>
+		static bool ElementExists_(const std::vector<Resource<Type>>& list, const Hash hash)
+		{
+			for(const auto& element : list)
+			{
+				if(element.hash == hash)
+				{
+					return true;
+				}
+			}
+			return false;
+		}
+		template<typename Type>
+		static Resource<Type>& GetElement_(std::vector<Resource<Type>>& list, const Hash hash)
+		{
+			for(auto& element : list)
+			{
+				if(element.hash == hash)
+				{
+					return element;
+				}
+			}
+			sge_ERROR("Element with the specified hash was not found in the list provided!");
+		}
 	};
 }//!sge
