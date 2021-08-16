@@ -38,7 +38,7 @@ namespace sge
 
 		inline bool IsValid() const
 		{
-			return !vertexCode.empty() && vertexCode != "\0" && !fragmentCode.empty() && fragmentCode != "\0" && geometryCode != "\0";
+			return !vertexCode.empty() && !fragmentCode.empty();
 		}
 	};
 	struct GltfData
@@ -54,7 +54,7 @@ namespace sge
 
 			INDICES = 1 << 4,
 
-			EVERYTHING = POSITIONS | NORMALS | TANGENTS | UVS,
+			EVERYTHING = POSITIONS | NORMALS | TANGENTS | UVS | INDICES,
 			MAX_VALUE = INDICES
 		};
 
@@ -108,7 +108,12 @@ namespace sge
 		sge_ALLOW_CONSTRUCTION(ResourceManager);
 
 		constexpr static const bool FREE_DATA_POST_INIT_ = true;
+		constexpr static const size_t DEFAULT_JSON_POOL_SIZE_ = 32;
+		constexpr static const size_t DEFAULT_KTX_POOL_SIZE_ = 64;
+		constexpr static const size_t DEFAULT_SHADER_SRC_POOL_SIZE_ = 16;
+		constexpr static const size_t DEFAULT_GLTF_POOL_SIZE_ = 16;
 
+		// WARNING: these are free to relocate as they wish since it's using a standard allocator! Reserve the memory on init to avoid that behaviour!
 		std::vector<Resource<JsonData>> jsons_ = {};
 		std::vector<Resource<KtxData>> ktxs_ = {};
 		std::vector<Resource<ShaderData>> shaderSrcs_ = {};

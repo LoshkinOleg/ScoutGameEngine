@@ -16,12 +16,12 @@ namespace sge
 
 		const std::string GIZMO_SHADER_PATH[2] = { sge_SHADERS_PATH + "gizmo.vert", sge_SHADERS_PATH + "gizmo.frag"};
 		const std::string GOOCH_SHADER_PATH[2] = { sge_SHADERS_PATH + "gooch.vert", sge_SHADERS_PATH + "gooch.frag"};
-		const std::string ALBEDO_ONLY_SHADER_PATH[2] = { sge_SHADERS_PATH + "albedyOnly.vert", sge_SHADERS_PATH + "albedyOnly.frag"};
+		const std::string ALBEDO_ONLY_SHADER_PATH[2] = { sge_SHADERS_PATH + "albedoOnly.vert", sge_SHADERS_PATH + "albedoOnly.frag"};
 		const std::string BLINN_PHONG_SHADER_PATH[2] = { sge_SHADERS_PATH + "blinnPhong.vert", sge_SHADERS_PATH + "blinnPhong.frag"};
 		const std::string BLINN_PHONG_NORMALMAPPED_SHADER_PATH[2] = { sge_SHADERS_PATH + "blinnPhongNormalmapped.vert", sge_SHADERS_PATH + "blinnPhongNormalmapped.frag"};
-		const std::string SHADOW_PASS_SHADER_PATH[2] = { sge_SHADERS_PATH + "shadowPass.vert", sge_SHADERS_PATH + "shadowPass.frag"};
-		const std::string DEFERRED_PASS_SHADER_PATH[2] = { sge_SHADERS_PATH + "deferredPass.vert", sge_SHADERS_PATH + "deferredPass.frag"};
-		const std::string POSTPROCESS_PASS_SHADER_PATH[2] = { sge_SHADERS_PATH + "postprocessPass.vert", sge_SHADERS_PATH + "postprocessPass.frag"};
+		// const std::string SHADOW_PASS_SHADER_PATH[2] = { sge_SHADERS_PATH + "shadowPass.vert", sge_SHADERS_PATH + "shadowPass.frag"};
+		// const std::string DEFERRED_PASS_SHADER_PATH[2] = { sge_SHADERS_PATH + "deferredPass.vert", sge_SHADERS_PATH + "deferredPass.frag"};
+		// const std::string POSTPROCESS_PASS_SHADER_PATH[2] = { sge_SHADERS_PATH + "postprocessPass.vert", sge_SHADERS_PATH + "postprocessPass.frag"};
 
 		auto& rm = Engine::Get().GetResourceManager();
 		auto gizmoSrcHandle = rm.LoadShader(GIZMO_SHADER_PATH[0], GIZMO_SHADER_PATH[1], "");
@@ -29,9 +29,17 @@ namespace sge
 		auto albedoOnlySrcHandle = rm.LoadShader(ALBEDO_ONLY_SHADER_PATH[0], ALBEDO_ONLY_SHADER_PATH[1], "");
 		auto blinnPhongSrcHandle = rm.LoadShader(BLINN_PHONG_SHADER_PATH[0], BLINN_PHONG_SHADER_PATH[1], "");
 		auto blinnPhongNormalmappedSrcHandle = rm.LoadShader(BLINN_PHONG_NORMALMAPPED_SHADER_PATH[0], BLINN_PHONG_NORMALMAPPED_SHADER_PATH[1], "");
-		auto shadowPassSrcHandle = rm.LoadShader(SHADOW_PASS_SHADER_PATH[0], SHADOW_PASS_SHADER_PATH[1], "");
-		auto deferredPassSrcHandle = rm.LoadShader(DEFERRED_PASS_SHADER_PATH[0], DEFERRED_PASS_SHADER_PATH[1], "");
-		auto postprocessPassSrcHandle = rm.LoadShader(POSTPROCESS_PASS_SHADER_PATH[0], POSTPROCESS_PASS_SHADER_PATH[1], "");
+		// auto shadowPassSrcHandle = rm.LoadShader(SHADOW_PASS_SHADER_PATH[0], SHADOW_PASS_SHADER_PATH[1], "");
+		// auto deferredPassSrcHandle = rm.LoadShader(DEFERRED_PASS_SHADER_PATH[0], DEFERRED_PASS_SHADER_PATH[1], "");
+		// auto postprocessPassSrcHandle = rm.LoadShader(POSTPROCESS_PASS_SHADER_PATH[0], POSTPROCESS_PASS_SHADER_PATH[1], "");
+		assert(gizmoSrcHandle.IsValid());
+		assert(goochSrcHandle.IsValid());
+		assert(albedoOnlySrcHandle.IsValid());
+		assert(blinnPhongSrcHandle.IsValid());
+		assert(blinnPhongNormalmappedSrcHandle.IsValid());
+		// assert(deferredPassSrcHandle.IsValid());
+		// assert(deferredPassSrcHandle.IsValid());
+		// assert(postprocessPassSrcHandle.IsValid());
 
 		gizmoShader_.hash = gizmoSrcHandle.hash;
 		gizmoShader_.resourceData.Init_(gizmoSrcHandle->vertexCode, gizmoSrcHandle->fragmentCode, gizmoSrcHandle->geometryCode, ShadingMode::GIZMO);
@@ -43,12 +51,12 @@ namespace sge
 		blinnPhongShader_.resourceData.Init_(blinnPhongSrcHandle->vertexCode, blinnPhongSrcHandle->fragmentCode, blinnPhongSrcHandle->geometryCode, ShadingMode::BLINN_PHONG);
 		blinnPhongNormalmappedShader_.hash = blinnPhongNormalmappedSrcHandle.hash;
 		blinnPhongNormalmappedShader_.resourceData.Init_(blinnPhongNormalmappedSrcHandle->vertexCode, blinnPhongNormalmappedSrcHandle->fragmentCode, blinnPhongNormalmappedSrcHandle->geometryCode, ShadingMode::BLINN_PHONG_NORMALMAPPED);
-		shadowPassShader_.hash = shadowPassSrcHandle.hash;
-		shadowPassShader_.resourceData.Init_(shadowPassSrcHandle->vertexCode, shadowPassSrcHandle->fragmentCode, shadowPassSrcHandle->geometryCode, ShadingMode::SHADOW_PASS);
-		deferredPassShader_.hash = deferredPassSrcHandle.hash;
-		deferredPassShader_.resourceData.Init_(deferredPassSrcHandle->vertexCode, deferredPassSrcHandle->fragmentCode, deferredPassSrcHandle->geometryCode, ShadingMode::DEFERRED_PASS);
-		postprocessPassShader_.hash = postprocessPassSrcHandle.hash;
-		postprocessPassShader_.resourceData.Init_(postprocessPassSrcHandle->vertexCode, postprocessPassSrcHandle->fragmentCode, postprocessPassSrcHandle->geometryCode, ShadingMode::POST_PROCESS_PASS);
+		// shadowPassShader_.hash = shadowPassSrcHandle.hash;
+		// shadowPassShader_.resourceData.Init_(shadowPassSrcHandle->vertexCode, shadowPassSrcHandle->fragmentCode, shadowPassSrcHandle->geometryCode, ShadingMode::SHADOW_PASS);
+		// deferredPassShader_.hash = deferredPassSrcHandle.hash;
+		// deferredPassShader_.resourceData.Init_(deferredPassSrcHandle->vertexCode, deferredPassSrcHandle->fragmentCode, deferredPassSrcHandle->geometryCode, ShadingMode::DEFERRED_PASS);
+		// postprocessPassShader_.hash = postprocessPassSrcHandle.hash;
+		// postprocessPassShader_.resourceData.Init_(postprocessPassSrcHandle->vertexCode, postprocessPassSrcHandle->fragmentCode, postprocessPassSrcHandle->geometryCode, ShadingMode::POST_PROCESS_PASS);
 	}
 	void Renderer::Shutdown()
 	{
@@ -72,9 +80,9 @@ namespace sge
 		albedoOnlyShader_.resourceData.Destroy_();
 		blinnPhongShader_.resourceData.Destroy_();
 		blinnPhongNormalmappedShader_.resourceData.Destroy_();
-		shadowPassShader_.resourceData.Destroy_();
-		deferredPassShader_.resourceData.Destroy_();
-		postprocessPassShader_.resourceData.Destroy_();
+		// shadowPassShader_.resourceData.Destroy_();
+		// deferredPassShader_.resourceData.Destroy_();
+		// postprocessPassShader_.resourceData.Destroy_();
 
 		models_.clear();
 		indexedMeshes_.clear();
@@ -97,9 +105,9 @@ namespace sge
 		albedoOnlyShader_.resourceData.UpdatePerFrameUniforms_(viewMatrix_, ShadingMode::ALBEDO_ONLY);
 		blinnPhongShader_.resourceData.UpdatePerFrameUniforms_(viewMatrix_, ShadingMode::BLINN_PHONG);
 		blinnPhongNormalmappedShader_.resourceData.UpdatePerFrameUniforms_(viewMatrix_, ShadingMode::BLINN_PHONG_NORMALMAPPED);
-		shadowPassShader_.resourceData.UpdatePerFrameUniforms_(viewMatrix_, ShadingMode::SHADOW_PASS);
-		deferredPassShader_.resourceData.UpdatePerFrameUniforms_(viewMatrix_, ShadingMode::DEFERRED_PASS);
-		postprocessPassShader_.resourceData.UpdatePerFrameUniforms_(viewMatrix_, ShadingMode::POST_PROCESS_PASS);
+		// shadowPassShader_.resourceData.UpdatePerFrameUniforms_(viewMatrix_, ShadingMode::SHADOW_PASS);
+		// deferredPassShader_.resourceData.UpdatePerFrameUniforms_(viewMatrix_, ShadingMode::DEFERRED_PASS);
+		// postprocessPassShader_.resourceData.UpdatePerFrameUniforms_(viewMatrix_, ShadingMode::POST_PROCESS_PASS);
 
 		const uint32_t len = (uint32_t)drawQueue_.size();
 		for(uint32_t i = 0; i < len; i++)
@@ -127,7 +135,7 @@ namespace sge
 	Handle<VertexBuffer> Renderer::CreateVertexBuffer(const VertexBuffer::Definition & def)
 	{
 		vertexBuffers_.push_back(Resource<VertexBuffer>());
-		auto& newElement = vertexBuffers_.front();
+		auto& newElement = vertexBuffers_.back();
 		auto& newValue = newElement.resourceData;
 		newElement.hash = Hash(def.begin, def.byteLen, 0);
 		newValue.Init_(def);
@@ -141,7 +149,7 @@ namespace sge
 	Handle<Texture> Renderer::CreateTexture(const Texture::Definition & def)
 	{
 		textures_.push_back(Resource<Texture>());
-		auto& newElement = textures_.front();
+		auto& newElement = textures_.back();
 		auto& newValue = newElement.resourceData;
 		newValue.Init_(def);
 		newElement.hash = Hash(def.datas[0], def.ByteSize(0), 0);
@@ -155,7 +163,7 @@ namespace sge
 	Handle<Material> Renderer::CreateMaterial(const Material::Definition & def)
 	{
 		materials_.push_back(Resource<Material>());
-		auto& newElement = materials_.front();
+		auto& newElement = materials_.back();
 		auto& newValue = newElement.resourceData;
 		newValue.Init_(def);
 		newElement.hash = def.ComputeHash();
@@ -169,7 +177,7 @@ namespace sge
 	Handle<IndexedMesh> Renderer::CreateMesh(const IndexedMesh::Definition & def)
 	{
 		indexedMeshes_.push_back(Resource<IndexedMesh>());
-		auto& newElement = indexedMeshes_.front();
+		auto& newElement = indexedMeshes_.back();
 		auto& newValue = newElement.resourceData;
 		newValue.Init_(def);
 		newElement.hash = def.ComputeHash();
@@ -183,7 +191,7 @@ namespace sge
 	Handle<Model> Renderer::CreateModel(const Model::Definition & def)
 	{
 		models_.push_back(Resource<Model>());
-		auto& newElement = models_.front();
+		auto& newElement = models_.back();
 		auto& newValue = newElement.resourceData;
 		newValue.Init_(def);
 		newElement.hash = def.ComputeHash();
@@ -227,20 +235,20 @@ namespace sge
 			}break;
 			case ShadingMode::SHADOW_PASS:
 			{
-				handle.hash = shadowPassShader_.hash;
-				handle.ptr = &shadowPassShader_;
+				// handle.hash = shadowPassShader_.hash;
+				// handle.ptr = &shadowPassShader_;
 				sge_ERROR("Shader not yet implemented!");
 			}break;
 			case ShadingMode::DEFERRED_PASS:
 			{
-				handle.hash = deferredPassShader_.hash;
-				handle.ptr = &deferredPassShader_;
+				// handle.hash = deferredPassShader_.hash;
+				// handle.ptr = &deferredPassShader_;
 				sge_ERROR("Shader not yet implemented!");
 			}break;
 			case ShadingMode::POST_PROCESS_PASS:
 			{
-				handle.hash = postprocessPassShader_.hash;
-				handle.ptr = &postprocessPassShader_;
+				// handle.hash = postprocessPassShader_.hash;
+				// handle.ptr = &postprocessPassShader_;
 				sge_ERROR("Shader not yet implemented!");
 			}break;
 			default:
@@ -256,7 +264,7 @@ namespace sge
 	{
 		assert(model->IsValid() && (uint32_t)mode);
 		drawQueue_.push_back(DrawCall_());
-		auto& drawCall = drawQueue_.front();
+		auto& drawCall = drawQueue_.back();
 		drawCall.model = model;
 		drawCall.primitive = (int32_t)primitive;
 		drawCall.mode = mode;

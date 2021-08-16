@@ -43,7 +43,7 @@ namespace sge
 
 		inline bool IsValid() const
 		{
-			return hash && ptr != nullptr && ptr->IsValid();
+			return hash.IsValid() && ptr != nullptr && ptr->IsValid() && hash == ptr->hash;
 		}
 		inline void Reset()
 		{

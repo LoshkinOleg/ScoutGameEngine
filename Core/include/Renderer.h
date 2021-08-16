@@ -25,9 +25,9 @@ namespace sge
 		Resource<Shader> albedoOnlyShader_ = {};
 		Resource<Shader> blinnPhongShader_ = {};
 		Resource<Shader> blinnPhongNormalmappedShader_ = {};
-		Resource<Shader> shadowPassShader_ = {};
-		Resource<Shader> deferredPassShader_ = {};
-		Resource<Shader> postprocessPassShader_ = {};
+		// Resource<Shader> shadowPassShader_ = {};
+		// Resource<Shader> deferredPassShader_ = {};
+		// Resource<Shader> postprocessPassShader_ = {};
 
 		std::vector<Resource<VertexBuffer>> vertexBuffers_ = {};
 		std::vector<Resource<Texture>> textures_ = {};

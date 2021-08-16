@@ -46,6 +46,10 @@ namespace sge
 	void ResourceManager::Init()
 	{
 		sge_MESSAGE("ResourceManager::Init() called.");
+		jsons_.reserve(DEFAULT_JSON_POOL_SIZE_);
+		ktxs_.reserve(DEFAULT_KTX_POOL_SIZE_);
+		shaderSrcs_.reserve(DEFAULT_SHADER_SRC_POOL_SIZE_);
+		gltfs_.reserve(DEFAULT_GLTF_POOL_SIZE_);
 	}
 	void ResourceManager::FreeAssetResources()
 	{
@@ -61,12 +65,20 @@ namespace sge
 
 	Handle<JsonData> ResourceManager::LoadJson(const std::string_view path)
 	{
-		const std::string_view extension = path.substr(path.find_last_of('.'), path.size());
+		if((jsons_.capacity() != DEFAULT_JSON_POOL_SIZE_) ||
+		   (ktxs_.capacity() != DEFAULT_KTX_POOL_SIZE_) ||
+		   (shaderSrcs_.capacity() != DEFAULT_SHADER_SRC_POOL_SIZE_) ||
+		   (gltfs_.capacity() != DEFAULT_GLTF_POOL_SIZE_))
+		{
+			sge_ERROR("Trying to allocate resources post initialization! This is not yet handled!");
+		}
+
+		const std::string_view extension = path.substr(path.find_last_of('.'), path.size() - path.find_last_of('.'));
 		assert(extension == ".json"); // Make sure we're loading a .json
 		if (extension == ".gltf") { sge_ERROR("Please use LoadGltf to load composite gltf files instead."); };
 
 		jsons_.push_back(Resource<JsonData>());
-		auto& newElement = jsons_.front();
+		auto& newElement = jsons_.back();
 		auto& newJson = newElement.resourceData;
 
 		const std::string str = LoadFile_(path);
@@ -85,27 +97,35 @@ namespace sge
 
 	Handle<GltfData> ResourceManager::LoadGltf(const std::string_view path)
 	{
-		assert(path.find_last_of('\\') == path.size()); // Forbid usage of backslashes in asset files.
-		std::string_view fileStem, extension;
+		if((jsons_.capacity() != DEFAULT_JSON_POOL_SIZE_) ||
+		   (ktxs_.capacity() != DEFAULT_KTX_POOL_SIZE_) ||
+		   (shaderSrcs_.capacity() != DEFAULT_SHADER_SRC_POOL_SIZE_) ||
+		   (gltfs_.capacity() != DEFAULT_GLTF_POOL_SIZE_))
+		{
+			sge_ERROR("Trying to allocate resources post initialization! This is not yet handled!");
+		}
+
+		assert(path.find_last_of('\\') == std::string::npos); // Forbid usage of backslashes in asset files.
+		std::string gltfStem, gltfExtension;
 		{
 			const size_t posOfLastDot = path.find_last_of('.');
 			const size_t posOfLastSlash = path.find_last_of('/');
-			assert(posOfLastDot != posOfLastSlash != 0);
-			fileStem = path.substr(posOfLastSlash + 1, posOfLastDot);
-			extension = path.substr(posOfLastDot, path.size());
-			assert(extension == ".glb" || extension == ".gltf"); // Make sure we're loading a gltf file.
+			assert(posOfLastDot != -1 && posOfLastSlash != -1);
+			gltfStem = path.substr(posOfLastSlash + 1, (posOfLastDot - 1) - posOfLastSlash);
+			gltfExtension = path.substr(posOfLastDot, path.size() - posOfLastDot);
+			assert(gltfExtension == ".glb" || gltfExtension == ".gltf"); // Make sure we're loading a gltf file.
 		}
 		assert(std::filesystem::exists(path));
 
 		gltfs_.push_back(Resource<GltfData>());
-		auto& newElement = gltfs_.front();
+		auto& newElement = gltfs_.back();
 		auto& newGltf = newElement.resourceData;
 
 		tinygltf::TinyGLTF loader;
 		std::string error, warning;
 		bool success = false;
 
-		if (extension == ".glb") // Loading a binary only.
+		if (gltfExtension == ".glb") // Loading a binary only.
 		{
 			success = loader.LoadBinaryFromFile(&newGltf.model, &error, &warning, path.data());
 		}
@@ -139,35 +159,30 @@ namespace sge
 		for(uint32_t i = 0; i < nrOfImages; i++)
 		{
 			const std::string_view imagePath = newGltf.model.images[i].uri;
-			std::string_view imageStem, imageExtension;
+			std::string_view imageExtension;
 			{
-				assert((imagePath.find_last_of('\\') == imagePath.size()) &&
-					   (imagePath.find_last_of('/') == imagePath.size())); // Forbid usage of directories. All images must be specified by name.
+				assert((imagePath.find_last_of('\\') == std::string::npos) &&
+					   (imagePath.find_last_of('/') == std::string::npos)); // Forbid usage of directories. All images must be specified by name.
 
-				const size_t posOfLastDot = path.find_last_of('.');
-				const size_t posOfLastSlash = path.find_last_of('/');
-				const size_t posOfLastUnderscore = path.find_last_of('_');
-				assert(posOfLastDot != posOfLastSlash != 0);
-				fileStem = path.substr(posOfLastSlash + 1, posOfLastDot);
-				extension = path.substr(posOfLastDot, path.size());
-				assert(extension == ".glb" || extension == ".gltf"); // Make sure we're loading a gltf file.
+				const size_t posOfLastDot = imagePath.find_last_of('.');
+				assert(posOfLastDot != std::string::npos);
+				imageExtension = imagePath.substr(posOfLastDot, imagePath.size() - posOfLastDot);
 			}
-			const std::string_view imageName = imagePath.substr(imagePath.find_last_of('/'), imagePath.size());
-			const std::string_view extension = imagePath.substr(imagePath.find_last_of('.'), imagePath.size());
-			if(extension == ".ktx")
+			assert(imagePath.find_last_of('.') != std::string::npos);
+			if(imageExtension == ".ktx")
 			{
-				newGltf.images.push_back(LoadKtx(sge_KTXS_PATH + fileStem.data() + imageName.data()));
-				assert(newGltf.images.front()->IsValid() && newGltf.images.front().IsValid());
+				newGltf.images.push_back(LoadKtx(sge_KTXS_PATH + gltfStem.c_str() + "/" + imagePath.data()));
+				assert(newGltf.images.back()->IsValid() && newGltf.images.back().IsValid());
 			}
-			else if(extension == ".png")
+			else if(imageExtension == ".png")
 			{
 				sge_ERROR("Loading of pngs is not yet implemented!");
 			}
-			else if(extension == ".bmp")
+			else if(imageExtension == ".bmp")
 			{
 				sge_ERROR("Loading of bmps is not yet implemented!");
 			}
-			else if(extension == ".jpg" || extension == ".jpeg")
+			else if(imageExtension == ".jpg" || imageExtension == ".jpeg")
 			{
 				sge_ERROR("Loading of jpgs is not yet implemented!");
 			}
@@ -198,7 +213,7 @@ namespace sge
 		for(uint32_t meshIdx = 0; meshIdx < nrOfMeshes; meshIdx++)
 		{
 			modDef.meshDefs.push_back(IndexedMesh::Definition());
-			auto& newMeshDef = modDef.meshDefs.front();
+			auto& newMeshDef = modDef.meshDefs.back();
 			auto& newMaterialDefs = newMeshDef.matDefs;
 			auto& newVboDefs = newMeshDef.vboDefs;
 			auto& newEboDef = newMeshDef.eboDef;
@@ -275,7 +290,7 @@ namespace sge
 				}
 
 				newVboDefs.push_back(VertexBuffer::Definition());
-				auto& positionsBuffer = newVboDefs.front();
+				auto& positionsBuffer = newVboDefs.back();
 				positionsBuffer.begin = new uint8_t[bufferView.byteLength]; // Note: Must be deleted in CreateVertexBuffer() method!!!
 				positionsBuffer.byteLen = (uint32_t)bufferView.byteLength;
 				positionsBuffer.componentsPerElement = TINYGLTF_TYPE_VEC3;
@@ -295,17 +310,53 @@ namespace sge
 				auto& bufferView = model.bufferViews[accessor.bufferView];
 				auto& buffer = model.buffers[bufferView.buffer];
 
-				assert(accessor.componentType == TINYGLTF_COMPONENT_TYPE_UNSIGNED_INT && accessor.type == TINYGLTF_TYPE_SCALAR);
+				assert(accessor.type == TINYGLTF_TYPE_SCALAR);
+				const uint32_t gltfIndexNumberFormat = (uint32_t)accessor.componentType;
+				switch(gltfIndexNumberFormat)
+				{
+					case TINYGLTF_COMPONENT_TYPE_UNSIGNED_INT:
+					{
+						newEboDef.begin = new uint8_t[bufferView.byteLength]; // Note: Must be deleted in CreateVertexBuffer() method!!!
+						newEboDef.byteLen = (uint32_t)bufferView.byteLength;
+						newEboDef.componentsPerElement = 1;
+						newEboDef.componentType = NumberType::UINT;
+						newEboDef.isIndexBuffer = true;
+						newEboDef.mutability = (Mutability)GL_STATIC_DRAW;
+						newEboDef.type = VertexBuffer::Definition::Type::INDICES_UINT32;
+						memcpy(newEboDef.begin, buffer.data.data() + bufferView.byteOffset, bufferView.byteLength);
+						assert(newEboDef.IsValid());
+					}break;
+					case TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT:
+					{
+						std::vector<uint16_t> inputIndices;
+						inputIndices.insert(
+							inputIndices.end(),
+							reinterpret_cast<uint16_t*>(buffer.data.data() + bufferView.byteOffset),
+							reinterpret_cast<uint16_t*>(buffer.data.data() + bufferView.byteOffset + bufferView.byteLength));
+						std::vector<uint32_t> convertedIndices;
+						const uint32_t nrOfIndices = bufferView.byteLength / sizeof(unsigned short);
+						convertedIndices.resize((size_t)nrOfIndices);
+						assert(inputIndices.size() == convertedIndices.size());
+						for(uint32_t index = 0; index < nrOfIndices; index++)
+						{
+							convertedIndices[index] = (uint32_t)inputIndices[index];
+						}
 
-				newEboDef.begin = new uint8_t[bufferView.byteLength]; // Note: Must be deleted in CreateVertexBuffer() method!!!
-				newEboDef.byteLen = (uint32_t)bufferView.byteLength;
-				newEboDef.componentsPerElement = 1;
-				newEboDef.componentType = NumberType::UINT;
-				newEboDef.isIndexBuffer = true;
-				newEboDef.mutability = (Mutability)GL_STATIC_DRAW;
-				newEboDef.type = VertexBuffer::Definition::Type::INDICES_UINT32;
-				memcpy(newEboDef.begin, buffer.data.data() + bufferView.byteOffset, bufferView.byteLength);
-				assert(newEboDef.IsValid());
+						newEboDef.begin = new uint8_t[sizeof(uint32_t) * (size_t)nrOfIndices]; // Note: Must be deleted in CreateVertexBuffer() method!!!
+						newEboDef.byteLen = (uint32_t)(sizeof(uint32_t) * (size_t)nrOfIndices);
+						newEboDef.componentsPerElement = 1;
+						newEboDef.componentType = NumberType::UINT;
+						newEboDef.isIndexBuffer = true;
+						newEboDef.mutability = (Mutability)GL_STATIC_DRAW;
+						newEboDef.type = VertexBuffer::Definition::Type::INDICES_UINT32;
+						memcpy(newEboDef.begin, convertedIndices.data(), (size_t)nrOfIndices * sizeof(uint32_t));
+						assert(newEboDef.IsValid());
+					}break;
+					default:
+					{
+						sge_ERROR("Unexpected index number format retireved from gltf!");
+					}break;
+				}
 			}
 
 			if(((uint32_t)relevantData & (uint32_t)GltfData::GltfAttributes::NORMALS) || ((uint32_t)relevantData & (uint32_t)GltfData::GltfAttributes::TANGENTS))
@@ -357,7 +408,7 @@ namespace sge
 				if((uint32_t)relevantData & (uint32_t)GltfData::GltfAttributes::NORMALS)
 				{
 					newVboDefs.push_back(VertexBuffer::Definition());
-					auto& normalsBuffer = newVboDefs.front();
+					auto& normalsBuffer = newVboDefs.back();
 					normalsBuffer.begin = new uint8_t[bufferViewNormals.byteLength]; // Note: Must be deleted in CreateVertexBuffer() method!!!
 					normalsBuffer.byteLen = (uint32_t)bufferViewNormals.byteLength;
 					normalsBuffer.componentsPerElement = TINYGLTF_TYPE_VEC3;
@@ -373,7 +424,7 @@ namespace sge
 					assert((uint32_t)relevantData & (uint32_t)GltfData::GltfAttributes::NORMALS); // Something really fishy goes on if the user asks for the tangents but NOT for the normals...
 
 					newVboDefs.push_back(VertexBuffer::Definition());
-					auto& tangentsBuffer = newVboDefs.front();
+					auto& tangentsBuffer = newVboDefs.back();
 					tangentsBuffer.begin = new uint8_t[tangents.size() * sizeof(glm::vec3)]; // Note: Must be deleted in CreateVertexBuffer() method!!!
 					tangentsBuffer.byteLen = (uint32_t)(tangents.size() * sizeof(glm::vec3));
 					tangentsBuffer.componentsPerElement = TINYGLTF_TYPE_VEC3;
@@ -397,7 +448,7 @@ namespace sge
 				assert(accessor.componentType == TINYGLTF_COMPONENT_TYPE_FLOAT && accessor.type == TINYGLTF_TYPE_VEC2);
 
 				newVboDefs.push_back(VertexBuffer::Definition());
-				auto& uvsBuffer = newVboDefs.front();
+				auto& uvsBuffer = newVboDefs.back();
 				uvsBuffer.begin = new uint8_t[bufferView.byteLength]; // Note: Must be deleted in CreateVertexBuffer() method!!!
 				uvsBuffer.byteLen = (uint32_t)bufferView.byteLength;
 				uvsBuffer.componentsPerElement = TINYGLTF_TYPE_VEC3;
@@ -417,16 +468,16 @@ namespace sge
 					if((uint32_t)requiredShadingModes & (uint32_t)ShadingMode::GIZMO)
 					{
 						newMaterialDefs.push_back(Material::Definition());
-						auto& newMaterialDef = newMaterialDefs.front();
+						auto& newMaterialDef = newMaterialDefs.back();
 						newMaterialDef.vec3s.push_back(INVERSE_DEFAULT_COLOR);
 					}
 					if((uint32_t)requiredShadingModes & (uint32_t)ShadingMode::ALBEDO_ONLY)
 					{
 						newMaterialDefs.push_back(Material::Definition());
-						auto& newMaterialDef = newMaterialDefs.front();
+						auto& newMaterialDef = newMaterialDefs.back();
 						newMaterialDef.shadingMode = ShadingMode::ALBEDO_ONLY;
 						newMaterialDef.texDefs.push_back(Texture::Definition());
-						auto& newTextureDef = newMaterialDef.texDefs.front();
+						auto& newTextureDef = newMaterialDef.texDefs.back();
 						bool albedoMapFound = false;
 						for(const auto& image : handle->images)
 						{
@@ -452,18 +503,18 @@ namespace sge
 					if((uint32_t)requiredShadingModes & (uint32_t)ShadingMode::GOOCH)
 					{
 						newMaterialDefs.push_back(Material::Definition());
-						auto& newMaterialDef = newMaterialDefs.front();
+						auto& newMaterialDef = newMaterialDefs.back();
 						newMaterialDef.vec3s.push_back(INVERSE_DEFAULT_COLOR);
 					}
 					if((uint32_t)requiredShadingModes & (uint32_t)ShadingMode::BLINN_PHONG)
 					{
 						newMaterialDefs.push_back(Material::Definition());
-						auto& newMaterialDef = newMaterialDefs.front();
+						auto& newMaterialDef = newMaterialDefs.back();
 						newMaterialDef.shadingMode = ShadingMode::BLINN_PHONG;
 						newMaterialDef.texDefs.push_back(Texture::Definition());
-						auto& newAlbedoDef = newMaterialDef.texDefs.front();
+						auto& newAlbedoDef = newMaterialDef.texDefs.back();
 						newMaterialDef.texDefs.push_back(Texture::Definition());
-						auto& newSpecularDef = newMaterialDef.texDefs.front();
+						auto& newSpecularDef = newMaterialDef.texDefs.back();
 						bool albedoMapFound = false;
 						bool specularMapFound = false;
 						for(const auto& image : handle->images)
@@ -504,14 +555,14 @@ namespace sge
 					if((uint32_t)requiredShadingModes & (uint32_t)ShadingMode::BLINN_PHONG_NORMALMAPPED)
 					{
 						newMaterialDefs.push_back(Material::Definition());
-						auto& newMaterialDef = newMaterialDefs.front();
+						auto& newMaterialDef = newMaterialDefs.back();
 						newMaterialDef.shadingMode = ShadingMode::BLINN_PHONG_NORMALMAPPED;
 						newMaterialDef.texDefs.push_back(Texture::Definition());
-						auto& newAlbedoDef = newMaterialDef.texDefs.front();
+						auto& newAlbedoDef = newMaterialDef.texDefs.back();
 						newMaterialDef.texDefs.push_back(Texture::Definition());
-						auto& newSpecularDef = newMaterialDef.texDefs.front();
+						auto& newSpecularDef = newMaterialDef.texDefs.back();
 						newMaterialDef.texDefs.push_back(Texture::Definition());
-						auto& newNormalmapDef = newMaterialDef.texDefs.front();
+						auto& newNormalmapDef = newMaterialDef.texDefs.back();
 						bool albedoMapFound = false;
 						bool specularMapFound = false;
 						bool normalMapFound = false;
@@ -604,23 +655,31 @@ namespace sge
 
 	Handle<KtxData> ResourceManager::LoadKtx(const std::string_view path)
 	{
-		std::string_view stem, extension, meshName, imageType; // Images should be named like so: <dirs to image>/<associated mesh's name>_<texture type>.<extension>
+		if((jsons_.capacity() != DEFAULT_JSON_POOL_SIZE_) ||
+		   (ktxs_.capacity() != DEFAULT_KTX_POOL_SIZE_) ||
+		   (shaderSrcs_.capacity() != DEFAULT_SHADER_SRC_POOL_SIZE_) ||
+		   (gltfs_.capacity() != DEFAULT_GLTF_POOL_SIZE_))
+		{
+			sge_ERROR("Trying to allocate resources post initialization! This is not yet handled!");
+		}
+
+		std::string stem, extension, meshName, imageType; // Images should be named like so: <dirs to image>/<associated mesh's name>_<texture type>.<extension>
 		{
 			const size_t end = path.length();
-			assert(path.find_last_of('\\') == path.length()); // Forbit usage of backslashes.
+			assert(path.find_last_of('\\') == std::string::npos); // Forbit usage of backslashes.
 			const size_t lastDot = path.find_last_of('.');
 			const size_t lastSlash = path.find_last_of('/');
 			const size_t lastUnderscore = path.find_last_of('_');
-			stem = path.substr(lastSlash + 1, lastDot - 1);
-			extension = path.substr(lastDot, end);
-			meshName = path.substr(lastSlash + 1, lastUnderscore - 1);
-			imageType = path.substr(lastUnderscore + 1, lastDot - 1);
+			stem = path.substr(lastSlash + 1, (lastDot - 1) - lastSlash);
+			extension = path.substr(lastDot, end - lastDot);
+			meshName = path.substr(lastSlash + 1, lastUnderscore - (lastSlash + 1));
+			imageType = path.substr(lastUnderscore + 1, lastDot - (lastUnderscore + 1));
 		}
 		assert(extension == ".ktx"); // Make sure we're loading a .ktx
 		assert(std::filesystem::exists(path));
 
 		ktxs_.push_back(Resource<KtxData>());
-		auto& newElement = ktxs_.front();
+		auto& newElement = ktxs_.back();
 		auto& newKtx = newElement.resourceData;
 
 		newKtx.data = gli::load(path.data());
@@ -655,28 +714,46 @@ namespace sge
 
 	Handle<ShaderData> ResourceManager::LoadShader(const std::string_view vertexPath, const std::string_view fragmentPath, const std::string_view geometryPath)
 	{
-		assert(vertexPath.find_last_of('\\') == vertexPath.length() && fragmentPath.find_last_of('\\') == fragmentPath.length() && geometryPath.find_last_of('\\') == geometryPath.length());
-		assert(vertexPath.substr(vertexPath.find_last_of('.'), vertexPath.length()) == ".vert");
-		assert(fragmentPath.substr(fragmentPath.find_last_of('.'), fragmentPath.length()) == ".frag");
-		assert(geometryPath.substr(geometryPath.find_last_of('.'), geometryPath.length()) == ".geo");
+		if((jsons_.capacity() != DEFAULT_JSON_POOL_SIZE_) ||
+		   (ktxs_.capacity() != DEFAULT_KTX_POOL_SIZE_) ||
+		   (shaderSrcs_.capacity() != DEFAULT_SHADER_SRC_POOL_SIZE_) ||
+		   (gltfs_.capacity() != DEFAULT_GLTF_POOL_SIZE_))
+		{
+			sge_ERROR("Trying to allocate resources post initialization! This is not yet handled!");
+		}
+
+		assert(vertexPath.find_last_of('\\') == std::string::npos && fragmentPath.find_last_of('\\') == std::string::npos && geometryPath.find_last_of('\\') == std::string::npos);
+		assert(vertexPath.substr(vertexPath.find_last_of('.'), vertexPath.size() - vertexPath.find_last_of('.')) == ".vert");
+		assert(fragmentPath.substr(fragmentPath.find_last_of('.'), fragmentPath.size() - fragmentPath.find_last_of('.')) == ".frag");
+		const bool usingGeometryShader = geometryPath.length() > 0;
+		if(usingGeometryShader)
+		{
+			assert(geometryPath.substr(geometryPath.find_last_of('.'), geometryPath.size() - geometryPath.find_last_of('.')) == ".geo");
+		}
 
 		shaderSrcs_.push_back(Resource<ShaderData>());
-		auto& newElement = shaderSrcs_.front();
+		auto& newElement = shaderSrcs_.back();
 		auto& newShaderSrc = newElement.resourceData;
 
 		newShaderSrc.vertexCode = LoadFile_(vertexPath);
 		newShaderSrc.fragmentCode = LoadFile_(fragmentPath);
-		newShaderSrc.geometryCode = LoadFile_(geometryPath);
+		if(usingGeometryShader)
+		{
+			newShaderSrc.geometryCode = LoadFile_(geometryPath);
+		}
 		assert(newShaderSrc.IsValid());
 
 		newElement.hash = Hash(vertexPath.data(), (uint32_t)vertexPath.length(), 0);
 		newElement.hash = Hash(fragmentPath.data(), (uint32_t)fragmentPath.length(), newElement.hash);
-		newElement.hash = Hash(geometryPath.data(), (uint32_t)geometryPath.length(), newElement.hash);
+		if(usingGeometryShader)
+		{
+			newElement.hash = Hash(geometryPath.data(), (uint32_t)geometryPath.length(), newElement.hash);
+		}
 		assert(newElement.IsValid());
 
 		Handle<ShaderData> handle;
 		handle.hash = newElement.hash;
-		handle.ptr = &newElement;
+		handle.ptr = &shaderSrcs_.back();
 		assert(handle.IsValid());
 		return handle;
 	}
