@@ -7,6 +7,8 @@
 
 namespace sge
 {
+	struct TransformsBuffer;
+
 	/*
 	@brief: A mesh with non-interleaved data.
 	*/

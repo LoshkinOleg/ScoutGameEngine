@@ -10,12 +10,14 @@ namespace sge
 
 	Hash::Hash(const void* const data, const uint32_t byteLen, const Hash accumulatedHash)
 	{
+		if(!data || !byteLen) return;
 		Generate(data, byteLen);
 		Accumulate(accumulatedHash);
 	}
 
 	void Hash::Generate(const void* const data, const uint32_t byteLen)
 	{
+		if(!data || !byteLen) return;
 		value = XXH64(data, (size_t)byteLen, HASHING_SEED_);
 	}
 	void Hash::Accumulate(const Hash other)
@@ -29,6 +31,7 @@ namespace sge
 	}
 	void Hash::Accumulate(const void* const data, const uint32_t byteLen)
 	{
+		if(!data || !byteLen) return;
 		std::string accumulatedData = std::to_string(value);
 		accumulatedData += std::to_string(XXH64(data, (size_t)byteLen, HASHING_SEED_));
 		value = XXH64(accumulatedData.c_str(), accumulatedData.size(), HASHING_SEED_);

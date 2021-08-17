@@ -12,7 +12,9 @@ namespace sge
 
 		inline bool IsValid() const
 		{
-			return hash.IsValid() && resourceData.IsValid();
+			// Note: not checking hash for validity since some resources aren't ment to use hashes.
+			// TODO: make a hashless Resource and Handle structs.
+			return resourceData.IsValid();
 		}
 	};
 
@@ -43,7 +45,8 @@ namespace sge
 
 		inline bool IsValid() const
 		{
-			return hash.IsValid() && ptr != nullptr && ptr->IsValid() && hash == ptr->hash;
+			// Note: hash = 0, ptr->hash = 0 is valid for resources that are supposed to have duplicates (like transforms).
+			return ptr != nullptr && ptr->IsValid() && hash == ptr->hash;
 		}
 		inline void Reset()
 		{

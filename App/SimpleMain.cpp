@@ -2,7 +2,7 @@
 
 int main(int argv, char** args)
 {
-	auto texture = gli::load("../data/ktx/complexScene/Cube_albedoMap.ktx");
+	auto texture = gli::load("../data/ktx/complexScene/Cube_normalMap.ktx");
 	gli::gl translator(gli::gl::PROFILE_KTX);
 
 	int i = 5;

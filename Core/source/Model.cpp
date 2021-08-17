@@ -1,5 +1,7 @@
 #include "Model.h"
 
+#include <glad/glad.h>
+
 #include "Engine.h"
 
 namespace sge
@@ -36,17 +38,19 @@ namespace sge
 	{
 		auto& rm = Engine::Get().GetResourceManager();
 		auto& renderer = Engine::Get().GetRenderer();
-		transforms = rm.AllocateTransforms(def.transforms.data(), (uint32_t)(sizeof(glm::mat4) * def.transforms.size()));
 		for(const auto& meshDef : def.meshDefs)
 		{
 			indexedMeshes.push_back(renderer.CreateMesh(meshDef));
 		}
+		transforms.Init_(def.transforms);
 	}
 	void Model::Draw_(const uint32_t primitive, const ShadingMode mode) const
 	{
 		assert(IsValid());
+		assert(transforms.IsValid());
 		for(const auto& mesh : indexedMeshes)
 		{
+			transforms.Bind(mesh->VAO, mesh->vertexBuffers.size()); // iModelMatrix always comes after all the per-vertex attributes.
 			mesh->Draw_(transforms.NrOfTransforms(), primitive, mode);
 		}
 	}

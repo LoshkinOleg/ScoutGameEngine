@@ -299,7 +299,8 @@ namespace sge
 				positionsBuffer.componentType = (NumberType)TINYGLTF_COMPONENT_TYPE_FLOAT;
 				positionsBuffer.isIndexBuffer = false;
 				positionsBuffer.mutability = (Mutability)GL_STATIC_DRAW;
-				positionsBuffer.type = VertexBuffer::Definition::Type::POSITIONS_VEC3;
+				positionsBuffer.bufferContentsType = VertexBuffer::Type::POSITIONS_VEC3;
+				positionsBuffer.preComputedHash = Hash(buffer.data.data() + bufferView.byteOffset, bufferView.byteLength, 0);
 				memcpy(positionsBuffer.begin, positions.data(), bufferView.byteLength);
 				assert(positionsBuffer.IsValid());
 			}
@@ -324,7 +325,8 @@ namespace sge
 						newEboDef.componentType = NumberType::UINT;
 						newEboDef.isIndexBuffer = true;
 						newEboDef.mutability = (Mutability)GL_STATIC_DRAW;
-						newEboDef.type = VertexBuffer::Definition::Type::INDICES_UINT32;
+						newEboDef.bufferContentsType = VertexBuffer::Type::INDICES_UINT32;
+						newEboDef.preComputedHash = Hash(buffer.data.data() + bufferView.byteOffset, bufferView.byteLength, 0);
 						memcpy(newEboDef.begin, buffer.data.data() + bufferView.byteOffset, bufferView.byteLength);
 						assert(newEboDef.IsValid());
 					}break;
@@ -350,7 +352,8 @@ namespace sge
 						newEboDef.componentType = NumberType::UINT;
 						newEboDef.isIndexBuffer = true;
 						newEboDef.mutability = (Mutability)GL_STATIC_DRAW;
-						newEboDef.type = VertexBuffer::Definition::Type::INDICES_UINT32;
+						newEboDef.bufferContentsType = VertexBuffer::Type::INDICES_UINT32;
+						newEboDef.preComputedHash = Hash(inputIndices.data(), inputIndices.size() / sizeof(uint16_t), 0);
 						memcpy(newEboDef.begin, convertedIndices.data(), (size_t)nrOfIndices * sizeof(uint32_t));
 						assert(newEboDef.IsValid());
 					}break;
@@ -417,7 +420,8 @@ namespace sge
 					normalsBuffer.componentType = (NumberType)TINYGLTF_COMPONENT_TYPE_FLOAT;
 					normalsBuffer.isIndexBuffer = false;
 					normalsBuffer.mutability = (Mutability)GL_STATIC_DRAW;
-					normalsBuffer.type = VertexBuffer::Definition::Type::NORMALS;
+					normalsBuffer.bufferContentsType = VertexBuffer::Type::NORMALS;
+					normalsBuffer.preComputedHash = Hash(bufferNormals.data.data() + bufferViewNormals.byteOffset, bufferViewNormals.byteLength, 0);
 					memcpy(normalsBuffer.begin, normals.data(), bufferViewNormals.byteLength);
 					assert(normalsBuffer.IsValid());
 				}
@@ -433,7 +437,8 @@ namespace sge
 					tangentsBuffer.componentType = (NumberType)TINYGLTF_COMPONENT_TYPE_FLOAT;
 					tangentsBuffer.isIndexBuffer = false;
 					tangentsBuffer.mutability = (Mutability)GL_STATIC_DRAW;
-					tangentsBuffer.type = VertexBuffer::Definition::Type::TANGENTS;
+					tangentsBuffer.bufferContentsType = VertexBuffer::Type::TANGENTS;
+					tangentsBuffer.preComputedHash = Hash(tangents.data(), tangents.size() / sizeof(glm::vec3), 0);
 					memcpy(tangentsBuffer.begin, tangents.data(), tangents.size() * sizeof(glm::vec3));
 					assert(tangentsBuffer.IsValid());
 				}
@@ -457,8 +462,9 @@ namespace sge
 				uvsBuffer.componentType = (NumberType)TINYGLTF_COMPONENT_TYPE_FLOAT;
 				uvsBuffer.isIndexBuffer = false;
 				uvsBuffer.mutability = (Mutability)GL_STATIC_DRAW;
-				uvsBuffer.type = VertexBuffer::Definition::Type::NORMALS;
-				memcpy(uvsBuffer.begin, buffer.data.data(), bufferView.byteLength);
+				uvsBuffer.bufferContentsType = VertexBuffer::Type::UVS;
+				uvsBuffer.preComputedHash = Hash(buffer.data.data() + bufferView.byteOffset, bufferView.byteLength, 0);
+				memcpy(uvsBuffer.begin, buffer.data.data() + bufferView.byteOffset, bufferView.byteLength);
 				assert(uvsBuffer.IsValid());
 			}
 
@@ -624,6 +630,14 @@ namespace sge
 			{
 				newTextureDef.compression = Texture::Compression::ASTC_RGBA_4x4;
 			}break;
+			case gli::texture::format_type::FORMAT_RGBA_ETC2_UNORM_BLOCK16:
+			{
+				newTextureDef.compression = Texture::Compression::ETC2;
+			}break;
+			case gli::texture::format_type::FORMAT_RGB_ETC_UNORM_BLOCK8:
+			{
+				newTextureDef.compression = Texture::Compression::ETC1;
+			}break;
 			default:
 			{
 				sge_ERROR("Unexpected format retrieved from gli::texture!");
@@ -760,14 +774,9 @@ namespace sge
 		return handle;
 	}
 
-	TransformsBuffer ResourceManager::AllocateTransforms(const void* const data, const uint32_t byteLen)
+	glm::mat4* ResourceManager::AllocateTransforms(const void* const data, const uint32_t byteLen)
 	{
-		TransformsBuffer buffer;
-		buffer.begin = transformsPool_.Allocate(byteLen / sizeof(glm::mat4));
-		buffer.end = buffer.begin + (byteLen / sizeof(glm::mat4));
-		memcpy(buffer.begin, data, byteLen);
-		assert(buffer.IsValid());
-		return buffer;
+		return transformsPool_.Allocate(byteLen / sizeof(glm::mat4));
 	}
 	
 	void ResourceManager::Shutdown()

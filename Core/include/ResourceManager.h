@@ -86,7 +86,7 @@ namespace sge
 												   const Mutability mutability,
 												   const bool generateMipMaps) const;
 
-		TransformsBuffer AllocateTransforms(const void* const data, const uint32_t byteLen);
+		glm::mat4* AllocateTransforms(const void* const data, const uint32_t byteLen);
 
 		void Shutdown();
 

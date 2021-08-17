@@ -12,14 +12,21 @@ public:
 
 		auto gltfHandle = rm.LoadGltf("../data/gltf/complexScene.gltf");
 		const auto shadingModes = (sge::ShadingMode)
-			((uint32_t)sge::ShadingMode::ALBEDO_ONLY |
-			 (uint32_t)sge::ShadingMode::BLINN_PHONG_NORMALMAPPED |
-			 (uint32_t)sge::ShadingMode::GOOCH);
-		model = renderer.CreateModel(rm.GenerateDefinitionFrom(gltfHandle, sge::GltfData::GltfAttributes::EVERYTHING, shadingModes));
+			((uint32_t)sge::ShadingMode::GOOCH);
+		const auto meshDataToLoad = (sge::GltfData::GltfAttributes)
+			((uint32_t)sge::GltfData::GltfAttributes::POSITIONS |
+			(uint32_t)sge::GltfData::GltfAttributes::INDICES |
+			(uint32_t)sge::GltfData::GltfAttributes::NORMALS);
+		sge::Model::Definition modelDef = rm.GenerateDefinitionFrom(gltfHandle, meshDataToLoad, shadingModes);
+
+		modelDef.transforms.back()[3] = glm::vec4(0.0f, 0.0f, -10.0f, 1.0f);
+		modelDef.transforms.back() = glm::rotate(modelDef.transforms.back(), 3.14f, sge::EAST_VEC3);
+		
+		model = renderer.CreateModel(modelDef);
 	}
 	void Update() override
 	{
-		sge::Engine::Get().GetRenderer().Schedule(model, sge::Primitive::TRIANGLES, sge::ShadingMode::BLINN_PHONG_NORMALMAPPED);
+		sge::Engine::Get().GetRenderer().Schedule(model, sge::Primitive::TRIANGLES, sge::ShadingMode::GOOCH);
 	}
 	void Shutdown() override
 	{

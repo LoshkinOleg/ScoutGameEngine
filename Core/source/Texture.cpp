@@ -51,6 +51,8 @@ namespace sge
 				{
 					case Compression::ASTC_RGBA_4x4:
 					{
+						sge_ERROR("The loading of astc textures is not working yet!");
+
 						glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_BASE_LEVEL, 0);
 						glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, (GLint)(def.mipLevels));
 						glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, (GLint)wrappingModeS);
@@ -63,6 +65,50 @@ namespace sge
 							glCompressedTexImage2D(GL_TEXTURE_2D,
 												   (GLint)level,
 												   (GLenum)def.compression, // Might be causing the crashing. Maybe there's a good reason glad doesn't have the necessary define...
+												   (GLsizei)def.widths[level],
+												   (GLsizei)def.heights[level],
+												   0,
+												   (GLsizei)def.byteLens[level],
+												   def.datas[level]);
+							sge_CHECK_GL_ERROR();
+						}
+					}break;
+					case Compression::ETC1:
+					{
+						glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_BASE_LEVEL, 0);
+						glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, (GLint)(def.mipLevels));
+						glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, (GLint)wrappingModeS);
+						glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, (GLint)wrappingModeT);
+						glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, (GLint)minifyingMode);
+						glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, (GLint)magnifyingMode);
+						sge_CHECK_GL_ERROR();
+						for(uint32_t level = 0; level < def.mipLevels + 1; level++)
+						{
+							glCompressedTexImage2D(GL_TEXTURE_2D,
+												   (GLint)level,
+												   (GLenum)def.compression,
+												   (GLsizei)def.widths[level],
+												   (GLsizei)def.heights[level],
+												   0,
+												   (GLsizei)def.byteLens[level],
+												   def.datas[level]);
+							sge_CHECK_GL_ERROR();
+						}
+					}break;
+					case Compression::ETC2:
+					{
+						glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_BASE_LEVEL, 0);
+						glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, (GLint)(def.mipLevels));
+						glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, (GLint)wrappingModeS);
+						glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, (GLint)wrappingModeT);
+						glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, (GLint)minifyingMode);
+						glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, (GLint)magnifyingMode);
+						sge_CHECK_GL_ERROR();
+						for(uint32_t level = 0; level < def.mipLevels + 1; level++)
+						{
+							glCompressedTexImage2D(GL_TEXTURE_2D,
+												   (GLint)level,
+												   (GLenum)def.compression,
 												   (GLsizei)def.widths[level],
 												   (GLsizei)def.heights[level],
 												   0,

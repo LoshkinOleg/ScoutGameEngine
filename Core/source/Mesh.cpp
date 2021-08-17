@@ -3,6 +3,7 @@
 #include <glad/glad.h>
 
 #include "Engine.h"
+#include "Transform.h"
 
 namespace sge
 {
@@ -22,7 +23,7 @@ namespace sge
 		Hash hash = 0;
 		for(const auto& element : vboDefs)
 		{
-			hash.Accumulate(element.begin, element.byteLen);
+			hash.Accumulate(element.preComputedHash);
 		}
 		hash.Accumulate(eboDef.begin, eboDef.byteLen);
 		for(const auto& element : matDefs)
@@ -136,6 +137,8 @@ namespace sge
 
 	void IndexedMesh::Update(const std::vector<std::pair<void*, uint32_t>>& dataAndByteLen) const
 	{
+		sge_ERROR("Not yet implemented!");
+
 		uint32_t idx = 0;
 		const uint32_t len = (uint32_t)vertexBuffers.size();
 		for(uint32_t i = 0; i < len; i++)

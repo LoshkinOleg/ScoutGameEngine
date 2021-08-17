@@ -8,10 +8,12 @@ namespace sge
 {
 	void VertexBuffer::Init_(const Definition& def)
 	{
+		assert(def.IsValid());
 		mutability = def.mutability;
 		componentType = def.componentType;
 		componentsPerElement = def.componentsPerElement;
 		isIndexBuffer = def.isIndexBuffer;
+		bufferContentsType = def.bufferContentsType;
 		sge_CHECK_GL_ERROR();
 		glGenBuffers(1, &VBO);
 		if(def.isIndexBuffer)
@@ -26,7 +28,10 @@ namespace sge
 		glBufferData(target, (GLsizeiptr)def.byteLen, def.begin, (GLenum)def.mutability);
 		sge_CHECK_GL_ERROR();
 
-		delete[] def.begin; // Free buffer data stored on heap.
+		if(def.begin)
+		{
+			delete[] def.begin; // Free buffer data stored on heap.
+		}
 
 		assert(IsValid());
 	}
@@ -36,7 +41,8 @@ namespace sge
 		const GLenum target = (GLenum)Target_();
 		assert(mutability == Mutability::DYNAMIC && target == GL_ARRAY_BUFFER); // Not handling dynamic indices.
 		glBindBuffer(target, VBO);
-		glBufferSubData(target, 0, (GLsizeiptr)byteLen, data);
+		// glBufferSubData(target, 0, (GLsizeiptr)byteLen, data);
+		glBufferData(target, (GLsizeiptr)byteLen, data, (GLenum)Mutability::DYNAMIC);
 		sge_CHECK_GL_ERROR();
 	}
 	void VertexBuffer::Destroy_()

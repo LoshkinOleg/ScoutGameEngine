@@ -2,6 +2,7 @@
 
 #include "globals.h"
 // #include "macros.h"
+#include "Hash.h"
 
 namespace sge
 {
@@ -17,25 +18,28 @@ namespace sge
 			MAX_VALUE = EBO
 		};
 
+		enum class Type: uint16_t
+		{
+			INVALID = 0,
+
+			POSITIONS_VEC3 = 1 << 0,
+			POSITIONS_VEC2 = 1 << 1,
+			NORMALS = 1 << 2,
+			TANGENTS = 1 << 3,
+
+			BITANGENTS = 1 << 4,
+			UVS = 1 << 5,
+			INDICES_UINT32 = 1 << 6,
+			MODEL_MATRIX = 1 << 7,
+
+			GENERIC_VEC3 = 1 << 8,
+			GENERIC_FLOAT = 1 << 9,
+
+			MAX_VALUE = GENERIC_FLOAT
+		};
+
 		struct Definition
 		{
-			enum class Type: uint8_t
-			{
-				INVALID = 0,
-
-				POSITIONS_VEC3 = 1 << 0,
-				POSITIONS_VEC2 = 1 << 1,
-				NORMALS = 1 << 2,
-				TANGENTS = 1 << 3,
-
-				BITANGENTS = 1 << 4,
-				UVS = 1 << 5,
-				INDICES_UINT32 = 1 << 6,
-				OTHER = 1 << 7,
-
-				MAX_VALUE = OTHER
-			};
-
 			// sge_ALLOW_CONSTRUCTION(Definition);
 			// sge_DISALLOW_COPY(Definition);
 
@@ -45,12 +49,13 @@ namespace sge
 			Mutability mutability = Mutability::INVALID;
 			NumberType componentType = NumberType::INVALID;
 			uint32_t componentsPerElement = 0;
-			Type type = Type::INVALID;
+			Type bufferContentsType = Type::INVALID;
 			bool isIndexBuffer = false;
+			Hash preComputedHash = 0; // Needs to be here since begin will get deallocated upon VertexBuffer::Init_() .
 
 			inline bool IsValid() const
 			{
-				return begin && byteLen && (uint32_t)mutability && (uint32_t)componentType && componentsPerElement && (uint32_t)type;
+				return (uint32_t)mutability && (uint32_t)componentType && componentsPerElement && (uint32_t)bufferContentsType;
 			}
 		};
 
@@ -59,6 +64,7 @@ namespace sge
 		NumberType componentType = NumberType::INVALID;
 		uint32_t componentsPerElement = 0;
 		bool isIndexBuffer = false;
+		Type bufferContentsType = Type::INVALID;
 
 		void Update(void* data, const uint32_t byteLen) const;
 
@@ -66,7 +72,7 @@ namespace sge
 
 		inline bool IsValid() const
 		{
-			return VBO && (uint32_t)mutability && (uint32_t)componentType && componentsPerElement;
+			return VBO && (uint32_t)mutability && (uint32_t)componentType && componentsPerElement && (bool)bufferContentsType;
 		}
 		inline void Reset()
 		{
