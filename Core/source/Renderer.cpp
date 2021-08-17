@@ -57,6 +57,12 @@ namespace sge
 		// deferredPassShader_.resourceData.Init_(deferredPassSrcHandle->vertexCode, deferredPassSrcHandle->fragmentCode, deferredPassSrcHandle->geometryCode, ShadingMode::DEFERRED_PASS);
 		// postprocessPassShader_.hash = postprocessPassSrcHandle.hash;
 		// postprocessPassShader_.resourceData.Init_(postprocessPassSrcHandle->vertexCode, postprocessPassSrcHandle->fragmentCode, postprocessPassSrcHandle->geometryCode, ShadingMode::POST_PROCESS_PASS);
+
+		vertexBuffers_.reserve(VERTEX_BUFFER_POOL_SIZE_);
+		textures_.reserve(TEXTURES_POOL_SIZE_);
+		materials_.reserve(MATERIALS_POOL_SIZE_);
+		indexedMeshes_.reserve(INDEXED_MESHES_POOL_SIZE_);
+		models_.reserve(MODELS_POOL_SIZE_);
 	}
 	void Renderer::Shutdown()
 	{
@@ -141,7 +147,7 @@ namespace sge
 		newValue.Init_(def);
 		Handle<VertexBuffer> handle;
 		handle.hash = newElement.hash;
-		handle.ptr = &newElement;
+		handle.ptr = &vertexBuffers_.back();
 		assert(handle.IsValid());
 		return handle;
 	}
@@ -151,8 +157,8 @@ namespace sge
 		textures_.push_back(Resource<Texture>());
 		auto& newElement = textures_.back();
 		auto& newValue = newElement.resourceData;
+		newElement.hash = Hash(def.datas[0], def.byteLens[0], 0);
 		newValue.Init_(def);
-		newElement.hash = Hash(def.datas[0], def.ByteSize(0), 0);
 		Handle<Texture> handle;
 		handle.hash = newElement.hash;
 		handle.ptr = &newElement;
@@ -165,8 +171,8 @@ namespace sge
 		materials_.push_back(Resource<Material>());
 		auto& newElement = materials_.back();
 		auto& newValue = newElement.resourceData;
-		newValue.Init_(def);
 		newElement.hash = def.ComputeHash();
+		newValue.Init_(def);
 		Handle<Material> handle;
 		handle.hash = newElement.hash;
 		handle.ptr = &newElement;

@@ -464,161 +464,115 @@ namespace sge
 
 			if(requiredShadingModes != ShadingMode::INVALID)
 			{
-				constexpr const uint32_t len = (uint32_t)std::bit_width((uint64_t)ShadingMode::MAX_VALUE);
-				for(uint32_t i = 0; i < len; i++)
+				if((uint32_t)requiredShadingModes & (uint32_t)ShadingMode::GIZMO)
 				{
-					if((uint32_t)requiredShadingModes & (uint32_t)ShadingMode::GIZMO)
+					newMaterialDefs.push_back(Material::Definition());
+					auto& newMaterialDef = newMaterialDefs.back();
+					newMaterialDef.vec3s.push_back(INVERSE_DEFAULT_COLOR);
+				}
+				if((uint32_t)requiredShadingModes & (uint32_t)ShadingMode::ALBEDO_ONLY)
+				{
+					newMaterialDefs.push_back(Material::Definition());
+					auto& newMaterialDef = newMaterialDefs.back();
+					newMaterialDef.shadingMode = ShadingMode::ALBEDO_ONLY;
+					newMaterialDef.texDefs.push_back(Texture::Definition());
+					auto& newTextureDef = newMaterialDef.texDefs.back();
+					bool albedoMapFound = false;
+					for(const auto& image : handle->images)
 					{
-						newMaterialDefs.push_back(Material::Definition());
-						auto& newMaterialDef = newMaterialDefs.back();
-						newMaterialDef.vec3s.push_back(INVERSE_DEFAULT_COLOR);
-					}
-					if((uint32_t)requiredShadingModes & (uint32_t)ShadingMode::ALBEDO_ONLY)
-					{
-						newMaterialDefs.push_back(Material::Definition());
-						auto& newMaterialDef = newMaterialDefs.back();
-						newMaterialDef.shadingMode = ShadingMode::ALBEDO_ONLY;
-						newMaterialDef.texDefs.push_back(Texture::Definition());
-						auto& newTextureDef = newMaterialDef.texDefs.back();
-						bool albedoMapFound = false;
-						for(const auto& image : handle->images)
+						if(image->associatedMesh == hashedMeshName)
 						{
-							if(image->associatedMesh == hashedMeshName)
+							if(image->type == ImageType::ALBEDO_MAP)
 							{
-								if(image->type == ImageType::ALBEDO_MAP)
-								{
-									albedoMapFound = true;
-									newTextureDef = GenerateDefinitionFrom
-										 (image,
-										 (Texture::SamplingMode)((image->data.levels() > 1) ? GL_LINEAR_MIPMAP_LINEAR : GL_LINEAR),
-										 (Texture::SamplingMode)GL_LINEAR,
-										 (Texture::WrappingMode)GL_MIRRORED_REPEAT,
-										 (Texture::WrappingMode)GL_MIRRORED_REPEAT,
-										 (Mutability)GL_STATIC_DRAW,
-										 false);
-									break;
-								}
+								albedoMapFound = true;
+								newTextureDef = GenerateDefinitionFrom
+										(image,
+										(Texture::SamplingMode)((image->data.levels() > 1) ? GL_LINEAR_MIPMAP_LINEAR : GL_LINEAR),
+										(Texture::SamplingMode)GL_LINEAR,
+										(Texture::WrappingMode)GL_MIRRORED_REPEAT,
+										(Texture::WrappingMode)GL_MIRRORED_REPEAT,
+										(Mutability)GL_STATIC_DRAW,
+										false);
+								break;
 							}
 						}
-						if(!albedoMapFound)
-						{
-							sge_ERROR("Couldn't find an appropriate texture in the list of images provided!");
-						}
-						assert(newMaterialDef.IsValid());
 					}
-					if((uint32_t)requiredShadingModes & (uint32_t)ShadingMode::GOOCH)
+					if(!albedoMapFound)
 					{
-						newMaterialDefs.push_back(Material::Definition());
-						auto& newMaterialDef = newMaterialDefs.back();
-						newMaterialDef.vec3s.push_back(INVERSE_DEFAULT_COLOR);
+						sge_ERROR("Couldn't find an appropriate texture in the list of images provided!");
 					}
-					if((uint32_t)requiredShadingModes & (uint32_t)ShadingMode::BLINN_PHONG)
+					assert(newMaterialDef.IsValid());
+				}
+				if((uint32_t)requiredShadingModes & (uint32_t)ShadingMode::GOOCH)
+				{
+					newMaterialDefs.push_back(Material::Definition());
+					auto& newMaterialDef = newMaterialDefs.back();
+					newMaterialDef.vec3s.push_back(INVERSE_DEFAULT_COLOR);
+					newMaterialDef.shadingMode = ShadingMode::GOOCH;
+				}
+				if((uint32_t)requiredShadingModes & (uint32_t)ShadingMode::BLINN_PHONG_NORMALMAPPED)
+				{
+					newMaterialDefs.push_back(Material::Definition());
+					auto& newMaterialDef = newMaterialDefs.back();
+					newMaterialDef.shadingMode = ShadingMode::BLINN_PHONG_NORMALMAPPED;
+					Texture::Definition newAlbedoDef = {};
+					Texture::Definition newSpecularDef = {};
+					Texture::Definition newNormalmapDef = {};
+					bool albedoMapFound = false;
+					bool specularMapFound = false;
+					bool normalMapFound = false;
+					for(const auto& image : handle->images)
 					{
-						newMaterialDefs.push_back(Material::Definition());
-						auto& newMaterialDef = newMaterialDefs.back();
-						newMaterialDef.shadingMode = ShadingMode::BLINN_PHONG;
-						newMaterialDef.texDefs.push_back(Texture::Definition());
-						auto& newAlbedoDef = newMaterialDef.texDefs.back();
-						newMaterialDef.texDefs.push_back(Texture::Definition());
-						auto& newSpecularDef = newMaterialDef.texDefs.back();
-						bool albedoMapFound = false;
-						bool specularMapFound = false;
-						for(const auto& image : handle->images)
+						if(image->associatedMesh == hashedMeshName)
 						{
-							if(image->associatedMesh == hashedMeshName)
+							if(image->type == ImageType::ALBEDO_MAP)
 							{
-								if(image->type == ImageType::ALBEDO_MAP)
-								{
-									albedoMapFound = true;
-									newAlbedoDef = GenerateDefinitionFrom
-									(image,
-									 (Texture::SamplingMode)((image->data.levels() > 1) ? GL_LINEAR_MIPMAP_LINEAR : GL_LINEAR),
-									 (Texture::SamplingMode)GL_LINEAR,
-									 (Texture::WrappingMode)GL_MIRRORED_REPEAT,
-									 (Texture::WrappingMode)GL_MIRRORED_REPEAT,
-									 (Mutability)GL_STATIC_DRAW,
-									 false);
-								}
-								else if(image->type == ImageType::SPECULAR_MAP)
-								{
-									// TODO: use single channel texture for speculars.
-									specularMapFound = true;
-									newSpecularDef = GenerateDefinitionFrom
-									(image,
-									 (Texture::SamplingMode)((image->data.levels() > 1) ? GL_LINEAR_MIPMAP_LINEAR : GL_LINEAR),
-									 (Texture::SamplingMode)GL_LINEAR,
-									 (Texture::WrappingMode)GL_MIRRORED_REPEAT,
-									 (Texture::WrappingMode)GL_MIRRORED_REPEAT,
-									 (Mutability)GL_STATIC_DRAW,
-									 false);
-								}
+								albedoMapFound = true;
+								newAlbedoDef = GenerateDefinitionFrom
+								(image,
+									(Texture::SamplingMode)((image->data.levels() > 1) ? GL_LINEAR_MIPMAP_LINEAR : GL_LINEAR),
+									(Texture::SamplingMode)GL_LINEAR,
+									(Texture::WrappingMode)GL_MIRRORED_REPEAT,
+									(Texture::WrappingMode)GL_MIRRORED_REPEAT,
+									(Mutability)GL_STATIC_DRAW,
+									false);
+								newMaterialDef.texDefs.push_back(newAlbedoDef);
+							}
+							else if(image->type == ImageType::SPECULAR_MAP)
+							{
+								// TODO: use single channel texture for speculars.
+								specularMapFound = true;
+								newSpecularDef = GenerateDefinitionFrom
+								(image,
+									(Texture::SamplingMode)((image->data.levels() > 1) ? GL_LINEAR_MIPMAP_LINEAR : GL_LINEAR),
+									(Texture::SamplingMode)GL_LINEAR,
+									(Texture::WrappingMode)GL_MIRRORED_REPEAT,
+									(Texture::WrappingMode)GL_MIRRORED_REPEAT,
+									(Mutability)GL_STATIC_DRAW,
+									false);
+								newMaterialDef.texDefs.push_back(newSpecularDef);
+							}
+							else if(image->type == ImageType::NORMAL_MAP)
+							{
+								normalMapFound = true;
+								newNormalmapDef = GenerateDefinitionFrom
+								(image,
+									(Texture::SamplingMode)((image->data.levels() > 1) ? GL_LINEAR_MIPMAP_LINEAR : GL_LINEAR),
+									(Texture::SamplingMode)GL_LINEAR,
+									(Texture::WrappingMode)GL_MIRRORED_REPEAT,
+									(Texture::WrappingMode)GL_MIRRORED_REPEAT,
+									(Mutability)GL_STATIC_DRAW,
+									false);
+								newMaterialDef.texDefs.push_back(newNormalmapDef);
 							}
 						}
-						if(!albedoMapFound || !specularMapFound) sge_ERROR("Couldn't find an appropriate texture in the list of images provided!");
-						newMaterialDef.floats.push_back(64.0f); // TODO: load shininess from gltf.
-						assert(newMaterialDef.IsValid());
 					}
-					if((uint32_t)requiredShadingModes & (uint32_t)ShadingMode::BLINN_PHONG_NORMALMAPPED)
+					if(!albedoMapFound || !specularMapFound || !normalMapFound)
 					{
-						newMaterialDefs.push_back(Material::Definition());
-						auto& newMaterialDef = newMaterialDefs.back();
-						newMaterialDef.shadingMode = ShadingMode::BLINN_PHONG_NORMALMAPPED;
-						newMaterialDef.texDefs.push_back(Texture::Definition());
-						auto& newAlbedoDef = newMaterialDef.texDefs.back();
-						newMaterialDef.texDefs.push_back(Texture::Definition());
-						auto& newSpecularDef = newMaterialDef.texDefs.back();
-						newMaterialDef.texDefs.push_back(Texture::Definition());
-						auto& newNormalmapDef = newMaterialDef.texDefs.back();
-						bool albedoMapFound = false;
-						bool specularMapFound = false;
-						bool normalMapFound = false;
-						for(const auto& image : handle->images)
-						{
-							if(image->associatedMesh == hashedMeshName)
-							{
-								if(image->type == ImageType::ALBEDO_MAP)
-								{
-									albedoMapFound = true;
-									newAlbedoDef = GenerateDefinitionFrom
-									(image,
-									 (Texture::SamplingMode)((image->data.levels() > 1) ? GL_LINEAR_MIPMAP_LINEAR : GL_LINEAR),
-									 (Texture::SamplingMode)GL_LINEAR,
-									 (Texture::WrappingMode)GL_MIRRORED_REPEAT,
-									 (Texture::WrappingMode)GL_MIRRORED_REPEAT,
-									 (Mutability)GL_STATIC_DRAW,
-									 false);
-								}
-								else if(image->type == ImageType::SPECULAR_MAP)
-								{
-									// TODO: use single channel texture for speculars.
-									specularMapFound = true;
-									newSpecularDef = GenerateDefinitionFrom
-									(image,
-									 (Texture::SamplingMode)((image->data.levels() > 1) ? GL_LINEAR_MIPMAP_LINEAR : GL_LINEAR),
-									 (Texture::SamplingMode)GL_LINEAR,
-									 (Texture::WrappingMode)GL_MIRRORED_REPEAT,
-									 (Texture::WrappingMode)GL_MIRRORED_REPEAT,
-									 (Mutability)GL_STATIC_DRAW,
-									 false);
-								}
-								else if(image->type == ImageType::NORMAL_MAP)
-								{
-									normalMapFound = true;
-									newNormalmapDef = GenerateDefinitionFrom
-									(image,
-									 (Texture::SamplingMode)((image->data.levels() > 1) ? GL_LINEAR_MIPMAP_LINEAR : GL_LINEAR),
-									 (Texture::SamplingMode)GL_LINEAR,
-									 (Texture::WrappingMode)GL_MIRRORED_REPEAT,
-									 (Texture::WrappingMode)GL_MIRRORED_REPEAT,
-									 (Mutability)GL_STATIC_DRAW,
-									 false);
-								}
-							}
-						}
-						if(!albedoMapFound || !specularMapFound || !normalMapFound) sge_ERROR("Couldn't find an appropriate texture in the list of images provided!");
-						newMaterialDef.floats.push_back(64.0f); // TODO: load shininess from gltf.
-						assert(newMaterialDef.IsValid());
+						sge_ERROR("Couldn't find an appropriate texture in the list of images provided!");
 					}
+					newMaterialDef.floats.push_back(64.0f); // TODO: load shininess from gltf.
+					assert(newMaterialDef.IsValid());
 				}
 			}
 			assert(newMeshDef.IsValid());
@@ -649,9 +603,9 @@ namespace sge
 		for(uint32_t level = 0; level < nrOfMipLevels; level++)
 		{
 			// TODO: handle cubemaps
-			// newTextureDef.datas.push_back(const_cast<void*>(image.data(0,0,level)));
 			newTextureDef.datas[level] = new uint8_t[image.size(level)];
 			memcpy(newTextureDef.datas[level], image.data(0, 0, level), image.size(level));
+			newTextureDef.byteLens.push_back(image.size(level));
 			newTextureDef.widths.push_back(image.extent(level).x);
 			newTextureDef.heights.push_back(image.extent(level).y);
 		}
@@ -663,6 +617,18 @@ namespace sge
 		newTextureDef.mutability = mutability;
 		newTextureDef.onS = onS;
 		newTextureDef.onT = onT;
+		newTextureDef.preComputedHash = Hash(image.data(0,0,0), image.size(0), 0);
+		switch(image.format())
+		{
+			case gli::texture::format_type::FORMAT_RGBA_ASTC_4X4_UNORM_BLOCK16:
+			{
+				newTextureDef.compression = Texture::Compression::ASTC_RGBA_4x4;
+			}break;
+			default:
+			{
+				sge_ERROR("Unexpected format retrieved from gli::texture!");
+			}break;
+		}
 		assert(newTextureDef.IsValid());
 		return newTextureDef;
 	}

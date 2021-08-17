@@ -60,33 +60,34 @@ namespace sge
 			textures.push_back(renderer.CreateTexture(texDef));
 		}
 
+		Handle<Shader> shaderHandle = renderer.GetShaderForShadingMode(def.shadingMode);
 		switch(def.shadingMode)
 		{
 			case ShadingMode::GIZMO:
 			{
-				auto shaderDataHandle = rm.LoadShader(sge_SHADERS_PATH + "gizmos.vert", sge_SHADERS_PATH + "gizmos.frag", "");
-				auto shaderHandle = renderer.GetShaderForShadingMode(def.shadingMode);
+				// auto shaderDataHandle = rm.LoadShader(sge_SHADERS_PATH + "gizmos.vert", sge_SHADERS_PATH + "gizmos.frag", "");
+				// auto shaderHandle = renderer.GetShaderForShadingMode(def.shadingMode);
 				assert(vec3s.size() == 1);
 				shaderHandle->SetVec3("color", vec3s[0]);
 			}break;
 			case ShadingMode::GOOCH:
 			{
-				auto shaderDataHandle = rm.LoadShader(sge_SHADERS_PATH + "gooch.vert", sge_SHADERS_PATH + "gooch.frag", "");
-				auto shaderHandle = renderer.GetShaderForShadingMode(def.shadingMode);
+				// auto shaderDataHandle = rm.LoadShader(sge_SHADERS_PATH + "gooch.vert", sge_SHADERS_PATH + "gooch.frag", "");
+				// auto shaderHandle = renderer.GetShaderForShadingMode(def.shadingMode);
 				assert(vec3s.size() == 1);
 				shaderHandle->SetVec3("color", vec3s[0]);
 			}break;
 			case ShadingMode::ALBEDO_ONLY:
 			{
-				auto shaderDataHandle = rm.LoadShader(sge_SHADERS_PATH + "albedoOnly.vert", sge_SHADERS_PATH + "albedoOnly.frag", "");
-				auto shaderHandle = renderer.GetShaderForShadingMode(def.shadingMode);
+				// auto shaderDataHandle = rm.LoadShader(sge_SHADERS_PATH + "albedoOnly.vert", sge_SHADERS_PATH + "albedoOnly.frag", "");
+				// auto shaderHandle = renderer.GetShaderForShadingMode(def.shadingMode);
 				assert(textures.size() == 1);
 				shaderHandle->SetInt("albedoMap", 0);
 			}break;
 			case ShadingMode::BLINN_PHONG:
 			{
-				auto shaderDataHandle = rm.LoadShader(sge_SHADERS_PATH + "blinnPhong.vert", sge_SHADERS_PATH + "blinnPhong.frag", "");
-				auto shaderHandle = renderer.GetShaderForShadingMode(def.shadingMode);
+				// auto shaderDataHandle = rm.LoadShader(sge_SHADERS_PATH + "blinnPhong.vert", sge_SHADERS_PATH + "blinnPhong.frag", "");
+				// auto shaderHandle = renderer.GetShaderForShadingMode(def.shadingMode);
 				assert(textures.size() == 2 && floats.size() == 1);
 				shaderHandle->SetInt("albedoMap", 0);
 				shaderHandle->SetInt("specularMap", 1);
@@ -94,8 +95,8 @@ namespace sge
 			}break;
 			case ShadingMode::BLINN_PHONG_NORMALMAPPED:
 			{
-				auto shaderDataHandle = rm.LoadShader(sge_SHADERS_PATH + "blinnPhongNormalmapped.vert", sge_SHADERS_PATH + "blinnPhongNormalmapped.frag", "");
-				auto shaderHandle = renderer.GetShaderForShadingMode(def.shadingMode);
+				// auto shaderDataHandle = rm.LoadShader(sge_SHADERS_PATH + "blinnPhongNormalmapped.vert", sge_SHADERS_PATH + "blinnPhongNormalmapped.frag", "");
+				// auto shaderHandle = renderer.GetShaderForShadingMode(def.shadingMode);
 				assert(textures.size() == 3 && floats.size() == 1);
 				shaderHandle->SetInt("albedoMap", 0);
 				shaderHandle->SetInt("specularMap", 1);
@@ -124,7 +125,7 @@ namespace sge
 		Hash hash = 0;
 		for(const auto& element : texDefs)
 		{
-			hash.Accumulate(element.datas[0], element.ByteSize(0));
+			hash.Accumulate(element.preComputedHash);
 		}
 		hash.Accumulate(vec3s.data(), (uint32_t)(sizeof(glm::vec3) * vec3s.size()));
 		hash.Accumulate(floats.data(), (uint32_t)(sizeof(float) * floats.size()));

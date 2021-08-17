@@ -2,9 +2,8 @@
 
 layout (location = 0) in vec3 vPos;
 layout (location = 1) in vec3 vNormal;
-// layout (location = 2) in vec3 vTangent;
-layout (location = 3) in vec2 vUv;
-layout (location = 4) in mat4 iModelMatrix;
+layout (location = 2) in vec2 vUv;
+layout (location = 3) in mat4 iModelMatrix;
 
 out VS_OUT {
 	vec3 w_fragPos;

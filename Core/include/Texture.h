@@ -2,6 +2,7 @@
 
 #include <vector>
 
+#include "Hash.h"
 #include "globals.h"
 
 namespace sge
@@ -38,9 +39,21 @@ namespace sge
 
 			MAX_VALUE = RGBA_B8
 		};
+		enum class Compression: uint32_t
+		{
+			INVALID = 0,
+
+			NONE = 1,
+			ETC1 = 2,
+			ETC2 = 3,
+			ASTC_RGBA_4x4 = 0x93B0, // COMPRESSED_RGBA_ASTC_4x4_KHR
+
+			MAX_VALUE = ASTC_RGBA_4x4
+		};
 		struct Definition
 		{
 			std::vector<void*> datas = {};
+			std::vector<uint32_t> byteLens = {};
 			Mutability mutability = Mutability::INVALID;
 			Format format = Format::INVALID;
 			std::vector<uint32_t> widths = {}; // one per mipmap level
@@ -51,6 +64,8 @@ namespace sge
 			WrappingMode onS = WrappingMode::INVALID;
 			WrappingMode onT = WrappingMode::INVALID;
 			bool generateMipMaps = false;
+			Compression compression = Compression::INVALID;
+			Hash preComputedHash = 0; // Note: need to compute the hash before it gets destroyed on Texture's Init_(). Needed to compute hashes of any overarching structure like meshes.
 
 			// Definition() = default;
 			// ~Definition() = default;
@@ -60,9 +75,8 @@ namespace sge
 
 			inline bool IsValid() const
 			{
-				return datas.size() && (uint32_t)mutability && (widths.size() == (size_t)mipLevels + 1) && (widths.size() == heights.size()) && (uint32_t)minifyingMode && (uint32_t)magnifyingMode && (uint32_t)onS && (uint32_t)onT;
+				return preComputedHash.value && (bool)compression && datas.size() && byteLens.size() && (uint32_t)mutability && (widths.size() == (size_t)mipLevels + 1) && (widths.size() == heights.size()) && (uint32_t)minifyingMode && (uint32_t)magnifyingMode && (uint32_t)onS && (uint32_t)onT;
 			}
-			uint32_t ByteSize(const uint32_t mipLevel) const;
 		};
 
 		uint32_t TEX = 0;

@@ -18,7 +18,10 @@ namespace sge
 		wrappingModeS = def.onS;
 		wrappingModeT = def.onT;
 
-		if(def.generateMipMaps) sge_ERROR("Implement generation of mip maps!");
+		if(def.generateMipMaps)
+		{
+			sge_ERROR("Implement generation of mip maps!");
+		}
 
 		glGenTextures(1, &TEX);
 		glBindTexture(GL_TEXTURE_2D, TEX);
@@ -26,6 +29,7 @@ namespace sge
 		if(mutability == Mutability::DYNAMIC)
 		{
 			sge_CHECK_GL_ERROR();
+			assert(def.compression == Compression::NONE);
 			assert(def.format == Format::RED_F32); // Supporting only single channel float textures for dynamic ones.
 			assert(!def.mipLevels && !def.generateMipMaps); // Not supporting mip mapping for dynamic textures.
 			assert(def.widths.size() == 1);
@@ -41,60 +45,72 @@ namespace sge
 		else
 		{
 			// TODO: add support for compressed textures.
-
-			assert(def.format == Format::RGBA_B8); // Supporting only uint8_t type for each color channel in RGBA.
-			if(minifyingMode > SamplingMode::NEAREST) assert(def.mipLevels > 0);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_BASE_LEVEL, 0);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, (GLint)(def.mipLevels));
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, (GLint)wrappingModeS);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, (GLint)wrappingModeT);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, (GLint)minifyingMode);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, (GLint)magnifyingMode);
-			glTexStorage2D(GL_TEXTURE_2D, (GLsizei)def.mipLevels, GL_RGBA8, (GLsizei)def.widths[0], (GLsizei)def.heights[0]);
-			sge_CHECK_GL_ERROR();
-			for(uint32_t level = 0; level < def.mipLevels + 1; level++)
+			if(def.compression != Compression::NONE)
 			{
-				glTexSubImage2D
-				(
-					GL_TEXTURE_2D,
-					(GLint)level,
-					0,
-					0,
-					(GLint)def.widths[level],
-					(GLint)def.heights[level],
-					GL_RGBA,
-					GL_UNSIGNED_BYTE,
-					def.datas[level]
-				);
+				switch(def.compression)
+				{
+					case Compression::ASTC_RGBA_4x4:
+					{
+						glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_BASE_LEVEL, 0);
+						glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, (GLint)(def.mipLevels));
+						glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, (GLint)wrappingModeS);
+						glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, (GLint)wrappingModeT);
+						glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, (GLint)minifyingMode);
+						glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, (GLint)magnifyingMode);
+						sge_CHECK_GL_ERROR();
+						for(uint32_t level = 0; level < def.mipLevels + 1; level++)
+						{
+							glCompressedTexImage2D(GL_TEXTURE_2D,
+												   (GLint)level,
+												   (GLenum)def.compression, // Might be causing the crashing. Maybe there's a good reason glad doesn't have the necessary define...
+												   (GLsizei)def.widths[level],
+												   (GLsizei)def.heights[level],
+												   0,
+												   (GLsizei)def.byteLens[level],
+												   def.datas[level]);
+							sge_CHECK_GL_ERROR();
+						}
+					}break;
+					default:
+					{
+						sge_ERROR("Unexpected compression algorithm retireved from texture definition!");
+					}break;
+				}
+			}
+			else
+			{
+				assert(def.format == Format::RGBA_B8); // Supporting only uint8_t type for each color channel in RGBA.
+				if(minifyingMode > SamplingMode::NEAREST) assert(def.mipLevels > 0);
+				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_BASE_LEVEL, 0);
+				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, (GLint)(def.mipLevels));
+				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, (GLint)wrappingModeS);
+				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, (GLint)wrappingModeT);
+				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, (GLint)minifyingMode);
+				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, (GLint)magnifyingMode);
+				glTexStorage2D(GL_TEXTURE_2D, (GLsizei)def.mipLevels, GL_RGBA8, (GLsizei)def.widths[0], (GLsizei)def.heights[0]);
 				sge_CHECK_GL_ERROR();
+				for(uint32_t level = 0; level < def.mipLevels + 1; level++)
+				{
+					glTexSubImage2D
+					(
+						GL_TEXTURE_2D,
+						(GLint)level,
+						0,
+						0,
+						(GLsizei)def.widths[level],
+						(GLsizei)def.heights[level],
+						GL_RGBA,
+						GL_UNSIGNED_BYTE,
+						def.datas[level]
+					);
+					sge_CHECK_GL_ERROR();
+				}
 			}
 		}
 		for(uint32_t i = 0; i < def.datas.size(); i++)
 		{
 			delete[] def.datas[i];
 		}
-	}
-	uint32_t Texture::Definition::ByteSize(const uint32_t mipLevel) const
-	{
-		size_t sizeOfElement = 0;
-		switch(format)
-		{
-			case sge::Texture::Format::RED_F32:
-			{
-				sizeOfElement = sizeof(float);
-			}break;
-			case sge::Texture::Format::RGBA_B8:
-			{
-				sizeOfElement = sizeof(char) * 4;
-			}break;
-			default:
-			{
-				sge_ERROR("Unexpected pixel format!");
-			}break;
-		}
-		const size_t width = (size_t)widths[mipLevel];
-		const size_t height = (size_t)heights[mipLevel];
-		return (uint32_t)(width * height * sizeOfElement);
 	}
 	void Texture::Destroy_()
 	{

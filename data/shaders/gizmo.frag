@@ -2,10 +2,10 @@
 
 layout (location = 0) out vec4 fragColor;
 
-uniform vec3 baseColor;
+uniform vec3 color;
 
 void main()
 {
-  fragColor.rgb = baseColor;
+  fragColor.rgb = color;
   fragColor.a = 1.0;
 }

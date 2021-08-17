@@ -102,6 +102,7 @@ namespace sge
 			assert(def.vboDefs[i].IsValid());
 			assert(def.vboDefs[i].componentType == (NumberType)GL_FLOAT); // Not handling any other type of vertex data yet.
 			vertexBuffers[i] = renderer.CreateVertexBuffer(def.vboDefs[i]);
+			assert(vertexBuffers[i].IsValid());
 			sge_CHECK_GL_ERROR();
 		}
 
@@ -121,6 +122,7 @@ namespace sge
 		for(uint32_t i = 0; i < vertexBuffers.size(); i++)
 		{
 			sge_CHECK_GL_ERROR();
+			assert(vertexBuffers[i].IsValid());
 			vertexBuffers[i]->Bind();
 			glEnableVertexAttribArray((GLuint)i);
 			glVertexAttribPointer((GLuint)i, (GLint)vertexBuffers[i]->componentsPerElement, GL_FLOAT, GL_FALSE, (GLsizei)vertexBuffers[i]->Stride(), 0);

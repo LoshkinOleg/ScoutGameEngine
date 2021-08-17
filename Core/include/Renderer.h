@@ -11,6 +11,11 @@ namespace sge
 		sge_ALLOW_CONSTRUCTION(Renderer);
 
 		constexpr static const int32_t CLEAR_FLAGS_ = 0x00004000 | 0x00000100;
+		constexpr static const size_t VERTEX_BUFFER_POOL_SIZE_ = 64;
+		constexpr static const size_t TEXTURES_POOL_SIZE_ = 32;
+		constexpr static const size_t MATERIALS_POOL_SIZE_ = 32;
+		constexpr static const size_t INDEXED_MESHES_POOL_SIZE_ = 64;
+		constexpr static const size_t MODELS_POOL_SIZE_ = 8;
 
 		struct DrawCall_
 		{
