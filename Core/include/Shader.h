@@ -3,12 +3,12 @@
 #include <string_view>
 #include <map>
 
-#include "Hash.h"
+#include "Resources.h"
 #include "globals.h"
 
 namespace sge
 {
-	struct Shader
+	struct Shader: public I_Validateable
 	{
 		uint32_t PROGRAM = 0;
 		std::map<Hash, uint32_t> uniformLocationCache = {};
@@ -22,14 +22,7 @@ namespace sge
 		void SetMat4(const std::string_view name, const glm::mat4& value);
 		void SetMat3(const std::string_view name, const glm::mat3& value);
 
-		inline bool IsValid() const
-		{
-			return PROGRAM;
-		}
-		inline void Reset()
-		{
-			*this = {};
-		}
+		bool IsValid() const override;
 
 	private:
 		friend class Renderer;

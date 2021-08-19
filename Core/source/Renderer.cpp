@@ -58,7 +58,8 @@ namespace sge
 		// postprocessPassShader_.hash = postprocessPassSrcHandle.hash;
 		// postprocessPassShader_.resourceData.Init_(postprocessPassSrcHandle->vertexCode, postprocessPassSrcHandle->fragmentCode, postprocessPassSrcHandle->geometryCode, ShadingMode::POST_PROCESS_PASS);
 
-		vertexBuffers_.reserve(VERTEX_BUFFER_POOL_SIZE_);
+		uniqueVertexBuffers_.reserve(STATIC_VERTEX_BUFFER_POOL_SIZE_);
+		dynamicVertexBuffers_.reserve(DYNAMIC_VERTEX_BUFFER_POOL_SIZE_);
 		textures_.reserve(TEXTURES_POOL_SIZE_);
 		materials_.reserve(MATERIALS_POOL_SIZE_);
 		indexedMeshes_.reserve(INDEXED_MESHES_POOL_SIZE_);
@@ -71,7 +72,7 @@ namespace sge
 	}
 	void Renderer::Shutdown()
 	{
-		for(auto& vbResource : vertexBuffers_)
+		for(auto& vbResource : uniqueVertexBuffers_)
 		{
 			auto& vb = vbResource.resourceData;
 			vb.Destroy_();
@@ -99,7 +100,8 @@ namespace sge
 
 		models_.clear();
 		indexedMeshes_.clear();
-		vertexBuffers_.clear();
+		uniqueVertexBuffers_.clear();
+		dynamicVertexBuffers_.clear();
 		textures_.clear();
 		materials_.clear();
 		// shaders_.clear();
@@ -151,21 +153,41 @@ namespace sge
 		return {};
 	}
 
-	UniqueResourceHandle<VertexBuffer> Renderer::CreateVertexBuffer(const VertexBuffer::Definition & def)
+	UniqueResourceHandle<VertexBuffer> Renderer::CreateStaticVertexBuffer(const VertexBuffer::Definition & def)
 	{
-		assert(vertexBuffers_.size() + 1 < VERTEX_BUFFER_POOL_SIZE_);
+		assert(def.mutability == Mutability::STATIC);
+		assert(uniqueVertexBuffers_.size() + 1 < STATIC_VERTEX_BUFFER_POOL_SIZE_);
 
-		vertexBuffers_.push_back(UniqueResource<VertexBuffer>());
-		auto& newElement = vertexBuffers_.back();
+		uniqueVertexBuffers_.push_back(UniqueResource<VertexBuffer>());
+		auto& newElement = uniqueVertexBuffers_.back();
 		auto& newValue = newElement.resourceData;
 		newElement.hash = Hash(def.begin, def.byteLen, 0);
 		newValue.Init_(def);
 		UniqueResourceHandle<VertexBuffer> handle;
 		handle.hash = newElement.hash;
-		handle.ptr = &vertexBuffers_.back();
+		handle.ptr = &uniqueVertexBuffers_.back();
 		assert(newElement.IsValid());
 		assert(newValue.IsValid());
 		assert(handle.IsValid());
+		return handle;
+	}
+
+	HashlessHandle<VertexBuffer> Renderer::CreateDynamicVertexBuffer(const VertexBuffer::Definition & def)
+	{
+		assert(def.mutability == Mutability::DYNAMIC);
+		assert(dynamicVertexBuffers_.size() + 1 < DYNAMIC_VERTEX_BUFFER_POOL_SIZE_);
+
+		HashlessResource<VertexBuffer> newElement;
+		auto& newValue = newElement.resourceData;
+		newValue.Init_(def);
+		assert(newValue.IsValid());
+		assert(newElement.IsValid());
+		dynamicVertexBuffers_.push_back(newElement);
+
+		HashlessHandle<VertexBuffer> handle;
+		handle.ptr = &dynamicVertexBuffers_.back();
+		assert(handle.IsValid());
+
 		return handle;
 	}
 
@@ -201,7 +223,7 @@ namespace sge
 		return handle;
 	}
 
-	UniqueResourceHandle<IndexedMesh> Renderer::CreateMesh(const IndexedMesh::Definition & def)
+	UniqueResourceHandle<IndexedMesh> Renderer::CreateIndexedMesh(const IndexedMesh::Definition & def)
 	{
 		assert(indexedMeshes_.size() + 1 < INDEXED_MESHES_POOL_SIZE_);
 
@@ -217,16 +239,16 @@ namespace sge
 		return handle;
 	}
 
-	UniqueResourceHandle<Model> Renderer::CreateModel(const Model::Definition & def)
+	UniqueResourceHandle<StaticModel> Renderer::CreateModel(const StaticModel::Definition & def)
 	{
 		assert(models_.size() + 1 < MODELS_POOL_SIZE_);
 
-		models_.push_back(UniqueResource<Model>());
+		models_.push_back(UniqueResource<StaticModel>());
 		auto& newElement = models_.back();
 		auto& newValue = newElement.resourceData;
 		newValue.Init_(def);
 		newElement.hash = def.ComputeHash();
-		UniqueResourceHandle<Model> handle;
+		UniqueResourceHandle<StaticModel> handle;
 		handle.hash = newElement.hash;
 		handle.ptr = &newElement;
 		assert(handle.IsValid());
@@ -296,7 +318,7 @@ namespace sge
 		glBindBuffer(GL_ARRAY_BUFFER, modelMatricesVBO_);
 	}
 
-	void Renderer::Schedule(const UniqueResourceHandle<Model>& model, const Primitive primitive, const ShadingMode mode)
+	void Renderer::Schedule(const UniqueResourceHandle<StaticModel>& model, const Primitive primitive, const ShadingMode mode)
 	{
 		assert(model->IsValid() && (uint32_t)mode);
 		drawQueue_.push_back(DrawCall_());

@@ -5,29 +5,30 @@
 
 namespace sge
 {
-	struct Model
+	class Model: public I_Validateable
 	{
-		struct Definition
-		{
-			std::vector<glm::mat4> transforms = {};
-			std::vector<IndexedMesh::Definition> meshDefs = {};
+		friend class Renderer;
 
-			bool IsValid() const;
+	public:
+		class Definition: public I_Validateable
+		{
+		public:
+			std::vector<glm::mat4> transforms = {};
+			std::vector<IndexedMesh::Definition> indexedMeshDefs = {};
+			std::vector<InterlacedMesh::Definition> interlacedMeshDefs = {};
 
 			Hash ComputeHash() const;
+
+			bool IsValid() const override;
 		};
 
-		HashlessResourceHandle<TransformsBuffer> transforms = {};
+		HashlessHandle<TransformsBuffer> transforms = {};
 		std::vector<UniqueResourceHandle<IndexedMesh>> indexedMeshes = {};
+		std::vector<UniqueResourceHandle<IndexedMesh>> interlacedMeshes = {};
 
-		bool IsValid() const;
-		inline void Reset()
-		{
-			*this = {};
-		}
+		bool IsValid() const override;
 
 	private:
-		friend class Renderer;
 		void Init_(const Definition& def);
 		void Draw_(const uint32_t primitive, const ShadingMode mode) const;
 	};

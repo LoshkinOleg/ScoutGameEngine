@@ -22,7 +22,7 @@
 #else
 #define sge_MESSAGE(msg) [](){}
 #define sge_WARNING(msg) [](){}
-#define sge_ERROR(msg) [](){}
+#define sge_ERROR(msg) [](){abort();}
 #define sge_CHECK_GL_ERROR() [](){}
 #endif //!_DEBUG
 #endif //!sgeGuard_StdOutput

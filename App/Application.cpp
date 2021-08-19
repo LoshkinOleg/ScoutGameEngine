@@ -7,7 +7,7 @@
 class Game final : public sge::I_Application
 {
 private:
-	sge::UniqueResourceHandle<sge::Model> model = {};
+	sge::UniqueResourceHandle<sge::StaticModel> model = {};
 public:
 	void Init() override
 	{
@@ -21,7 +21,7 @@ public:
 			((uint32_t)sge::GltfData::GltfAttributes::POSITIONS |
 			(uint32_t)sge::GltfData::GltfAttributes::INDICES |
 			(uint32_t)sge::GltfData::GltfAttributes::NORMALS);
-		sge::Model::Definition modelDef = rm.GenerateDefinitionFrom(gltfHandle, meshDataToLoad, shadingModes);
+		sge::StaticModel::Definition modelDef = rm.GenerateDefinitionFrom(gltfHandle, meshDataToLoad, shadingModes);
 		modelDef.transforms = std::vector<glm::mat4>(5, sge::IDENTITY_MAT4);
 		model = renderer.CreateModel(modelDef);
 

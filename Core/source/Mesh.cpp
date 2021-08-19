@@ -10,11 +10,33 @@ namespace sge
 	bool IndexedMesh::Definition::IsValid() const
 	{
 		bool returnVal = vboDefs.size();
+		assert(returnVal);
 		returnVal &= eboDef.IsValid();
+		assert(returnVal);
 		returnVal &= eboDef.componentsPerElement == 1;
+		assert(returnVal);
+		for(const auto& def : vboDefs)
+		{
+			returnVal &= def.mutability == Mutability::STATIC; // Note: disallow for now the usage of dynamic vertex buffers in indexed meshes.
+			assert(returnVal);
+		}
 		for(const auto& matDef : matDefs)
 		{
 			returnVal &= matDef.IsValid();
+			assert(returnVal);
+		}
+		return returnVal;
+	}
+	bool InterlacedMesh::Definition::IsValid() const
+	{
+		bool returnVal = (bool)vboDefs.size();
+		assert(returnVal);
+		returnVal &= (bool)matDefs.size();
+		assert(returnVal);
+		for(const auto& matDef : matDefs)
+		{
+			returnVal &= matDef.IsValid();
+			assert(returnVal);
 		}
 		return returnVal;
 	}
@@ -100,16 +122,17 @@ namespace sge
 		uint32_t indexBufferIdx = 0;
 		for(uint32_t i = 0; i < nrOfVbos; i++)
 		{
+			assert(def.vboDefs[i].mutability == Mutability::STATIC); // For now, forbid usage of dynamic vertex buffers for indexed meshes. Use interlaced meshes for dynamic meshes.
 			assert(def.vboDefs[i].IsValid());
 			assert(def.vboDefs[i].componentType == (NumberType)GL_FLOAT); // Not handling any other type of vertex data yet.
-			vertexBuffers[i] = renderer.CreateVertexBuffer(def.vboDefs[i]);
+			vertexBuffers[i] = renderer.CreateStaticVertexBuffer(def.vboDefs[i]);
 			assert(vertexBuffers[i].IsValid());
 			sge_CHECK_GL_ERROR();
 		}
 
 		glGenVertexArrays(1, &VAO);
 		glBindVertexArray(VAO);
-		indexVBO = renderer.CreateVertexBuffer(def.eboDef);
+		indexVBO = renderer.CreateStaticVertexBuffer(def.eboDef);
 		sge_CHECK_GL_ERROR();
 
 		const uint32_t nrOfMaterials = (uint32_t)def.matDefs.size();
@@ -159,7 +182,7 @@ namespace sge
 		}
 	}
 
-	void IndexedMesh::Draw_(const HashlessResourceHandle<TransformsBuffer>& transforms, const uint32_t primitive, const ShadingMode mode)
+	void IndexedMesh::Draw_(const HashlessHandle<TransformsBuffer>& transforms, const uint32_t primitive, const ShadingMode mode)
 	{
 		auto& renderer = Engine::Get().GetRenderer();
 		glBindVertexArray(VAO);
@@ -193,20 +216,34 @@ namespace sge
 
 	bool IndexedMesh::IsValid() const
 	{
-		bool returnVal = VAO;
+		bool returnVal = VAO > 0;
+		assert(returnVal);
 		returnVal &= indexVBO.IsValid();
+		assert(returnVal);
 		returnVal &= indexVBO->IsValid();
+		assert(returnVal);
 		for(const auto& handle : vertexBuffers)
 		{
-			returnVal &= handle.IsValid();
 			returnVal &= handle->IsValid();
+			assert(returnVal);
 		}
 		for(const auto& pair : materials)
 		{
-			returnVal &= pair.second.IsValid();
 			returnVal &= pair.second->IsValid();
+			assert(returnVal);
 		}
 		returnVal &= (bool)nrOfVertices;
+		assert(returnVal);
 		return returnVal;
 	}
+	bool InterlacedMesh::IsValid() const
+	{
+		return false;
+	}
+	void InterlacedMesh::Init_(const Definition & def)
+	{}
+	void InterlacedMesh::Draw_(const HashlessHandle<TransformsBuffer>&transforms, const uint32_t primitive, const ShadingMode mode)
+	{}
+	void InterlacedMesh::UpdateRadius_()
+	{}
 }//!sge

@@ -9,12 +9,12 @@ union SDL_Event;
 
 namespace sge
 {
-	struct ControlScheme
+	class ControlScheme
 	{
 
 	};
 
-	struct Command
+	class Command
 	{
 	public:
 		enum Type : uint64_t
@@ -38,8 +38,9 @@ namespace sge
 		Type type = Type::INVALID;
 		bool pressedDown = false;
 	};
-	struct MouseMotion
+	class MouseMotion
 	{
+	public:
 		glm::ivec2 lastPos = -ONE_IVEC2; // < 0 means invalid since screen pos range is [0;RESOLUTION[
 		glm::ivec2 currentPos = -ONE_IVEC2;
 

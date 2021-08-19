@@ -5,19 +5,19 @@ namespace sge
     class Gizmos
     {
     public:
-        struct Vector
+        class Vector
         {
 
         };
-        struct Icon
+        class Icon
         {
 
         };
-        struct Axis
+        class Axis
         {
 
         };
-        struct Grid
+        class Grid
         {
 
         };

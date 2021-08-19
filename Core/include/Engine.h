@@ -1,46 +1,55 @@
 #pragma once
 
+#include "ResourceManager.h"
 #include "Renderer.h"
 #include "InputManager.h"
 #include "PhysicsEngine.h"
+
 struct SDL_Window;
 
 namespace sge
 {
+	class Engine;
+
 	class I_Application
 	{
 	public:
-		virtual void Init() = 0;
-		virtual void Update() = 0;
+		virtual void Init(Engine& engine) = 0;
+		virtual void Update(Engine& engine) = 0;
 		virtual void Shutdown() = 0;
 	};
 
 	class Engine
 	{
-		using SDL_GLContext = void*;
-
-		SDL_Window* window_ = nullptr;
-		SDL_GLContext glContextPtr_ = nullptr;
-		float lastTimer_ = 0.0f;
-		float currentTimer_ = 0.0f;
-		Renderer renderer_ = {};
-		InputManager inputManager_ = {};
-		ResourceManager resourceManager_ = {};
-		PhysicsEngine physicsEngine_ = {};
-		I_Application* app_ = nullptr;
-
-	private:
-		void Init();
-		void Shutdown();
-		sge_ALLOW_CONSTRUCTION(Engine);
 	public:
-		sge_DISALLOW_COPY(Engine);
+		Engine() = delete;
+		Engine(I_Application& app, ResourceManager& rm, Renderer& renderer, InputManager& im, PhysicsEngine& phy):
+			app_(app), rm_(rm), renderer_(renderer), im_(im), phy_(phy) {};
+
 		static Engine& Get();
 		ResourceManager& GetResourceManager();
 		Renderer& GetRenderer();
-		void Run(I_Application* app);
+		InputManager& GetInputManager();
+		PhysicsEngine& GetPhysicsEngine();
+		
 		float GetCurrentTimer() const;
 		float GetLastTimer() const;
 		float GetDt() const;
+
+		void Run();
+
+	private:
+		SDL_Window* window_ = nullptr;
+		void* glContext_ = nullptr;
+		float lastTimer_ = 0.0f;
+		float currentTimer_ = 0.0f;
+		I_Application& app_;
+		ResourceManager& rm_;
+		Renderer& renderer_;
+		InputManager& im_;
+		PhysicsEngine& phy_;
+
+		void Init_();
+		void Shutdown_();
 	};
 } //!sge

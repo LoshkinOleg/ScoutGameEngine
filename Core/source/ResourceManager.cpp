@@ -11,6 +11,18 @@
 
 namespace sge
 {
+	bool JsonData::IsValid() const
+	{
+		return data != json::value_t::discarded;
+	}
+	bool KtxData::IsValid() const
+	{
+		return !data.empty() && (uint32_t)type && associatedMesh.value;
+	}
+	bool ShaderData::IsValid() const
+	{
+		return !vertexCode.empty() && !fragmentCode.empty();
+	}
 	bool GltfData::IsValid() const
 	{
 		bool returnVal = model != tinygltf::Model();
@@ -177,11 +189,11 @@ namespace sge
 		return handle;
 	}
 
-	Model::Definition ResourceManager::GenerateDefinitionFrom(const UniqueResourceHandle<GltfData>& handle, const GltfData::GltfAttributes relevantData, const ShadingMode requiredShadingModes) const
+	StaticModel::Definition ResourceManager::GenerateDefinitionFrom(const UniqueResourceHandle<GltfData>& handle, const GltfData::GltfAttributes relevantData, const ShadingMode requiredShadingModes) const
 	{
 		assert((uint32_t)relevantData > 0); // Need at least something to load.
 
-		Model::Definition modDef;
+		StaticModel::Definition modDef;
 		modDef.transforms.push_back(IDENTITY_MAT4);
 		tinygltf::Model& model = handle->model;
 
@@ -273,7 +285,7 @@ namespace sge
 				positionsBuffer.componentType = (NumberType)TINYGLTF_COMPONENT_TYPE_FLOAT;
 				positionsBuffer.isIndexBuffer = false;
 				positionsBuffer.mutability = (Mutability)GL_STATIC_DRAW;
-				positionsBuffer.bufferContentsType = VertexBuffer::Type::POSITIONS_VEC3;
+				positionsBuffer.bufferContentsType = VertexBuffer::VertexBufferType::POSITIONS_VEC3;
 				positionsBuffer.preComputedHash = Hash(buffer.data.data() + bufferView.byteOffset, (uint32_t)bufferView.byteLength, 0);
 				memcpy(positionsBuffer.begin, positions.data(), bufferView.byteLength);
 				assert(positionsBuffer.IsValid());
@@ -299,7 +311,7 @@ namespace sge
 						newEboDef.componentType = NumberType::UINT;
 						newEboDef.isIndexBuffer = true;
 						newEboDef.mutability = (Mutability)GL_STATIC_DRAW;
-						newEboDef.bufferContentsType = VertexBuffer::Type::INDICES_UINT32;
+						newEboDef.bufferContentsType = VertexBuffer::VertexBufferType::INDICES_UINT32;
 						newEboDef.preComputedHash = Hash(buffer.data.data() + bufferView.byteOffset, (uint32_t)bufferView.byteLength, 0);
 						memcpy(newEboDef.begin, buffer.data.data() + bufferView.byteOffset, bufferView.byteLength);
 						assert(newEboDef.IsValid());
@@ -326,7 +338,7 @@ namespace sge
 						newEboDef.componentType = NumberType::UINT;
 						newEboDef.isIndexBuffer = true;
 						newEboDef.mutability = (Mutability)GL_STATIC_DRAW;
-						newEboDef.bufferContentsType = VertexBuffer::Type::INDICES_UINT32;
+						newEboDef.bufferContentsType = VertexBuffer::VertexBufferType::INDICES_UINT32;
 						newEboDef.preComputedHash = Hash(inputIndices.data(), (uint32_t)(inputIndices.size() / sizeof(uint16_t)), 0);
 						memcpy(newEboDef.begin, convertedIndices.data(), (size_t)nrOfIndices * sizeof(uint32_t));
 						assert(newEboDef.IsValid());
@@ -393,7 +405,7 @@ namespace sge
 						normalsBuffer.componentType = (NumberType)TINYGLTF_COMPONENT_TYPE_FLOAT;
 						normalsBuffer.isIndexBuffer = false;
 						normalsBuffer.mutability = (Mutability)GL_STATIC_DRAW;
-						normalsBuffer.bufferContentsType = VertexBuffer::Type::NORMALS;
+						normalsBuffer.bufferContentsType = VertexBuffer::VertexBufferType::NORMALS;
 						normalsBuffer.preComputedHash = Hash(bufferNormals.data.data() + bufferViewNormals.byteOffset, (uint32_t)bufferViewNormals.byteLength, 0);
 						memcpy(normalsBuffer.begin, normals.data(), bufferViewNormals.byteLength);
 						assert(normalsBuffer.IsValid());
@@ -410,7 +422,7 @@ namespace sge
 						tangentsBuffer.componentType = (NumberType)TINYGLTF_COMPONENT_TYPE_FLOAT;
 						tangentsBuffer.isIndexBuffer = false;
 						tangentsBuffer.mutability = (Mutability)GL_STATIC_DRAW;
-						tangentsBuffer.bufferContentsType = VertexBuffer::Type::TANGENTS;
+						tangentsBuffer.bufferContentsType = VertexBuffer::VertexBufferType::TANGENTS;
 						tangentsBuffer.preComputedHash = Hash(tangents.data(), (uint32_t)(tangents.size() / sizeof(glm::vec3)), 0);
 						memcpy(tangentsBuffer.begin, tangents.data(), tangents.size() * sizeof(glm::vec3));
 						assert(tangentsBuffer.IsValid());
@@ -430,7 +442,7 @@ namespace sge
 					normalsBuffer.componentType = (NumberType)TINYGLTF_COMPONENT_TYPE_FLOAT;
 					normalsBuffer.isIndexBuffer = false;
 					normalsBuffer.mutability = (Mutability)GL_STATIC_DRAW;
-					normalsBuffer.bufferContentsType = VertexBuffer::Type::NORMALS;
+					normalsBuffer.bufferContentsType = VertexBuffer::VertexBufferType::NORMALS;
 					normalsBuffer.preComputedHash = Hash(bufferNormals.data.data() + bufferViewNormals.byteOffset, (uint32_t)bufferViewNormals.byteLength, 0);
 					memcpy(normalsBuffer.begin, normals.data(), bufferViewNormals.byteLength);
 					assert(normalsBuffer.IsValid());
@@ -455,7 +467,7 @@ namespace sge
 				uvsBuffer.componentType = (NumberType)TINYGLTF_COMPONENT_TYPE_FLOAT;
 				uvsBuffer.isIndexBuffer = false;
 				uvsBuffer.mutability = (Mutability)GL_STATIC_DRAW;
-				uvsBuffer.bufferContentsType = VertexBuffer::Type::UVS;
+				uvsBuffer.bufferContentsType = VertexBuffer::VertexBufferType::UVS;
 				uvsBuffer.preComputedHash = Hash(buffer.data.data() + bufferView.byteOffset, (uint32_t)bufferView.byteLength, 0);
 				memcpy(uvsBuffer.begin, buffer.data.data() + bufferView.byteOffset, bufferView.byteLength);
 				assert(uvsBuffer.IsValid());
@@ -761,7 +773,7 @@ namespace sge
 		return handle;
 	}
 
-	HashlessResourceHandle<TransformsBuffer> ResourceManager::CreateTransformsBuffer(const std::vector<glm::mat4>& transforms)
+	HashlessHandle<TransformsBuffer> ResourceManager::CreateTransformsBuffer(const std::vector<glm::mat4>& transforms)
 	{
 		HashlessResource<TransformsBuffer> newElement;
 		auto& newValue = newElement.resourceData;
@@ -771,7 +783,7 @@ namespace sge
 		assert(newElement.IsValid());
 		transformBuffers_.push_back(newElement);
 
-		HashlessResourceHandle<TransformsBuffer> handle;
+		HashlessHandle<TransformsBuffer> handle;
 		handle.ptr = &transformBuffers_.back();
 		handle.IsValid();
 		return handle;
@@ -809,5 +821,30 @@ namespace sge
 
 		std::ifstream stream(path.data());
 		return std::string((std::istreambuf_iterator<char>(stream)), std::istreambuf_iterator<char>());
+	}
+
+	template<typename Type>
+	static bool ResourceManager::ElementExists_(const std::vector<UniqueResource<Type>>& list, const Hash hash)
+	{
+		for(const auto& element : list)
+		{
+			if(element.hash == hash)
+			{
+				return true;
+			}
+		}
+		return false;
+	}
+	template<typename Type>
+	static UniqueResource<Type>& ResourceManager::GetElement_(std::vector<UniqueResource<Type>>& list, const Hash hash)
+	{
+		for(auto& element : list)
+		{
+			if(element.hash == hash)
+			{
+				return element;
+			}
+		}
+		sge_ERROR("Element with the specified hash was not found in the list provided!");
 	}
 }//!sge

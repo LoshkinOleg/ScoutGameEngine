@@ -1,76 +1,106 @@
 #pragma once
 
+#include "EnumsAndFlags.h"
+#include "Model.h"
 #include "Shader.h"
-#include "ResourceManager.h"
 
 namespace sge
 {
 	class Renderer
 	{
 		friend class Engine;
-		sge_ALLOW_CONSTRUCTION(Renderer);
-
-		constexpr static const int32_t CLEAR_FLAGS_ = 0x00004000 | 0x00000100;
-		constexpr static const size_t VERTEX_BUFFER_POOL_SIZE_ = 64;
+		constexpr static const int32_t CLEAR_FLAGS_ = 0x4000 | 0x0100; // GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT
+		constexpr static const size_t STATIC_VERTEX_BUFFER_POOL_SIZE_ = 64;
+		constexpr static const size_t DYNAMIC_VERTEX_BUFFER_POOL_SIZE_ = 8;
 		constexpr static const size_t TEXTURES_POOL_SIZE_ = 32;
 		constexpr static const size_t MATERIALS_POOL_SIZE_ = 32;
 		constexpr static const size_t INDEXED_MESHES_POOL_SIZE_ = 64;
+		constexpr static const size_t INTERLACED_MESHES_POOL_SIZE_ = 8;
 		constexpr static const size_t MODELS_POOL_SIZE_ = 8;
+		constexpr static const size_t DRAW_QUEUE_SIZE_ = 16;
 
-		struct DrawCall_
+		class DrawCall_
 		{
+		public:
 			UniqueResourceHandle<Model> model = {};
-			ShadingMode mode = {};
-			int32_t primitive = 0;
+			ShadingMode mode = ShadingMode::INVALID;
+			DrawingPrimitive primitive = DrawingPrimitive::POINTS;
 		};
 
-		// std::vector<Resource<Shader>> shaders_ = {};
-		UniqueResource<Shader> gizmoShader_ = {};
-		UniqueResource<Shader> goochShader_ = {};
-		UniqueResource<Shader> albedoOnlyShader_ = {};
-		UniqueResource<Shader> blinnPhongShader_ = {};
-		UniqueResource<Shader> blinnPhongNormalmappedShader_ = {};
-		// Resource<Shader> shadowPassShader_ = {};
-		// Resource<Shader> deferredPassShader_ = {};
-		// Resource<Shader> postprocessPassShader_ = {};
+	public:
+		UniqueResourceHandle<Shader> CreateShader(const UniqueResourceHandle<ShaderData>& handle);
+		UniqueResourceHandle<VertexBuffer> CreateStaticVertexBuffer(const VertexBuffer::Definition& def);
+		HashlessHandle<VertexBuffer> CreateDynamicVertexBuffer(const VertexBuffer::Definition & def);
+		UniqueResourceHandle<Texture> CreateTexture(const Texture::Definition& def);
+		UniqueResourceHandle<Material> CreateMaterial(const Material::Definition& def);
+		UniqueResourceHandle<IndexedMesh> CreateIndexedMesh(const IndexedMesh::Definition& def);
+		UniqueResourceHandle<InterlacedMesh> CreateInterlacedMesh(const InterlacedMesh::Definition& def);
+		UniqueResourceHandle<Model> CreateModel(const Model::Definition& def);
 
-		std::vector<UniqueResource<VertexBuffer>> vertexBuffers_ = {};
+		UniqueResourceHandle<Shader> GetShaderFor(const ShadingMode mode);
+
+		void Schedule(const UniqueResourceHandle<Model>& model, const DrawingPrimitive primitive, const ShadingMode mode);
+
+	private:
+		std::vector<UniqueResource<VertexBuffer>> staticVertexBuffers_ = {};
+		std::vector<HashlessResource<VertexBuffer>> dynamicVertexBuffers_ = {};
 		std::vector<UniqueResource<Texture>> textures_ = {};
 		std::vector<UniqueResource<Material>> materials_ = {};
 		std::vector<UniqueResource<IndexedMesh>> indexedMeshes_ = {};
+		std::vector<UniqueResource<InterlacedMesh>> interlacedMeshes = {};
 		std::vector<UniqueResource<Model>> models_ = {};
 
+		UniqueResource<Shader> goochShader_ = {};
 		std::vector<DrawCall_> drawQueue_ = {};
+		VertexBuffer modelMatricesVbo_ = {};
 
-		glm::mat4 viewMatrix_ = DEFAULT_VIEW_MATRIX;
+		void Init_();
+		void Update_();
+		void Shutdown_();
 
-		uint32_t modelMatricesVBO_ = 0;
+		// TODO: implement gl context tracking to avoid uneccessary binding calls.
+		// uint32_t boundVao_ = 0, boundVbo_ = 0, boundProgram_ = 0, boundFramebuffer_ = 0;
+		// void BindVao(const uint32_t VAO) const;
+		// void BindVbo(const uint32_t VBO) const;
+		// void BindProgram(const uint32_t PROGRAM) const;
+		// void BindFramebuffer(const uint32_t FBO) const;
 
-		// TODO: implement this
-		static std::vector<glm::mat4> FrustumCulling_(const glm::ivec2 resolution,
-													  const float horizontalFullFov,
-													  const float nearPlane,
-													  const float farPlane);
-		static void SortFrontToBack_(std::vector<glm::mat4>& transforms);
-		static void SortBackToFront_(std::vector<glm::mat4>& transforms);
+		// TODO: implement frustum culling.
+		// static std::vector<glm::mat4> FrustumCulling_(const glm::ivec2 resolution,
+		// 											  const float horizontalFullFov,
+		// 											  const float nearPlane,
+		// 											  const float farPlane);
+		
+		// TODO: implement blending.
+		// static void SortFrontToBack_(std::vector<glm::mat4>& transforms);
+		// static void SortBackToFront_(std::vector<glm::mat4>& transforms);
+		
+		// TODO: implement gizmos.
+		// UniqueResource<Shader> gizmoShader_ = {};
+		
+		// TODO: implement non compressed and compressed textures handling.
+		// UniqueResource<Shader> albedoOnlyShader_ = {};
+		// UniqueResource<Shader> blinnPhongShader_ = {};
+		// UniqueResource<Shader> blinnPhongNormalmappedShader_ = {};
 
-	public:
-		sge_DISALLOW_COPY(Renderer);
+		// TODO: implement deferred rendering and shadow pass.
+		// DoubleBuffer pingPongBuffers_ = {};
+		// UniqueResource<Shader> shadowPassShader_ = {};
+		// UniqueResource<Shader> deferredPassShader_ = {};
+		// UniqueResource<Shader> postprocessPassShader_ = {};
+		// class DoubleBuffer
+		// {
+		// public:
+		// 	Framebuffer& Ping();
+		// 	Framebuffer& Pong();
+		// 
+		// private:
+		// 	Framebuffer ping_ = {};
+		// 	Framebuffer pong_ = {};
+		// 	bool current_ = 0;
+		// };
 
-		void Init();
-		void Shutdown();
-		void Update();
-
-		UniqueResourceHandle<Shader> CreateShader(const UniqueResourceHandle<ShaderData>& handle);
-		UniqueResourceHandle<VertexBuffer> CreateVertexBuffer(const VertexBuffer::Definition& def);
-		UniqueResourceHandle<Texture> CreateTexture(const Texture::Definition& def);
-		UniqueResourceHandle<Material> CreateMaterial(const Material::Definition& def);
-		UniqueResourceHandle<IndexedMesh> CreateMesh(const IndexedMesh::Definition& def);
-		UniqueResourceHandle<Model> CreateModel(const Model::Definition& def);
-
-		UniqueResourceHandle<Shader> GetShaderForShadingMode(const ShadingMode mode);
-		void BindModelMatricesVbo() const;
-
-		void Schedule(const UniqueResourceHandle<Model>& model, const Primitive primitive, const ShadingMode mode);
+		// TODO: implement skybox.
+		// Skybox skybox_ = {};
 	};
 }//!sge

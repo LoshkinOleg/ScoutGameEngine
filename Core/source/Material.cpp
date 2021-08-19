@@ -7,41 +7,58 @@ namespace sge
 	bool Material::IsValid() const
 	{
 		bool returnVal = (bool)shadingMode;
+		assert(returnVal);
 		switch(shadingMode)
 		{
 			case ShadingMode::GIZMO:
 			{
 				returnVal = returnVal && textures.size() == 0;
+				assert(returnVal);
 				returnVal = returnVal && vec3s.size() == 1;
+				assert(returnVal);
 				returnVal = returnVal && floats.size() == 0;
+				assert(returnVal);
 			}break;
 			case ShadingMode::GOOCH:
 			{
 				returnVal = returnVal && textures.size() == 0;
+				assert(returnVal);
 				returnVal = returnVal && vec3s.size() == 1;
+				assert(returnVal);
 				returnVal = returnVal && floats.size() == 0;
+				assert(returnVal);
 			}break;
 			case ShadingMode::ALBEDO_ONLY:
 			{
 				returnVal = returnVal && textures.size() == 1;
+				assert(returnVal);
 				returnVal = returnVal && vec3s.size() == 0;
+				assert(returnVal);
 				returnVal = returnVal && floats.size() == 0;
+				assert(returnVal);
 			}break;
 			case ShadingMode::BLINN_PHONG:
 			{
 				returnVal = returnVal && textures.size() == 2;
+				assert(returnVal);
 				returnVal = returnVal && vec3s.size() == 0;
+				assert(returnVal);
 				returnVal = returnVal && floats.size() == 1;
+				assert(returnVal);
 			}break;
 			case ShadingMode::BLINN_PHONG_NORMALMAPPED:
 			{
 				returnVal = returnVal && textures.size() == 3;
+				assert(returnVal);
 				returnVal = returnVal && vec3s.size() == 0;
+				assert(returnVal);
 				returnVal = returnVal && floats.size() == 1;
+				assert(returnVal);
 			}break;
 			default:
 			{
 				returnVal = false;
+				assert(returnVal);
 			}break;
 		}
 		return returnVal;
@@ -114,9 +131,11 @@ namespace sge
 	bool Material::Definition::IsValid() const
 	{
 		bool returnVal = (bool)shadingMode;
+		assert(returnVal);
 		for(const auto& def : texDefs)
 		{
 			returnVal &= def.IsValid();
+			assert(returnVal);
 		}
 		return returnVal;
 	}

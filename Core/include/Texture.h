@@ -2,12 +2,12 @@
 
 #include <vector>
 
-#include "Hash.h"
+#include "Resources.h"
 #include "globals.h"
 
 namespace sge
 {
-	struct Texture
+	struct Texture: public I_Validateable
 	{
 		enum class SamplingMode: uint32_t
 		{
@@ -50,7 +50,7 @@ namespace sge
 
 			MAX_VALUE = ASTC_RGBA_4x4
 		};
-		struct Definition
+		struct Definition: public I_Validateable
 		{
 			std::vector<void*> datas = {};
 			std::vector<uint32_t> byteLens = {};
@@ -67,16 +67,7 @@ namespace sge
 			Compression compression = Compression::INVALID;
 			Hash preComputedHash = 0; // Note: need to compute the hash before it gets destroyed on Texture's Init_(). Needed to compute hashes of any overarching structure like meshes.
 
-			// Definition() = default;
-			// ~Definition() = default;
-			// Definition(Definition&) = default;
-			// Definition(Definition&&) = default;
-			// Definition& operator=(Definition&&) = default;
-
-			inline bool IsValid() const
-			{
-				return preComputedHash.value && (bool)compression && datas.size() && byteLens.size() && (uint32_t)mutability && (widths.size() == (size_t)mipLevels + 1) && (widths.size() == heights.size()) && (uint32_t)minifyingMode && (uint32_t)magnifyingMode && (uint32_t)onS && (uint32_t)onT;
-			}
+			bool IsValid() const override;
 		};
 
 		uint32_t TEX = 0;
@@ -84,19 +75,12 @@ namespace sge
 		std::vector<uint32_t> heights = {};
 		Mutability mutability = Mutability::INVALID;
 		SamplingMode minifyingMode = SamplingMode::INVALID, magnifyingMode = SamplingMode::INVALID;
-		WrappingMode wrappingModeS = WrappingMode::INVALID, wrappingModeT = WrappingMode::INVALID;
+		WrappingMode onS = WrappingMode::INVALID, onT = WrappingMode::INVALID;
 
 		void UpdateData(const void* const data) const;
 		void Bind(const uint32_t textureUnit) const;
 
-		inline bool IsValid() const
-		{
-			return TEX && (uint32_t)mutability && widths.size() && (widths.size() == heights.size()) && (uint32_t)minifyingMode && (uint32_t)magnifyingMode && (uint32_t)wrappingModeS && (uint32_t)wrappingModeT;
-		}
-		inline void Reset()
-		{
-			*this = {};
-		}
+		bool IsValid() const override;
 
 	private:
 		friend class Renderer;

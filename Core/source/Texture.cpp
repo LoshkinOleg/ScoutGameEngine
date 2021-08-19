@@ -6,6 +6,69 @@
 
 namespace sge
 {
+	bool Texture::Definition::IsValid() const
+	{
+		bool returnVal = preComputedHash.IsValid();
+		assert(returnVal);
+		returnVal &= (bool)compression;
+		assert(returnVal);
+		returnVal &= datas.size() > 0;
+		assert(returnVal);
+		returnVal &= byteLens.size() > 0;
+		assert(returnVal);
+		returnVal &= widths.size() > 0;
+		assert(returnVal);
+		returnVal &= heights.size() > 0;
+		assert(returnVal);
+		returnVal &= (datas.size() == byteLens.size() == widths.size() == heights.size());
+		assert(returnVal);
+		returnVal &= (bool)mutability;
+		assert(returnVal);
+		returnVal &= (bool)format;
+		assert(returnVal);
+		returnVal &= (mipLevels + 1 == (uint32_t)datas.size());
+		assert(returnVal);
+		returnVal &= (bool)minifyingMode;
+		assert(returnVal);
+		returnVal &= (bool)magnifyingMode;
+		assert(returnVal);
+		returnVal &= (bool)compression;
+		assert(returnVal);
+		returnVal &= (bool)onS;
+		assert(returnVal);
+		returnVal &= (bool)onT;
+		assert(returnVal);
+		returnVal &= preComputedHash.IsValid();
+		assert(returnVal);
+		if(generateMipMaps)
+		{
+			returnVal &= mipLevels == 0;
+			assert(returnVal);
+		}
+		return returnVal;
+	}
+	bool Texture::IsValid() const
+	{
+		return TEX && (uint32_t)mutability && widths.size() && (widths.size() == heights.size()) && (uint32_t)minifyingMode && (uint32_t)magnifyingMode && (uint32_t)onS && (uint32_t)onT;
+		bool returnVal = TEX > 0;
+		assert(returnVal);
+		returnVal &= (bool)mutability;
+		assert(returnVal);
+		returnVal &= widths.size() > 0;
+		assert(returnVal);
+		returnVal &= heights.size() > 0;
+		assert(returnVal);
+		returnVal &= (widths.size() == heights.size());
+		assert(returnVal);
+		returnVal &= (bool)minifyingMode;
+		assert(returnVal);
+		returnVal &= (bool)magnifyingMode;
+		assert(returnVal);
+		returnVal &= (bool)onS;
+		assert(returnVal);
+		returnVal &= (bool)onT;
+		assert(returnVal);
+	}
 	void Texture::Init_(const Definition& def)
 	{
 		assert(def.IsValid());
@@ -15,8 +78,8 @@ namespace sge
 		mutability = def.mutability;
 		minifyingMode = def.minifyingMode;
 		magnifyingMode = def.magnifyingMode;
-		wrappingModeS = def.onS;
-		wrappingModeT = def.onT;
+		onS = def.onS;
+		onT = def.onT;
 
 		if(def.generateMipMaps)
 		{
@@ -38,8 +101,8 @@ namespace sge
 			assert((uint32_t)minifyingMode < GL_LINEAR_MIPMAP_NEAREST && (uint32_t)magnifyingMode < GL_LINEAR_MIPMAP_NEAREST);
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, (GLint)minifyingMode);
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, (GLint)magnifyingMode);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, (GLint)wrappingModeS);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, (GLint)wrappingModeT);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, (GLint)onS);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, (GLint)onT);
 			sge_CHECK_GL_ERROR();
 		}
 		else
@@ -55,8 +118,8 @@ namespace sge
 
 						glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_BASE_LEVEL, 0);
 						glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, (GLint)(def.mipLevels));
-						glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, (GLint)wrappingModeS);
-						glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, (GLint)wrappingModeT);
+						glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, (GLint)onS);
+						glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, (GLint)onT);
 						glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, (GLint)minifyingMode);
 						glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, (GLint)magnifyingMode);
 						sge_CHECK_GL_ERROR();
@@ -77,8 +140,8 @@ namespace sge
 					{
 						glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_BASE_LEVEL, 0);
 						glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, (GLint)(def.mipLevels));
-						glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, (GLint)wrappingModeS);
-						glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, (GLint)wrappingModeT);
+						glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, (GLint)onS);
+						glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, (GLint)onT);
 						glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, (GLint)minifyingMode);
 						glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, (GLint)magnifyingMode);
 						sge_CHECK_GL_ERROR();
@@ -99,8 +162,8 @@ namespace sge
 					{
 						glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_BASE_LEVEL, 0);
 						glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, (GLint)(def.mipLevels));
-						glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, (GLint)wrappingModeS);
-						glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, (GLint)wrappingModeT);
+						glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, (GLint)onS);
+						glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, (GLint)onT);
 						glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, (GLint)minifyingMode);
 						glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, (GLint)magnifyingMode);
 						sge_CHECK_GL_ERROR();
@@ -129,8 +192,8 @@ namespace sge
 				if(minifyingMode > SamplingMode::NEAREST) assert(def.mipLevels > 0);
 				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_BASE_LEVEL, 0);
 				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, (GLint)(def.mipLevels));
-				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, (GLint)wrappingModeS);
-				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, (GLint)wrappingModeT);
+				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, (GLint)onS);
+				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, (GLint)onT);
 				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, (GLint)minifyingMode);
 				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, (GLint)magnifyingMode);
 				glTexStorage2D(GL_TEXTURE_2D, (GLsizei)def.mipLevels, GL_RGBA8, (GLsizei)def.widths[0], (GLsizei)def.heights[0]);
@@ -160,27 +223,19 @@ namespace sge
 	}
 	void Texture::Destroy_()
 	{
-		if(IsValid())
-		{
-			glDeleteTextures(1, &TEX);
-			Reset();
-		}
-		else
-		{
-			sge_WARNING("Attempting to delete an invalid Texture!");
-		}
+		assert(IsValid());
+		glDeleteTextures(1, &TEX);
 	}
 	void Texture::UpdateData(const void* const data) const
 	{
 		assert(IsValid());
-		assert(mutability == Mutability::DYNAMIC && widths.size() == 1);
-		// Note: if using dynamic mutability, mipmaps aren't used.
+		assert(mutability == Mutability::DYNAMIC);
 		glBindTexture(GL_TEXTURE_2D, TEX);
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_R32F, (GLsizei)widths[0], (GLsizei)heights[0], 0, GL_RED, GL_FLOAT, data);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, (GLint)minifyingMode);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, (GLint)magnifyingMode);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, (GLint)wrappingModeS);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, (GLint)wrappingModeT);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, (GLint)onS);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, (GLint)onT);
 	}
 	void Texture::Bind(const uint32_t textureUnit) const
 	{

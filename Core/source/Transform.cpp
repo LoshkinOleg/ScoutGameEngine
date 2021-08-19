@@ -8,7 +8,11 @@ namespace sge
 {
 	bool TransformsBuffer::IsValid() const
 	{
-		return begin_ && nrOfTransforms_;
+		bool returnVal = begin_ != nullptr;
+		assert(returnVal);
+		returnVal &= nrOfTransforms_ > 0;
+		assert(returnVal);
+		return returnVal;
 	}
 	void TransformsBuffer::Init_(const std::vector<glm::mat4>& transforms)
 	{
@@ -44,7 +48,7 @@ namespace sge
 			matrix = glm::scale(matrix, deltaScale);
 		}
 	}
-	void TransformsBuffer::SetMatrix(const glm::mat4 & value, const uint32_t begin, const uint32_t end)
+	void TransformsBuffer::WriteMatrix(const glm::mat4 & value, const uint32_t begin, const uint32_t end)
 	{
 		for(uint32_t i = begin; i < end + 1; i++)
 		{
@@ -74,9 +78,9 @@ namespace sge
 	}
 	glm::mat4 * const ModelMatrixPool::Allocate(const uint32_t nrOfTransforms)
 	{
-		assert(end_ + nrOfTransforms < max_);
-		glm::mat4* returnVal = begin_ + end_;
-		end_ += nrOfTransforms;
+		assert(current_ + nrOfTransforms < max_);
+		glm::mat4* returnVal = begin_ + current_;
+		current_ += nrOfTransforms;
 		return returnVal;
 	}
 }//!sge

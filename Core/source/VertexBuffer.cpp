@@ -9,16 +9,41 @@ namespace sge
 	bool VertexBuffer::Definition::IsValid() const
 	{
 		bool returnVal = (bool)componentType;
+		assert(returnVal);
 		returnVal &= (bool)componentsPerElement;
+		assert(returnVal);
 		returnVal &= (bool)bufferContentsType;
+		assert(returnVal);
 		returnVal &= (bool)mutability;
+		assert(returnVal);
 		if(mutability == Mutability::STATIC) // If it's dynamic, begin, byteLen and preComputedHash can be 0.
 		{
 			returnVal &= (bool)begin;
+			assert(returnVal);
 			returnVal &= (bool)byteLen;
+			assert(returnVal);
 			returnVal &= (bool)preComputedHash.value;
+			assert(returnVal);
 		}
 		return returnVal;
+	}
+	bool VertexBuffer::IsValid() const
+	{
+		bool returnVal = VBO > 0;
+		assert(returnVal);
+		returnVal &= (bool)mutability;
+		assert(returnVal);
+		returnVal &= (bool)componentType;
+		assert(returnVal);
+		returnVal &= componentsPerElement > 0;
+		assert(returnVal);
+		returnVal &= (bool)bufferContentsType;
+		assert(returnVal);
+		return returnVal;
+	}
+	VertexBuffer::VertexBufferTarget VertexBuffer::Target_() const
+	{
+		return isIndexBuffer ? VertexBufferTarget::EBO : VertexBufferTarget::VBO;
 	}
 	void VertexBuffer::Init_(const Definition& def)
 	{
@@ -63,15 +88,8 @@ namespace sge
 	}
 	void VertexBuffer::Destroy_()
 	{
-		if(IsValid())
-		{
-			glDeleteBuffers(1, &VBO);
-			Reset();
-		}
-		else
-		{
-			sge_WARNING("Attempting to delete an invalid VertexBuffer!");
-		}
+		assert(IsValid());
+		glDeleteBuffers(1, &VBO);
 	}
 	void VertexBuffer::Bind() const
 	{
@@ -81,52 +99,52 @@ namespace sge
 	{
 		switch(bufferContentsType)
 		{
-			case sge::VertexBuffer::Type::POSITIONS_VEC3:
+			case sge::VertexBuffer::VertexBufferType::POSITIONS_VEC3:
 			{
 				assert(componentType == NumberType::FLOAT && componentsPerElement == 3);
 				return sizeof(float) * componentsPerElement;
 			}break;
-			case sge::VertexBuffer::Type::POSITIONS_VEC2:
+			case sge::VertexBuffer::VertexBufferType::POSITIONS_VEC2:
 			{
 				assert(componentType == NumberType::FLOAT && componentsPerElement == 2);
 				return sizeof(float) * componentsPerElement;
 			}break;
-			case sge::VertexBuffer::Type::NORMALS:
+			case sge::VertexBuffer::VertexBufferType::NORMALS:
 			{
 				assert(componentType == NumberType::FLOAT && componentsPerElement == 3);
 				return sizeof(float) * componentsPerElement;
 			}break;
-			case sge::VertexBuffer::Type::TANGENTS:
+			case sge::VertexBuffer::VertexBufferType::TANGENTS:
 			{
 				assert(componentType == NumberType::FLOAT && componentsPerElement == 3);
 				return sizeof(float) * componentsPerElement;
 			}break;
-			case sge::VertexBuffer::Type::BITANGENTS:
+			case sge::VertexBuffer::VertexBufferType::BITANGENTS:
 			{
 				assert(componentType == NumberType::FLOAT && componentsPerElement == 3);
 				return sizeof(float) * componentsPerElement;
 			}break;
-			case sge::VertexBuffer::Type::UVS:
+			case sge::VertexBuffer::VertexBufferType::UVS:
 			{
 				assert(componentType == NumberType::FLOAT && componentsPerElement == 2);
 				return sizeof(float) * componentsPerElement;
 			}break;
-			case sge::VertexBuffer::Type::INDICES_UINT32:
+			case sge::VertexBuffer::VertexBufferType::INDICES_UINT32:
 			{
 				assert(componentType == NumberType::UINT && componentsPerElement == 1);
 				return sizeof(uint32_t) * componentsPerElement;
 			}break;
-			case sge::VertexBuffer::Type::MODEL_MATRIX:
+			case sge::VertexBuffer::VertexBufferType::MODEL_MATRIX:
 			{
 				assert(componentType == NumberType::FLOAT && componentsPerElement == 16);
 				return sizeof(float) * componentsPerElement;
 			}break;
-			case sge::VertexBuffer::Type::GENERIC_VEC3:
+			case sge::VertexBuffer::VertexBufferType::GENERIC_VEC3:
 			{
 				assert(componentType == NumberType::FLOAT && componentsPerElement == 3);
 				return sizeof(float) * componentsPerElement;
 			}break;
-			case sge::VertexBuffer::Type::GENERIC_FLOAT:
+			case sge::VertexBuffer::VertexBufferType::GENERIC_FLOAT:
 			{
 				assert(componentType == NumberType::FLOAT && componentsPerElement == 1);
 				return sizeof(float) * componentsPerElement;

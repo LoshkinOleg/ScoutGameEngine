@@ -6,6 +6,12 @@
 
 namespace sge
 {
+	bool Shader::IsValid() const
+	{
+		const bool returnVal = PROGRAM > 0;
+		assert(returnVal);
+		return returnVal;
+	}
 	void Shader::Init_(const std::string_view vertexSrc, const std::string_view fragmentSrc, const std::string_view geometrySrc, const ShadingMode shadingMode)
 	{
 		uint32_t VERT = 0, FRAG = 0, GEO = 0;
@@ -174,14 +180,7 @@ namespace sge
 	}
 	void Shader::Destroy_()
 	{
-		if(IsValid())
-		{
-			glDeleteProgram(PROGRAM);
-			Reset();
-		}
-		else
-		{
-			sge_WARNING("Trying to destroy an invalid shader!");
-		}
+		assert(IsValid());
+		glDeleteProgram(PROGRAM);
 	}
 }//!sge
