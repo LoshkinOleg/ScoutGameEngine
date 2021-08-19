@@ -112,7 +112,7 @@ namespace sge
 		// Upload transforms to gpu.
 		auto& rm = Engine::Get().GetResourceManager();
 		glBindBuffer(GL_ARRAY_BUFFER, modelMatricesVBO_);
-		glBufferSubData(GL_ARRAY_BUFFER, 0, (GLsizeiptr)(rm.GetMaxNrOfModelMatrices()), rm.GetModelMatricesBegin());
+		glBufferSubData(GL_ARRAY_BUFFER, 0, (GLsizeiptr)(rm.GetMaxNrOfModelMatrices() * sizeof(glm::mat4)), rm.GetModelMatricesBegin());
 
 		// TODO: update view matrix using player input.
 
@@ -148,6 +148,7 @@ namespace sge
 	UniqueResourceHandle<Shader> Renderer::CreateShader(const UniqueResourceHandle<ShaderData>& handle)
 	{
 		sge_ERROR("You're not supposed to create your own shaders just yet.");
+		return {};
 	}
 
 	UniqueResourceHandle<VertexBuffer> Renderer::CreateVertexBuffer(const VertexBuffer::Definition & def)

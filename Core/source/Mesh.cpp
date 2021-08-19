@@ -165,7 +165,7 @@ namespace sge
 		glBindVertexArray(VAO);
 		renderer.BindModelMatricesVbo();
 
-		const uint32_t matrixLocation = vertexBuffers.size(); // iModelMatrix comes after all the other vertex attributes.
+		const uint32_t matrixLocation = (uint32_t)vertexBuffers.size(); // iModelMatrix comes after all the other vertex attributes.
 		glEnableVertexAttribArray((unsigned int)matrixLocation);
 		glVertexAttribPointer((unsigned int)matrixLocation, 4, GL_FLOAT, GL_FALSE, 4 * 4 * sizeof(float), (void*)0);
 		glEnableVertexAttribArray((unsigned int)matrixLocation + 1);

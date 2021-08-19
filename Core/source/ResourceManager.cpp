@@ -126,7 +126,7 @@ namespace sge
 		for(const auto& mesh : newGltf.model.meshes)
 		{
 			assert(mesh.primitives.size() == 1); // Handling only triangle base geometry.
-			assert(mesh.primitives[0].attributes.size() == 4); // Expecting all data necessary for blinn-phong.
+			// assert(mesh.primitives[0].attributes.size() == 4); // Expecting all data necessary for blinn-phong.
 		}
 
 		const uint32_t nrOfImages = (uint32_t)newGltf.model.images.size();
@@ -195,7 +195,7 @@ namespace sge
 			auto& newEboDef = newMeshDef.eboDef;
 			tinygltf::Mesh& mesh = model.meshes[meshIdx];
 
-			assert(mesh.primitives.size() == 1 && mesh.primitives[0].attributes.size() == 4);
+			assert(mesh.primitives.size() == 1 /* && mesh.primitives[0].attributes.size() == 4 */);
 
 			auto& attributes = mesh.primitives[0].attributes;
 			const auto indicesIdx = mesh.primitives[0].indices;
@@ -203,7 +203,7 @@ namespace sge
 			const std::string_view meshName = mesh.name;
 			const Hash hashedMeshName = Hash(meshName.data(), (uint32_t)meshName.length(), 0);
 
-			for(const auto& pair : attributes)
+			/*for(const auto& pair : attributes)
 			{
 				assert // Expecting the gltf to have all the data needed for normalmapped Blinn-Phong.
 				(
@@ -212,7 +212,7 @@ namespace sge
 					pair.first == "TANGENT" ||
 					pair.first == "TEXCOORD_0"
 				);
-			}
+			}*/
 
 			glm::mat4 modelMatrix = (model.nodes[meshIdx].matrix.size() > 0) ?
 				glm::mat4(
@@ -343,49 +343,85 @@ namespace sge
 				assert(((uint32_t)relevantData & (uint32_t)GltfData::GltfAttributes::INDICES) || ((uint32_t)relevantData & (uint32_t)GltfData::GltfAttributes::POSITIONS)); // All normals and tangents are indexed in gltf.
 
 				auto& accessorNormals = model.accessors[attributes["NORMAL"]];
-				auto& accessorTangents = model.accessors[attributes["TANGENT"]];
 				auto& bufferViewNormals = model.bufferViews[accessorNormals.bufferView];
-				auto& bufferViewTangents = model.bufferViews[accessorTangents.bufferView];
 				auto& bufferNormals = model.buffers[bufferViewNormals.buffer];
-				auto& bufferTangents = model.buffers[bufferViewTangents.buffer];
-
 				assert(accessorNormals.componentType == TINYGLTF_COMPONENT_TYPE_FLOAT && accessorNormals.type == TINYGLTF_TYPE_VEC3);
-				assert(accessorTangents.componentType == TINYGLTF_COMPONENT_TYPE_FLOAT && accessorTangents.type == TINYGLTF_TYPE_VEC4);
-
 				std::vector<glm::vec3> normals;
-				std::vector<float> tangentsVec4;
 				normals.insert
 				(
 					normals.end(),
 					reinterpret_cast<glm::vec3*>(bufferNormals.data.data() + bufferViewNormals.byteOffset),
 					reinterpret_cast<glm::vec3*>(bufferNormals.data.data() + bufferViewNormals.byteOffset + bufferViewNormals.byteLength)
 				);
-				tangentsVec4.insert
-				(
-					tangentsVec4.end(),
-					reinterpret_cast<float*>(bufferTangents.data.data() + bufferViewTangents.byteOffset),
-					reinterpret_cast<float*>(bufferTangents.data.data() + bufferViewTangents.byteOffset + bufferViewTangents.byteLength)
-				);
-				assert(normals.size() * 4 == tangentsVec4.size());
-				std::vector<glm::vec3> tangents = std::vector<glm::vec3>(normals.size());
 
-				for(size_t i = 0; i < normals.size(); i++)
+				if((uint32_t)relevantData & (uint32_t)GltfData::GltfAttributes::TANGENTS)
 				{
-					const glm::vec3 tangent = glm::vec3(tangentsVec4[i * 4 + 0], tangentsVec4[i * 4 + 1], tangentsVec4[i * 4 + 2]);
-					assert(glm::length(tangent) > 0.99f);
+					auto& accessorTangents = model.accessors[attributes["TANGENT"]];
+					auto& bufferViewTangents = model.bufferViews[accessorTangents.bufferView];
+					auto& bufferTangents = model.buffers[bufferViewTangents.buffer];
+					assert(accessorTangents.componentType == TINYGLTF_COMPONENT_TYPE_FLOAT && accessorTangents.type == TINYGLTF_TYPE_VEC4);
+					std::vector<float> tangentsVec4;
+					tangentsVec4.insert
+					(
+						tangentsVec4.end(),
+						reinterpret_cast<float*>(bufferTangents.data.data() + bufferViewTangents.byteOffset),
+						reinterpret_cast<float*>(bufferTangents.data.data() + bufferViewTangents.byteOffset + bufferViewTangents.byteLength)
+					);
+					std::vector<glm::vec3> tangents = std::vector<glm::vec3>(normals.size());
 
-					normals[i] = glm::normalize(normalMatrix * glm::normalize(normals[i]));
-					tangents[i] = glm::normalize(tangentMatrix * glm::normalize(tangent));
+					for(size_t i = 0; i < normals.size(); i++)
+					{
+						const glm::vec3 tangent = glm::vec3(tangentsVec4[i * 4 + 0], tangentsVec4[i * 4 + 1], tangentsVec4[i * 4 + 2]);
+						assert(glm::length(tangent) > 0.99f);
 
-					assert(glm::dot(normals[i], tangents[i]) < 0.0001f);
-#ifdef _DEBUG
-					const glm::vec3 bitangent = glm::cross(normals[i], tangents[i]);
-					assert(glm::dot(normals[i], bitangent) < 0.0001f && glm::dot(tangents[i], bitangent) < 0.0001f);
-#endif //!_DEBUG
+						normals[i] = glm::normalize(normalMatrix * glm::normalize(normals[i]));
+						tangents[i] = glm::normalize(tangentMatrix * glm::normalize(tangent));
+
+						assert(glm::dot(normals[i], tangents[i]) < 0.0001f);
+	#ifdef _DEBUG
+						const glm::vec3 bitangent = glm::cross(normals[i], tangents[i]);
+						assert(glm::dot(normals[i], bitangent) < 0.0001f && glm::dot(tangents[i], bitangent) < 0.0001f);
+	#endif //!_DEBUG
+					}
+					if((uint32_t)relevantData & (uint32_t)GltfData::GltfAttributes::NORMALS)
+					{
+						newVboDefs.push_back(VertexBuffer::Definition());
+						auto& normalsBuffer = newVboDefs.back();
+						normalsBuffer.begin = new uint8_t[bufferViewNormals.byteLength]; // Note: Must be deleted in CreateVertexBuffer() method!!!
+						normalsBuffer.byteLen = (uint32_t)bufferViewNormals.byteLength;
+						normalsBuffer.componentsPerElement = TINYGLTF_TYPE_VEC3;
+						normalsBuffer.componentType = (NumberType)TINYGLTF_COMPONENT_TYPE_FLOAT;
+						normalsBuffer.isIndexBuffer = false;
+						normalsBuffer.mutability = (Mutability)GL_STATIC_DRAW;
+						normalsBuffer.bufferContentsType = VertexBuffer::Type::NORMALS;
+						normalsBuffer.preComputedHash = Hash(bufferNormals.data.data() + bufferViewNormals.byteOffset, (uint32_t)bufferViewNormals.byteLength, 0);
+						memcpy(normalsBuffer.begin, normals.data(), bufferViewNormals.byteLength);
+						assert(normalsBuffer.IsValid());
+					}
+					if((uint32_t)relevantData & (uint32_t)GltfData::GltfAttributes::TANGENTS)
+					{
+						assert((uint32_t)relevantData & (uint32_t)GltfData::GltfAttributes::NORMALS); // Something really fishy goes on if the user asks for the tangents but NOT for the normals...
+
+						newVboDefs.push_back(VertexBuffer::Definition());
+						auto& tangentsBuffer = newVboDefs.back();
+						tangentsBuffer.begin = new uint8_t[tangents.size() * sizeof(glm::vec3)]; // Note: Must be deleted in CreateVertexBuffer() method!!!
+						tangentsBuffer.byteLen = (uint32_t)(tangents.size() * sizeof(glm::vec3));
+						tangentsBuffer.componentsPerElement = TINYGLTF_TYPE_VEC3;
+						tangentsBuffer.componentType = (NumberType)TINYGLTF_COMPONENT_TYPE_FLOAT;
+						tangentsBuffer.isIndexBuffer = false;
+						tangentsBuffer.mutability = (Mutability)GL_STATIC_DRAW;
+						tangentsBuffer.bufferContentsType = VertexBuffer::Type::TANGENTS;
+						tangentsBuffer.preComputedHash = Hash(tangents.data(), (uint32_t)(tangents.size() / sizeof(glm::vec3)), 0);
+						memcpy(tangentsBuffer.begin, tangents.data(), tangents.size() * sizeof(glm::vec3));
+						assert(tangentsBuffer.IsValid());
+					}
 				}
-
-				if((uint32_t)relevantData & (uint32_t)GltfData::GltfAttributes::NORMALS)
+				else
 				{
+					for(size_t i = 0; i < normals.size(); i++)
+					{
+						normals[i] = glm::normalize(normalMatrix * glm::normalize(normals[i]));
+					}
 					newVboDefs.push_back(VertexBuffer::Definition());
 					auto& normalsBuffer = newVboDefs.back();
 					normalsBuffer.begin = new uint8_t[bufferViewNormals.byteLength]; // Note: Must be deleted in CreateVertexBuffer() method!!!
@@ -398,23 +434,6 @@ namespace sge
 					normalsBuffer.preComputedHash = Hash(bufferNormals.data.data() + bufferViewNormals.byteOffset, (uint32_t)bufferViewNormals.byteLength, 0);
 					memcpy(normalsBuffer.begin, normals.data(), bufferViewNormals.byteLength);
 					assert(normalsBuffer.IsValid());
-				}
-				if((uint32_t)relevantData & (uint32_t)GltfData::GltfAttributes::TANGENTS)
-				{
-					assert((uint32_t)relevantData & (uint32_t)GltfData::GltfAttributes::NORMALS); // Something really fishy goes on if the user asks for the tangents but NOT for the normals...
-
-					newVboDefs.push_back(VertexBuffer::Definition());
-					auto& tangentsBuffer = newVboDefs.back();
-					tangentsBuffer.begin = new uint8_t[tangents.size() * sizeof(glm::vec3)]; // Note: Must be deleted in CreateVertexBuffer() method!!!
-					tangentsBuffer.byteLen = (uint32_t)(tangents.size() * sizeof(glm::vec3));
-					tangentsBuffer.componentsPerElement = TINYGLTF_TYPE_VEC3;
-					tangentsBuffer.componentType = (NumberType)TINYGLTF_COMPONENT_TYPE_FLOAT;
-					tangentsBuffer.isIndexBuffer = false;
-					tangentsBuffer.mutability = (Mutability)GL_STATIC_DRAW;
-					tangentsBuffer.bufferContentsType = VertexBuffer::Type::TANGENTS;
-					tangentsBuffer.preComputedHash = Hash(tangents.data(), (uint32_t)(tangents.size() / sizeof(glm::vec3)), 0);
-					memcpy(tangentsBuffer.begin, tangents.data(), tangents.size() * sizeof(glm::vec3));
-					assert(tangentsBuffer.IsValid());
 				}
 			}
 

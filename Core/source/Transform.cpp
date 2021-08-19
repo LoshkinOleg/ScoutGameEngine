@@ -13,8 +13,8 @@ namespace sge
 	void TransformsBuffer::Init_(const std::vector<glm::mat4>& transforms)
 	{
 		auto& rm = Engine::Get().GetResourceManager();
-		begin_ = rm.AllocateModelMatrices(transforms.size());
-		nrOfTransforms_ = transforms.size();
+		begin_ = rm.AllocateModelMatrices((uint32_t)transforms.size());
+		nrOfTransforms_ = (uint32_t)transforms.size();
 		for(size_t i = 0; i < nrOfTransforms_; i++)
 		{
 			*(begin_ + i) = transforms[i];
@@ -51,9 +51,9 @@ namespace sge
 			*(begin_ + i) = value;
 		}
 	}
-	const glm::mat4& TransformsBuffer::GetBegin() const
+	glm::mat4* TransformsBuffer::GetBegin()
 	{
-		return *begin_;
+		return begin_;
 	}
 	const uint32_t TransformsBuffer::GetNrOfTransforms() const
 	{

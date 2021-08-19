@@ -22,23 +22,17 @@ public:
 			(uint32_t)sge::GltfData::GltfAttributes::INDICES |
 			(uint32_t)sge::GltfData::GltfAttributes::NORMALS);
 		sge::Model::Definition modelDef = rm.GenerateDefinitionFrom(gltfHandle, meshDataToLoad, shadingModes);
-		modelDef.transforms = std::vector<glm::mat4>(3, sge::IDENTITY_MAT4);
+		modelDef.transforms = std::vector<glm::mat4>(5, sge::IDENTITY_MAT4);
 		model = renderer.CreateModel(modelDef);
 
-		model->transforms->Translate(sge::DOWN_VEC3 * 20.0f + sge::SOUTH_VEC3 * 13.0f, 0, 0);
-		model->transforms->Translate(sge::DOWN_VEC3 * 20.0f + sge::EAST_VEC3 * 15.0f + sge::NORTH_VEC3 * 10.0f, 1, 1);
-		model->transforms->Translate(sge::DOWN_VEC3 * 20.0f + sge::WEST_VEC3 * 15.0f + sge::NORTH_VEC3 * 10.0f, 2, 2);
+		model->transforms->Translate(sge::DOWN_VEC3 * 20.0f, 0, 4);
+		model->transforms->Translate(sge::EAST_VEC3 * 15.0f + sge::NORTH_VEC3 * 10.0f, 1, 1);
+		model->transforms->Translate(sge::WEST_VEC3 * 15.0f + sge::NORTH_VEC3 * 10.0f, 2, 2);
+		model->transforms->Translate(sge::EAST_VEC3 * 15.0f - sge::NORTH_VEC3 * 10.0f, 3, 3);
+		model->transforms->Translate(sge::WEST_VEC3 * 15.0f - sge::NORTH_VEC3 * 10.0f, 4, 4);
 	}
 	void Update() override
 	{
-		const float timer = sge::Engine::Get().GetCurrentTimer();
-
-		model->transforms->Rotate(0.01f, sge::NORTH_VEC3, 0, 0);
-		model->transforms->Rotate(0.01f, sge::EAST_VEC3, 1, 1);
-		model->transforms->Rotate(0.01f, sge::UP_VEC3, 2, 2);
-		model->indexedMeshes[0]->materials[sge::ShadingMode::GOOCH]->vec3s[0] = glm::vec3(glm::cos(timer), glm::sin(timer), glm::cos(timer));
-		model->indexedMeshes[1]->materials[sge::ShadingMode::GOOCH]->vec3s[0] = glm::vec3(glm::cos(timer + sge::PI), glm::sin(timer), glm::cos(timer));
-		model->indexedMeshes[2]->materials[sge::ShadingMode::GOOCH]->vec3s[0] = glm::vec3(glm::cos(timer), glm::sin(timer +sge::PI), glm::cos(timer));
 		sge::Engine::Get().GetRenderer().Schedule(model, sge::Primitive::TRIANGLES, sge::ShadingMode::GOOCH);
 	}
 	void Shutdown() override

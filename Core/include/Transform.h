@@ -28,7 +28,7 @@ namespace sge
 		void SetMatrix(const glm::mat4& value, const uint32_t begin, const uint32_t end);
 
 		bool IsValid() const;
-		const glm::mat4& GetBegin() const;
+		glm::mat4* GetBegin();
 		const uint32_t GetNrOfTransforms() const;
 	};
 
