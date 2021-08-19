@@ -6,50 +6,77 @@
 
 namespace sge
 {
-	uint32_t TransformsBuffer::NrOfTransforms() const
-	{
-		assert(end - begin > 0);
-		return (uint32_t)(end - begin);
-	}
 	bool TransformsBuffer::IsValid() const
 	{
-		return end > begin;
-	}
-	void TransformsBuffer::Bind(const uint32_t VAO, const uint32_t transformModelOffset) const
-	{
-		glBindVertexArray(VAO);
-		vbo->Update(begin, NrOfTransforms() * sizeof(glm::mat4));
-		glEnableVertexAttribArray((GLuint)transformModelOffset);
-		glVertexAttribPointer((GLuint)transformModelOffset, 4, GL_FLOAT, GL_FALSE, 4 * 4 * sizeof(float), (void*)0);
-		glEnableVertexAttribArray((GLuint)transformModelOffset + 1);
-		glVertexAttribPointer((GLuint)transformModelOffset + 1, 4, GL_FLOAT, GL_FALSE, 4 * 4 * sizeof(float), (void*)(4 * sizeof(float)));
-		glEnableVertexAttribArray((GLuint)transformModelOffset + 2);
-		glVertexAttribPointer((GLuint)transformModelOffset + 2, 4, GL_FLOAT, GL_FALSE, 4 * 4 * sizeof(float), (void*)(2 * 4 * sizeof(float)));
-		glEnableVertexAttribArray((GLuint)transformModelOffset + 3);
-		glVertexAttribPointer((GLuint)transformModelOffset + 3, 4, GL_FLOAT, GL_FALSE, 4 * 4 * sizeof(float), (void*)(3 * 4 * sizeof(float)));
-		glVertexAttribDivisor((GLuint)transformModelOffset, 1);
-		glVertexAttribDivisor((GLuint)transformModelOffset + 1, 1);
-		glVertexAttribDivisor((GLuint)transformModelOffset + 2, 1);
-		glVertexAttribDivisor((GLuint)transformModelOffset + 3, 1);
+		return begin_ && nrOfTransforms_;
 	}
 	void TransformsBuffer::Init_(const std::vector<glm::mat4>& transforms)
 	{
-		VertexBuffer::Definition vbDef;
-		vbDef.begin = nullptr;
-		vbDef.bufferContentsType = VertexBuffer::Type::MODEL_MATRIX;
-		vbDef.byteLen = 0;
-		vbDef.componentsPerElement = 16;
-		vbDef.componentType = NumberType::FLOAT;
-		vbDef.isIndexBuffer = false;
-		vbDef.mutability = Mutability::DYNAMIC;
-		vbDef.preComputedHash = 0;
-		vbo = Engine::Get().GetRenderer().CreateVertexBuffer(vbDef);
-		begin = Engine::Get().GetResourceManager().AllocateTransforms(transforms.data(), transforms.size() * sizeof(glm::mat4));
-		end = begin + transforms.size();
-
-		for(size_t i = 0; i < transforms.size(); i++)
+		auto& rm = Engine::Get().GetResourceManager();
+		begin_ = rm.AllocateModelMatrices(transforms.size());
+		nrOfTransforms_ = transforms.size();
+		for(size_t i = 0; i < nrOfTransforms_; i++)
 		{
-			*(begin + i) = transforms[i];
+			*(begin_ + i) = transforms[i];
 		}
+	}
+	void TransformsBuffer::Translate(const glm::vec3 deltaPos, const uint32_t begin, const uint32_t end)
+	{
+		for(uint32_t i = begin; i < end + 1; i++)
+		{
+			auto& matrix = *(begin_ + i);
+			matrix = glm::translate(matrix, deltaPos);
+		}
+	}
+	void TransformsBuffer::Rotate(const float radians, const glm::vec3 axis, const uint32_t begin, const uint32_t end)
+	{
+		for(uint32_t i = begin; i < end + 1; i++)
+		{
+			auto& matrix = *(begin_ + i);
+			matrix = glm::rotate(matrix, radians, axis);
+		}
+	}
+	void TransformsBuffer::Scale(const glm::vec3 deltaScale, const uint32_t begin, const uint32_t end)
+	{
+		for(uint32_t i = begin; i < end + 1; i++)
+		{
+			auto& matrix = *(begin_ + i);
+			matrix = glm::scale(matrix, deltaScale);
+		}
+	}
+	void TransformsBuffer::SetMatrix(const glm::mat4 & value, const uint32_t begin, const uint32_t end)
+	{
+		for(uint32_t i = begin; i < end + 1; i++)
+		{
+			*(begin_ + i) = value;
+		}
+	}
+	const glm::mat4& TransformsBuffer::GetBegin() const
+	{
+		return *begin_;
+	}
+	const uint32_t TransformsBuffer::GetNrOfTransforms() const
+	{
+		return nrOfTransforms_;
+	}
+	void ModelMatrixPool::Init_(const uint32_t nrOfTransforms)
+	{
+		begin_ = new glm::mat4[nrOfTransforms];
+		max_ = nrOfTransforms;
+		for(glm::mat4* it = begin_; it < begin_ + nrOfTransforms; it++)
+		{
+			*it = IDENTITY_MAT4;
+		}
+	}
+	void ModelMatrixPool::Destroy_()
+	{
+		delete[] begin_;
+	}
+	glm::mat4 * const ModelMatrixPool::Allocate(const uint32_t nrOfTransforms)
+	{
+		assert(end_ + nrOfTransforms < max_);
+		glm::mat4* returnVal = begin_ + end_;
+		end_ += nrOfTransforms;
+		return returnVal;
 	}
 }//!sge

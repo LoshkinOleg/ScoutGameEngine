@@ -7,7 +7,7 @@
 
 namespace sge
 {
-	struct TransformsBuffer;
+	class TransformsBuffer;
 
 	/*
 	@brief: A mesh with non-interleaved data.
@@ -26,9 +26,9 @@ namespace sge
 		};
 
 		uint32_t VAO = 0;
-		Handle<VertexBuffer> indexVBO = {};
-		std::vector<Handle<VertexBuffer>> vertexBuffers = {};
-		std::map<const ShadingMode, const Handle<Material>> materials = {}; // at most 1 per shading mode
+		UniqueResourceHandle<VertexBuffer> indexVBO = {};
+		std::vector<UniqueResourceHandle<VertexBuffer>> vertexBuffers = {};
+		std::map<const ShadingMode, const UniqueResourceHandle<Material>> materials = {}; // at most 1 per shading mode
 		uint32_t nrOfVertices = 0;
 		float radius = 0.0f;
 
@@ -44,6 +44,6 @@ namespace sge
 		friend class Renderer;
 		friend struct Model;
 		void Init_(const Definition& def);
-		void Draw_(const uint32_t nrOfInstances, const uint32_t primitive, const ShadingMode mode);
+		void Draw_(const HashlessResourceHandle<TransformsBuffer>& transforms, const uint32_t primitive, const ShadingMode mode);
 	};
 }//!sge

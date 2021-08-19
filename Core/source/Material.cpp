@@ -60,7 +60,7 @@ namespace sge
 			textures.push_back(renderer.CreateTexture(texDef));
 		}
 
-		Handle<Shader> shaderHandle = renderer.GetShaderForShadingMode(def.shadingMode);
+		UniqueResourceHandle<Shader> shaderHandle = renderer.GetShaderForShadingMode(def.shadingMode);
 		switch(def.shadingMode)
 		{
 			case ShadingMode::GIZMO:

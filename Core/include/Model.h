@@ -17,8 +17,8 @@ namespace sge
 			Hash ComputeHash() const;
 		};
 
-		sge::TransformsBuffer transforms = {};
-		std::vector<Handle<IndexedMesh>> indexedMeshes = {};
+		HashlessResourceHandle<TransformsBuffer> transforms = {};
+		std::vector<UniqueResourceHandle<IndexedMesh>> indexedMeshes = {};
 
 		bool IsValid() const;
 		inline void Reset()

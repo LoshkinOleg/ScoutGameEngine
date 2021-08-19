@@ -5,24 +5,33 @@
 namespace sge
 {
 	template <typename Type>
-	struct Resource
+	struct UniqueResource
 	{
 		Hash hash = 0;
 		Type resourceData = {};
 
 		inline bool IsValid() const
 		{
-			// Note: not checking hash for validity since some resources aren't ment to use hashes.
-			// TODO: make a hashless Resource and Handle structs.
+			return hash.IsValid() && resourceData.IsValid();
+		}
+	};
+
+	template <typename Type>
+	struct HashlessResource
+	{
+		Type resourceData = {};
+
+		inline bool IsValid() const
+		{
 			return resourceData.IsValid();
 		}
 	};
 
 	template <typename Type>
-	struct Handle
+	struct UniqueResourceHandle
 	{
 		Hash hash = 0;
-		Resource<Type>* ptr = nullptr;
+		UniqueResource<Type>* ptr = nullptr;
 
 		inline Type* operator->() const
 		{
@@ -34,19 +43,42 @@ namespace sge
 			assert(hash == ptr->hash);
 			return ptr->resourceData;
 		}
-		inline bool operator==(const Handle<Type>& other) const
+		inline bool operator==(const UniqueResourceHandle<Type>& other) const
 		{
 			return hash == other.hash;
 		}
-		inline bool operator==(const Resource<Type>& resource) const
+		inline bool operator==(const UniqueResource<Type>& resource) const
 		{
 			return hash == resource.hash;
 		}
 
 		inline bool IsValid() const
 		{
-			// Note: hash = 0, ptr->hash = 0 is valid for resources that are supposed to have duplicates (like transforms).
-			return ptr != nullptr && ptr->IsValid() && hash == ptr->hash;
+			return hash.IsValid() && ptr != nullptr && ptr->IsValid() && hash == ptr->hash;
+		}
+		inline void Reset()
+		{
+			*this = {};
+		}
+	};
+
+	template <typename Type>
+	struct HashlessResourceHandle
+	{
+		HashlessResource<Type>* ptr = nullptr;
+
+		inline Type* operator->() const
+		{
+			return &ptr->resourceData;
+		}
+		inline Type& operator*() const
+		{
+			return ptr->resourceData;
+		}
+
+		inline bool IsValid() const
+		{
+			return ptr != nullptr && ptr->IsValid();
 		}
 		inline void Reset()
 		{

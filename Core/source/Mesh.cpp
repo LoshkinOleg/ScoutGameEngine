@@ -159,10 +159,28 @@ namespace sge
 		}
 	}
 
-	void IndexedMesh::Draw_(const uint32_t nrOfInstances, const uint32_t primitive, const ShadingMode mode)
+	void IndexedMesh::Draw_(const HashlessResourceHandle<TransformsBuffer>& transforms, const uint32_t primitive, const ShadingMode mode)
 	{
-		materials[mode]->Bind();
+		auto& renderer = Engine::Get().GetRenderer();
 		glBindVertexArray(VAO);
+		renderer.BindModelMatricesVbo();
+
+		const uint32_t matrixLocation = vertexBuffers.size(); // iModelMatrix comes after all the other vertex attributes.
+		glEnableVertexAttribArray((unsigned int)matrixLocation);
+		glVertexAttribPointer((unsigned int)matrixLocation, 4, GL_FLOAT, GL_FALSE, 4 * 4 * sizeof(float), (void*)0);
+		glEnableVertexAttribArray((unsigned int)matrixLocation + 1);
+		glVertexAttribPointer((unsigned int)matrixLocation + 1, 4, GL_FLOAT, GL_FALSE, 4 * 4 * sizeof(float), (void*)(4 * sizeof(float)));
+		glEnableVertexAttribArray((unsigned int)matrixLocation + 2);
+		glVertexAttribPointer((unsigned int)matrixLocation + 2, 4, GL_FLOAT, GL_FALSE, 4 * 4 * sizeof(float), (void*)(2 * 4 * sizeof(float)));
+		glEnableVertexAttribArray((unsigned int)matrixLocation + 3);
+		glVertexAttribPointer((unsigned int)matrixLocation + 3, 4, GL_FLOAT, GL_FALSE, 4 * 4 * sizeof(float), (void*)(3 * 4 * sizeof(float)));
+		glVertexAttribDivisor((unsigned int)matrixLocation, 1);
+		glVertexAttribDivisor((unsigned int)matrixLocation + 1, 1);
+		glVertexAttribDivisor((unsigned int)matrixLocation + 2, 1);
+		glVertexAttribDivisor((unsigned int)matrixLocation + 3, 1);
+
+		const uint32_t nrOfInstances = transforms->GetNrOfTransforms();
+		materials[mode]->Bind();
 		if(nrOfInstances)
 		{
 			glDrawElementsInstanced((GLenum)primitive, (GLsizei)nrOfVertices, (GLenum)indexVBO->componentType, 0, (GLsizei)nrOfInstances);

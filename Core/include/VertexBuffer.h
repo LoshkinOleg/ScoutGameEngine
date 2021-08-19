@@ -1,7 +1,6 @@
 #pragma once
 
 #include "globals.h"
-// #include "macros.h"
 #include "Hash.h"
 
 namespace sge
@@ -40,23 +39,17 @@ namespace sge
 
 		struct Definition
 		{
-			// sge_ALLOW_CONSTRUCTION(Definition);
-			// sge_DISALLOW_COPY(Definition);
-
 			// Note: this points heap! Use Renderer's CreateVertexBuffer() method to ensure the heap gets freed!
 			uint8_t* begin = nullptr;
 			uint32_t byteLen = 0;
 			Mutability mutability = Mutability::INVALID;
-			NumberType componentType = NumberType::INVALID;
-			uint32_t componentsPerElement = 0;
+			NumberType componentType = NumberType::INVALID; // TODO: is this really needed if we know the Type?
+			uint32_t componentsPerElement = 0; // TODO: is this really needed if we know the Type?
 			Type bufferContentsType = Type::INVALID;
 			bool isIndexBuffer = false;
 			Hash preComputedHash = 0; // Needs to be here since begin will get deallocated upon VertexBuffer::Init_() .
 
-			inline bool IsValid() const
-			{
-				return (uint32_t)mutability && (uint32_t)componentType && componentsPerElement && (uint32_t)bufferContentsType;
-			}
+			bool IsValid() const;
 		};
 
 		uint32_t VBO = 0;
@@ -72,7 +65,7 @@ namespace sge
 
 		inline bool IsValid() const
 		{
-			return VBO && (uint32_t)mutability && (uint32_t)componentType && componentsPerElement && (bool)bufferContentsType;
+			return VBO && (bool)mutability && (bool)componentType && componentsPerElement && (bool)bufferContentsType;
 		}
 		inline void Reset()
 		{

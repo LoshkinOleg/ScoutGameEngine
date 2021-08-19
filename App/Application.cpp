@@ -1,9 +1,13 @@
 #include "Engine.h"
 
+// TODO: make things private to prevent user from misuing the framework
+// TODO: remove all direct pointers to vector elements, use indices instead!
+// TODO: cout which element is invalid on IsValid calls
+
 class Game final : public sge::I_Application
 {
 private:
-	sge::Handle<sge::Model> model = {};
+	sge::UniqueResourceHandle<sge::Model> model = {};
 public:
 	void Init() override
 	{
@@ -18,14 +22,23 @@ public:
 			(uint32_t)sge::GltfData::GltfAttributes::INDICES |
 			(uint32_t)sge::GltfData::GltfAttributes::NORMALS);
 		sge::Model::Definition modelDef = rm.GenerateDefinitionFrom(gltfHandle, meshDataToLoad, shadingModes);
-
-		modelDef.transforms.back()[3] = glm::vec4(0.0f, 0.0f, -10.0f, 1.0f);
-		modelDef.transforms.back() = glm::rotate(modelDef.transforms.back(), 3.14f, sge::EAST_VEC3);
-		
+		modelDef.transforms = std::vector<glm::mat4>(3, sge::IDENTITY_MAT4);
 		model = renderer.CreateModel(modelDef);
+
+		model->transforms->Translate(sge::DOWN_VEC3 * 20.0f + sge::SOUTH_VEC3 * 13.0f, 0, 0);
+		model->transforms->Translate(sge::DOWN_VEC3 * 20.0f + sge::EAST_VEC3 * 15.0f + sge::NORTH_VEC3 * 10.0f, 1, 1);
+		model->transforms->Translate(sge::DOWN_VEC3 * 20.0f + sge::WEST_VEC3 * 15.0f + sge::NORTH_VEC3 * 10.0f, 2, 2);
 	}
 	void Update() override
 	{
+		const float timer = sge::Engine::Get().GetCurrentTimer();
+
+		model->transforms->Rotate(0.01f, sge::NORTH_VEC3, 0, 0);
+		model->transforms->Rotate(0.01f, sge::EAST_VEC3, 1, 1);
+		model->transforms->Rotate(0.01f, sge::UP_VEC3, 2, 2);
+		model->indexedMeshes[0]->materials[sge::ShadingMode::GOOCH]->vec3s[0] = glm::vec3(glm::cos(timer), glm::sin(timer), glm::cos(timer));
+		model->indexedMeshes[1]->materials[sge::ShadingMode::GOOCH]->vec3s[0] = glm::vec3(glm::cos(timer + sge::PI), glm::sin(timer), glm::cos(timer));
+		model->indexedMeshes[2]->materials[sge::ShadingMode::GOOCH]->vec3s[0] = glm::vec3(glm::cos(timer), glm::sin(timer +sge::PI), glm::cos(timer));
 		sge::Engine::Get().GetRenderer().Schedule(model, sge::Primitive::TRIANGLES, sge::ShadingMode::GOOCH);
 	}
 	void Shutdown() override

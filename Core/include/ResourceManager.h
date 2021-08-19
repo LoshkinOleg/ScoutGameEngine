@@ -59,7 +59,7 @@ namespace sge
 		};
 
 		tinygltf::Model model = {};
-		std::vector<Handle<KtxData>> images = {};
+		std::vector<UniqueResourceHandle<KtxData>> images = {};
 
 		bool IsValid() const;
 	};
@@ -72,13 +72,13 @@ namespace sge
 		void Init();
 		void FreeAssetResources();
 
-		Handle<JsonData> LoadJson(const std::string_view path);
-		Handle<KtxData> LoadKtx(const std::string_view path);
-		Handle<ShaderData> LoadShader(const std::string_view vertexPath, const std::string_view fragmentPath, const std::string_view geometryPath);
-		Handle<GltfData> LoadGltf(const std::string_view path);
+		UniqueResourceHandle<JsonData> LoadJson(const std::string_view path);
+		UniqueResourceHandle<KtxData> LoadKtx(const std::string_view path);
+		UniqueResourceHandle<ShaderData> LoadShader(const std::string_view vertexPath, const std::string_view fragmentPath, const std::string_view geometryPath);
+		UniqueResourceHandle<GltfData> LoadGltf(const std::string_view path);
 
-		Model::Definition GenerateDefinitionFrom(const Handle<GltfData>& handle, const GltfData::GltfAttributes relevantData, const ShadingMode shadingModesNeeded) const;
-		Texture::Definition GenerateDefinitionFrom(const Handle<KtxData>& handle,
+		Model::Definition GenerateDefinitionFrom(const UniqueResourceHandle<GltfData>& handle, const GltfData::GltfAttributes relevantData, const ShadingMode shadingModesNeeded) const;
+		Texture::Definition GenerateDefinitionFrom(const UniqueResourceHandle<KtxData>& handle,
 												   const Texture::SamplingMode minifyingMode,
 												   const Texture::SamplingMode magnifyingMode,
 												   const Texture::WrappingMode onS,
@@ -86,43 +86,37 @@ namespace sge
 												   const Mutability mutability,
 												   const bool generateMipMaps) const;
 
-		glm::mat4* AllocateTransforms(const void* const data, const uint32_t byteLen);
+		HashlessResourceHandle<TransformsBuffer> CreateTransformsBuffer(const std::vector<glm::mat4>& transforms);
+		glm::mat4* AllocateModelMatrices(const uint32_t nrOfTransforms);
+		glm::mat4* GetModelMatricesBegin();
+		uint32_t GetMaxNrOfModelMatrices() const;
 
 		void Shutdown();
 
 	private:
-		struct TransformsPool_
-		{
-			sge_DISALLOW_COPY(TransformsPool_);
-
-			constexpr static const uint32_t TRANSFORMS_POOL_SIZE = 256;
-			glm::mat4* transforms = nullptr;
-			glm::mat4* currentTransformsEnd = nullptr;
-
-			TransformsPool_();
-			~TransformsPool_();
-			glm::mat4* const Allocate(const uint32_t nrOfTransforms);
-		};
 
 		friend class Engine;
 		sge_ALLOW_CONSTRUCTION(ResourceManager);
 
-		constexpr static const bool FREE_DATA_POST_INIT_ = true;
-		constexpr static const size_t DEFAULT_JSON_POOL_SIZE_ = 32;
-		constexpr static const size_t DEFAULT_KTX_POOL_SIZE_ = 64;
-		constexpr static const size_t DEFAULT_SHADER_SRC_POOL_SIZE_ = 16;
-		constexpr static const size_t DEFAULT_GLTF_POOL_SIZE_ = 16;
+		constexpr static const bool FREE_ASSETS_POST_INIT_ = true;
+		constexpr static const size_t JSON_POOL_SIZE_ = 32;
+		constexpr static const size_t KTX_POOL_SIZE_ = 64;
+		constexpr static const size_t SHADER_SRC_POOL_SIZE_ = 16;
+		constexpr static const size_t GLTF_POOL_SIZE_ = 16;
+		constexpr static const size_t TRANSFORM_BUFFER_POOL_SIZE_ = 64;
+		constexpr static const size_t MODEL_MATRIX_POOL_SIZE_ = 256;
 
 		// WARNING: these are free to relocate as they wish since it's using a standard allocator! Reserve the memory on init to avoid that behaviour!
-		std::vector<Resource<JsonData>> jsons_ = {};
-		std::vector<Resource<KtxData>> ktxs_ = {};
-		std::vector<Resource<ShaderData>> shaderSrcs_ = {};
-		std::vector<Resource<GltfData>> gltfs_ = {};
-		TransformsPool_ transformsPool_ = {};
+		std::vector<UniqueResource<JsonData>> jsons_ = {};
+		std::vector<UniqueResource<KtxData>> ktxs_ = {};
+		std::vector<UniqueResource<ShaderData>> shaderSrcs_ = {};
+		std::vector<UniqueResource<GltfData>> gltfs_ = {};
+		std::vector<HashlessResource<TransformsBuffer>> transformBuffers_ = {};
+		ModelMatrixPool modelMatrixPool_ = {};
 
 		static std::string LoadFile_(const std::string_view path);
 		template<typename Type>
-		static bool ElementExists_(const std::vector<Resource<Type>>& list, const Hash hash)
+		static bool ElementExists_(const std::vector<UniqueResource<Type>>& list, const Hash hash)
 		{
 			for(const auto& element : list)
 			{
@@ -134,7 +128,7 @@ namespace sge
 			return false;
 		}
 		template<typename Type>
-		static Resource<Type>& GetElement_(std::vector<Resource<Type>>& list, const Hash hash)
+		static UniqueResource<Type>& GetElement_(std::vector<UniqueResource<Type>>& list, const Hash hash)
 		{
 			for(auto& element : list)
 			{

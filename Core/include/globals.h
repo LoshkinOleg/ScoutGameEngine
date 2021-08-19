@@ -41,6 +41,8 @@ namespace sge
 	constexpr const glm::mat4 IDENTITY_MAT4 = glm::mat4(1.0f);
 	constexpr const glm::mat4 DEFAULT_VIEW_MATRIX = IDENTITY_MAT4;
 
+	constexpr const float PI = 3.14f;
+
 	constexpr const std::array<float, 12> QUAD_2D = { -1.0f, -1.0f, 1.0f, -1.0f, 1.0f,  1.0f, -1.0f, -1.0f, 1.0f,  1.0f, -1.0f,  1.0f };
 	constexpr const std::array<float, 18> QUAD_3D = { -1.0f, -1.0f, 0.0f, 1.0f, -1.0f, 0.0f, 1.0f,  1.0f, 0.0f, -1.0f, -1.0f, 0.0f, 1.0f,  1.0f, 0.0f, -1.0f,  1.0f, 0.0f };
 	constexpr const std::array<float, 216> CUBE =

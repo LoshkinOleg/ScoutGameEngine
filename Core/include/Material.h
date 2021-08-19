@@ -18,7 +18,7 @@ namespace sge
 			Hash ComputeHash() const;
 		};
 
-		std::vector<Handle<Texture>> textures = {};
+		std::vector<UniqueResourceHandle<Texture>> textures = {};
 		std::vector<glm::vec3> vec3s = {};
 		std::vector<float> floats = {};
 		ShadingMode shadingMode = ShadingMode::INVALID;

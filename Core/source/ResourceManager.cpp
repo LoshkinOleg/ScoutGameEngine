@@ -7,6 +7,8 @@
 #include <glm/gtx/quaternion.hpp>
 #include <glad/glad.h>
 
+#include "Engine.h"
+
 namespace sge
 {
 	bool GltfData::IsValid() const
@@ -18,43 +20,21 @@ namespace sge
 		}
 		return returnVal;
 	}
-	ResourceManager::TransformsPool_::TransformsPool_()
-	{
-		sge_MESSAGE("ResourceManager::TransformsPool_() called.");
-		transforms = new glm::mat4[TRANSFORMS_POOL_SIZE];
-		currentTransformsEnd = transforms;
-		glm::mat4* it = transforms;
-		for(glm::mat4* it = transforms; it < transforms + TRANSFORMS_POOL_SIZE; it++)
-		{
-			*it = IDENTITY_MAT4;
-		}
-	}
-	ResourceManager::TransformsPool_::~TransformsPool_()
-	{
-		// Note: bit wierd this isn't called on shutdown... it is part of ResourceManager's resources after all.
-		sge_MESSAGE("ResourceManager::~TransformsPool_() called.");
-		delete[] transforms;
-	}
-
-	glm::mat4 * const ResourceManager::TransformsPool_::Allocate(const uint32_t nrOfTransforms)
-	{
-		currentTransformsEnd += nrOfTransforms;
-		assert(currentTransformsEnd <= transforms + TRANSFORMS_POOL_SIZE);
-		return transforms;
-	}
 
 	void ResourceManager::Init()
 	{
 		sge_MESSAGE("ResourceManager::Init() called.");
-		jsons_.reserve(DEFAULT_JSON_POOL_SIZE_);
-		ktxs_.reserve(DEFAULT_KTX_POOL_SIZE_);
-		shaderSrcs_.reserve(DEFAULT_SHADER_SRC_POOL_SIZE_);
-		gltfs_.reserve(DEFAULT_GLTF_POOL_SIZE_);
+		jsons_.reserve(JSON_POOL_SIZE_);
+		ktxs_.reserve(KTX_POOL_SIZE_);
+		shaderSrcs_.reserve(SHADER_SRC_POOL_SIZE_);
+		gltfs_.reserve(GLTF_POOL_SIZE_);
+		transformBuffers_.reserve(TRANSFORM_BUFFER_POOL_SIZE_);
+		modelMatrixPool_.Init_(MODEL_MATRIX_POOL_SIZE_);
 	}
 	void ResourceManager::FreeAssetResources()
 	{
 		sge_MESSAGE("ResourceManager::FreeAssetResources() called.");
-		if (FREE_DATA_POST_INIT_)
+		if (FREE_ASSETS_POST_INIT_)
 		{
 			jsons_.clear();
 			gltfs_.clear();
@@ -63,12 +43,9 @@ namespace sge
 		}
 	}
 
-	Handle<JsonData> ResourceManager::LoadJson(const std::string_view path)
+	UniqueResourceHandle<JsonData> ResourceManager::LoadJson(const std::string_view path)
 	{
-		if((jsons_.capacity() != DEFAULT_JSON_POOL_SIZE_) ||
-		   (ktxs_.capacity() != DEFAULT_KTX_POOL_SIZE_) ||
-		   (shaderSrcs_.capacity() != DEFAULT_SHADER_SRC_POOL_SIZE_) ||
-		   (gltfs_.capacity() != DEFAULT_GLTF_POOL_SIZE_))
+		if(jsons_.capacity() != JSON_POOL_SIZE_)
 		{
 			sge_ERROR("Trying to allocate resources post initialization! This is not yet handled!");
 		}
@@ -77,7 +54,7 @@ namespace sge
 		assert(extension == ".json"); // Make sure we're loading a .json
 		if (extension == ".gltf") { sge_ERROR("Please use LoadGltf to load composite gltf files instead."); };
 
-		Resource<JsonData> newElement;
+		UniqueResource<JsonData> newElement;
 		auto& newJson = newElement.resourceData;
 
 		const std::string str = LoadFile_(path);
@@ -89,19 +66,16 @@ namespace sge
 		assert(!ElementExists_<JsonData>(jsons_, newElement.hash));
 		jsons_.push_back(newElement);
 
-		Handle<JsonData> handle;
+		UniqueResourceHandle<JsonData> handle;
 		handle.hash = newElement.hash;
 		handle.ptr = &jsons_.back();
 		assert(handle.IsValid());
 		return handle;
 	}
 
-	Handle<GltfData> ResourceManager::LoadGltf(const std::string_view path)
+	UniqueResourceHandle<GltfData> ResourceManager::LoadGltf(const std::string_view path)
 	{
-		if((jsons_.capacity() != DEFAULT_JSON_POOL_SIZE_) ||
-		   (ktxs_.capacity() != DEFAULT_KTX_POOL_SIZE_) ||
-		   (shaderSrcs_.capacity() != DEFAULT_SHADER_SRC_POOL_SIZE_) ||
-		   (gltfs_.capacity() != DEFAULT_GLTF_POOL_SIZE_))
+		if(gltfs_.capacity() != GLTF_POOL_SIZE_)
 		{
 			sge_ERROR("Trying to allocate resources post initialization! This is not yet handled!");
 		}
@@ -118,7 +92,7 @@ namespace sge
 		}
 		assert(std::filesystem::exists(path));
 
-		Resource<GltfData> newElement;
+		UniqueResource<GltfData> newElement;
 		auto& newGltf = newElement.resourceData;
 
 		tinygltf::TinyGLTF loader;
@@ -197,13 +171,13 @@ namespace sge
 		assert(!ElementExists_<GltfData>(gltfs_, newElement.hash));
 		gltfs_.push_back(newElement);
 
-		Handle<GltfData> handle;
+		UniqueResourceHandle<GltfData> handle;
 		handle.hash = newElement.hash;
 		handle.ptr = &gltfs_.back();
 		return handle;
 	}
 
-	Model::Definition ResourceManager::GenerateDefinitionFrom(const Handle<GltfData>& handle, const GltfData::GltfAttributes relevantData, const ShadingMode requiredShadingModes) const
+	Model::Definition ResourceManager::GenerateDefinitionFrom(const UniqueResourceHandle<GltfData>& handle, const GltfData::GltfAttributes relevantData, const ShadingMode requiredShadingModes) const
 	{
 		assert((uint32_t)relevantData > 0); // Need at least something to load.
 
@@ -300,7 +274,7 @@ namespace sge
 				positionsBuffer.isIndexBuffer = false;
 				positionsBuffer.mutability = (Mutability)GL_STATIC_DRAW;
 				positionsBuffer.bufferContentsType = VertexBuffer::Type::POSITIONS_VEC3;
-				positionsBuffer.preComputedHash = Hash(buffer.data.data() + bufferView.byteOffset, bufferView.byteLength, 0);
+				positionsBuffer.preComputedHash = Hash(buffer.data.data() + bufferView.byteOffset, (uint32_t)bufferView.byteLength, 0);
 				memcpy(positionsBuffer.begin, positions.data(), bufferView.byteLength);
 				assert(positionsBuffer.IsValid());
 			}
@@ -326,7 +300,7 @@ namespace sge
 						newEboDef.isIndexBuffer = true;
 						newEboDef.mutability = (Mutability)GL_STATIC_DRAW;
 						newEboDef.bufferContentsType = VertexBuffer::Type::INDICES_UINT32;
-						newEboDef.preComputedHash = Hash(buffer.data.data() + bufferView.byteOffset, bufferView.byteLength, 0);
+						newEboDef.preComputedHash = Hash(buffer.data.data() + bufferView.byteOffset, (uint32_t)bufferView.byteLength, 0);
 						memcpy(newEboDef.begin, buffer.data.data() + bufferView.byteOffset, bufferView.byteLength);
 						assert(newEboDef.IsValid());
 					}break;
@@ -338,7 +312,7 @@ namespace sge
 							reinterpret_cast<uint16_t*>(buffer.data.data() + bufferView.byteOffset),
 							reinterpret_cast<uint16_t*>(buffer.data.data() + bufferView.byteOffset + bufferView.byteLength));
 						std::vector<uint32_t> convertedIndices;
-						const uint32_t nrOfIndices = bufferView.byteLength / sizeof(unsigned short);
+						const uint32_t nrOfIndices = (uint32_t)(bufferView.byteLength / sizeof(unsigned short));
 						convertedIndices.resize((size_t)nrOfIndices);
 						assert(inputIndices.size() == convertedIndices.size());
 						for(uint32_t index = 0; index < nrOfIndices; index++)
@@ -353,7 +327,7 @@ namespace sge
 						newEboDef.isIndexBuffer = true;
 						newEboDef.mutability = (Mutability)GL_STATIC_DRAW;
 						newEboDef.bufferContentsType = VertexBuffer::Type::INDICES_UINT32;
-						newEboDef.preComputedHash = Hash(inputIndices.data(), inputIndices.size() / sizeof(uint16_t), 0);
+						newEboDef.preComputedHash = Hash(inputIndices.data(), (uint32_t)(inputIndices.size() / sizeof(uint16_t)), 0);
 						memcpy(newEboDef.begin, convertedIndices.data(), (size_t)nrOfIndices * sizeof(uint32_t));
 						assert(newEboDef.IsValid());
 					}break;
@@ -421,7 +395,7 @@ namespace sge
 					normalsBuffer.isIndexBuffer = false;
 					normalsBuffer.mutability = (Mutability)GL_STATIC_DRAW;
 					normalsBuffer.bufferContentsType = VertexBuffer::Type::NORMALS;
-					normalsBuffer.preComputedHash = Hash(bufferNormals.data.data() + bufferViewNormals.byteOffset, bufferViewNormals.byteLength, 0);
+					normalsBuffer.preComputedHash = Hash(bufferNormals.data.data() + bufferViewNormals.byteOffset, (uint32_t)bufferViewNormals.byteLength, 0);
 					memcpy(normalsBuffer.begin, normals.data(), bufferViewNormals.byteLength);
 					assert(normalsBuffer.IsValid());
 				}
@@ -438,7 +412,7 @@ namespace sge
 					tangentsBuffer.isIndexBuffer = false;
 					tangentsBuffer.mutability = (Mutability)GL_STATIC_DRAW;
 					tangentsBuffer.bufferContentsType = VertexBuffer::Type::TANGENTS;
-					tangentsBuffer.preComputedHash = Hash(tangents.data(), tangents.size() / sizeof(glm::vec3), 0);
+					tangentsBuffer.preComputedHash = Hash(tangents.data(), (uint32_t)(tangents.size() / sizeof(glm::vec3)), 0);
 					memcpy(tangentsBuffer.begin, tangents.data(), tangents.size() * sizeof(glm::vec3));
 					assert(tangentsBuffer.IsValid());
 				}
@@ -463,7 +437,7 @@ namespace sge
 				uvsBuffer.isIndexBuffer = false;
 				uvsBuffer.mutability = (Mutability)GL_STATIC_DRAW;
 				uvsBuffer.bufferContentsType = VertexBuffer::Type::UVS;
-				uvsBuffer.preComputedHash = Hash(buffer.data.data() + bufferView.byteOffset, bufferView.byteLength, 0);
+				uvsBuffer.preComputedHash = Hash(buffer.data.data() + bufferView.byteOffset, (uint32_t)bufferView.byteLength, 0);
 				memcpy(uvsBuffer.begin, buffer.data.data() + bufferView.byteOffset, bufferView.byteLength);
 				assert(uvsBuffer.IsValid());
 			}
@@ -587,7 +561,7 @@ namespace sge
 	}
 
 	Texture::Definition ResourceManager::GenerateDefinitionFrom
-		(const Handle<KtxData>& handle,
+		(const UniqueResourceHandle<KtxData>& handle,
 		 const Texture::SamplingMode minifyingMode,
 		 const Texture::SamplingMode magnifyingMode,
 		 const Texture::WrappingMode onS,
@@ -611,9 +585,9 @@ namespace sge
 			// TODO: handle cubemaps
 			newTextureDef.datas[level] = new uint8_t[image.size(level)];
 			memcpy(newTextureDef.datas[level], image.data(0, 0, level), image.size(level));
-			newTextureDef.byteLens.push_back(image.size(level));
-			newTextureDef.widths.push_back(image.extent(level).x);
-			newTextureDef.heights.push_back(image.extent(level).y);
+			newTextureDef.byteLens.push_back((uint32_t)image.size(level));
+			newTextureDef.widths.push_back((uint32_t)image.extent(level).x);
+			newTextureDef.heights.push_back((uint32_t)image.extent(level).y);
 		}
 		newTextureDef.format = Texture::Format::RGBA_B8; // TODO: add support for more formats.
 		newTextureDef.generateMipMaps = false;
@@ -623,7 +597,7 @@ namespace sge
 		newTextureDef.mutability = mutability;
 		newTextureDef.onS = onS;
 		newTextureDef.onT = onT;
-		newTextureDef.preComputedHash = Hash(image.data(0,0,0), image.size(0), 0);
+		newTextureDef.preComputedHash = Hash(image.data(0,0,0), (uint32_t)image.size(0), 0);
 		switch(image.format())
 		{
 			case gli::texture::format_type::FORMAT_RGBA_ASTC_4X4_UNORM_BLOCK16:
@@ -647,12 +621,9 @@ namespace sge
 		return newTextureDef;
 	}
 
-	Handle<KtxData> ResourceManager::LoadKtx(const std::string_view path)
+	UniqueResourceHandle<KtxData> ResourceManager::LoadKtx(const std::string_view path)
 	{
-		if((jsons_.capacity() != DEFAULT_JSON_POOL_SIZE_) ||
-		   (ktxs_.capacity() != DEFAULT_KTX_POOL_SIZE_) ||
-		   (shaderSrcs_.capacity() != DEFAULT_SHADER_SRC_POOL_SIZE_) ||
-		   (gltfs_.capacity() != DEFAULT_GLTF_POOL_SIZE_))
+		if(ktxs_.capacity() != KTX_POOL_SIZE_)
 		{
 			sge_ERROR("Trying to allocate resources post initialization! This is not yet handled!");
 		}
@@ -673,12 +644,12 @@ namespace sge
 		assert(std::filesystem::exists(path));
 
 
-		Resource<KtxData> newElement;
+		UniqueResource<KtxData> newElement;
 		auto& newKtx = newElement.resourceData;
 
 		newKtx.data = gli::load(path.data());
 		newElement.hash = Hash(newKtx.data.data(), (uint32_t)newKtx.data.size(), 0);
-		newElement.hash.Accumulate(imageType.c_str(), imageType.length());
+		newElement.hash.Accumulate(imageType.c_str(), (uint32_t)imageType.length());
 		Hash associatedMesh = Hash(meshName.data(), (uint32_t)meshName.length(), 0);
 		newKtx.associatedMesh = associatedMesh;
 		newElement.hash.Accumulate(associatedMesh);
@@ -706,7 +677,7 @@ namespace sge
 			assert(newElement.IsValid());
 			ktxs_.push_back(newElement);
 
-			Handle<KtxData> handle;
+			UniqueResourceHandle<KtxData> handle;
 			handle.hash = newElement.hash;
 			handle.ptr = &ktxs_.back();
 			assert(handle.IsValid());
@@ -716,7 +687,7 @@ namespace sge
 		{
 			sge_WARNING("Element already in a resource manager's list! Returning handle to existing element.");
 			auto& existingElement = GetElement_<KtxData>(ktxs_, newElement.hash);
-			Handle<KtxData> handle;
+			UniqueResourceHandle<KtxData> handle;
 			handle.hash = existingElement.hash;
 			handle.ptr = &existingElement;
 			assert(handle.IsValid());
@@ -724,12 +695,9 @@ namespace sge
 		}
 	}
 
-	Handle<ShaderData> ResourceManager::LoadShader(const std::string_view vertexPath, const std::string_view fragmentPath, const std::string_view geometryPath)
+	UniqueResourceHandle<ShaderData> ResourceManager::LoadShader(const std::string_view vertexPath, const std::string_view fragmentPath, const std::string_view geometryPath)
 	{
-		if((jsons_.capacity() != DEFAULT_JSON_POOL_SIZE_) ||
-		   (ktxs_.capacity() != DEFAULT_KTX_POOL_SIZE_) ||
-		   (shaderSrcs_.capacity() != DEFAULT_SHADER_SRC_POOL_SIZE_) ||
-		   (gltfs_.capacity() != DEFAULT_GLTF_POOL_SIZE_))
+		if(shaderSrcs_.capacity() != SHADER_SRC_POOL_SIZE_)
 		{
 			sge_ERROR("Trying to allocate resources post initialization! This is not yet handled!");
 		}
@@ -752,7 +720,7 @@ namespace sge
 		}
 		assert(!ElementExists_<ShaderData>(shaderSrcs_, hash));
 
-		shaderSrcs_.push_back(Resource<ShaderData>());
+		shaderSrcs_.push_back(UniqueResource<ShaderData>());
 		auto& newElement = shaderSrcs_.back();
 		auto& newShaderSrc = newElement.resourceData;
 
@@ -767,16 +735,42 @@ namespace sge
 		newElement.hash = hash;
 		assert(newElement.IsValid());
 
-		Handle<ShaderData> handle;
+		UniqueResourceHandle<ShaderData> handle;
 		handle.hash = newElement.hash;
 		handle.ptr = &shaderSrcs_.back();
 		assert(handle.IsValid());
 		return handle;
 	}
 
-	glm::mat4* ResourceManager::AllocateTransforms(const void* const data, const uint32_t byteLen)
+	HashlessResourceHandle<TransformsBuffer> ResourceManager::CreateTransformsBuffer(const std::vector<glm::mat4>& transforms)
 	{
-		return transformsPool_.Allocate(byteLen / sizeof(glm::mat4));
+		HashlessResource<TransformsBuffer> newElement;
+		auto& newValue = newElement.resourceData;
+		newValue.Init_(transforms);
+
+		assert(newValue.IsValid());
+		assert(newElement.IsValid());
+		transformBuffers_.push_back(newElement);
+
+		HashlessResourceHandle<TransformsBuffer> handle;
+		handle.ptr = &transformBuffers_.back();
+		handle.IsValid();
+		return handle;
+	}
+
+	glm::mat4 * ResourceManager::AllocateModelMatrices(const uint32_t nrOfTransforms)
+	{
+		return modelMatrixPool_.Allocate(nrOfTransforms);
+	}
+
+	glm::mat4 * ResourceManager::GetModelMatricesBegin()
+	{
+		return modelMatrixPool_.begin_;
+	}
+
+	uint32_t ResourceManager::GetMaxNrOfModelMatrices() const
+	{
+		return modelMatrixPool_.max_;
 	}
 	
 	void ResourceManager::Shutdown()
@@ -786,6 +780,8 @@ namespace sge
 		ktxs_.clear();
 		shaderSrcs_.clear();
 		gltfs_.clear();
+		transformBuffers_.clear();
+		modelMatrixPool_.Destroy_();
 	}
 
 	std::string ResourceManager::LoadFile_(const std::string_view path)

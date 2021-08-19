@@ -19,30 +19,32 @@ namespace sge
 
 		struct DrawCall_
 		{
-			Handle<Model> model = {};
+			UniqueResourceHandle<Model> model = {};
 			ShadingMode mode = {};
 			int32_t primitive = 0;
 		};
 
 		// std::vector<Resource<Shader>> shaders_ = {};
-		Resource<Shader> gizmoShader_ = {};
-		Resource<Shader> goochShader_ = {};
-		Resource<Shader> albedoOnlyShader_ = {};
-		Resource<Shader> blinnPhongShader_ = {};
-		Resource<Shader> blinnPhongNormalmappedShader_ = {};
+		UniqueResource<Shader> gizmoShader_ = {};
+		UniqueResource<Shader> goochShader_ = {};
+		UniqueResource<Shader> albedoOnlyShader_ = {};
+		UniqueResource<Shader> blinnPhongShader_ = {};
+		UniqueResource<Shader> blinnPhongNormalmappedShader_ = {};
 		// Resource<Shader> shadowPassShader_ = {};
 		// Resource<Shader> deferredPassShader_ = {};
 		// Resource<Shader> postprocessPassShader_ = {};
 
-		std::vector<Resource<VertexBuffer>> vertexBuffers_ = {};
-		std::vector<Resource<Texture>> textures_ = {};
-		std::vector<Resource<Material>> materials_ = {};
-		std::vector<Resource<IndexedMesh>> indexedMeshes_ = {};
-		std::vector<Resource<Model>> models_ = {};
+		std::vector<UniqueResource<VertexBuffer>> vertexBuffers_ = {};
+		std::vector<UniqueResource<Texture>> textures_ = {};
+		std::vector<UniqueResource<Material>> materials_ = {};
+		std::vector<UniqueResource<IndexedMesh>> indexedMeshes_ = {};
+		std::vector<UniqueResource<Model>> models_ = {};
 
 		std::vector<DrawCall_> drawQueue_ = {};
 
 		glm::mat4 viewMatrix_ = DEFAULT_VIEW_MATRIX;
+
+		uint32_t modelMatricesVBO_ = 0;
 
 		// TODO: implement this
 		static std::vector<glm::mat4> FrustumCulling_(const glm::ivec2 resolution,
@@ -59,15 +61,16 @@ namespace sge
 		void Shutdown();
 		void Update();
 
-		Handle<Shader> CreateShader(const Handle<ShaderData>& handle);
-		Handle<VertexBuffer> CreateVertexBuffer(const VertexBuffer::Definition& def);
-		Handle<Texture> CreateTexture(const Texture::Definition& def);
-		Handle<Material> CreateMaterial(const Material::Definition& def);
-		Handle<IndexedMesh> CreateMesh(const IndexedMesh::Definition& def);
-		Handle<Model> CreateModel(const Model::Definition& def);
+		UniqueResourceHandle<Shader> CreateShader(const UniqueResourceHandle<ShaderData>& handle);
+		UniqueResourceHandle<VertexBuffer> CreateVertexBuffer(const VertexBuffer::Definition& def);
+		UniqueResourceHandle<Texture> CreateTexture(const Texture::Definition& def);
+		UniqueResourceHandle<Material> CreateMaterial(const Material::Definition& def);
+		UniqueResourceHandle<IndexedMesh> CreateMesh(const IndexedMesh::Definition& def);
+		UniqueResourceHandle<Model> CreateModel(const Model::Definition& def);
 
-		Handle<Shader> GetShaderForShadingMode(const ShadingMode mode);
+		UniqueResourceHandle<Shader> GetShaderForShadingMode(const ShadingMode mode);
+		void BindModelMatricesVbo() const;
 
-		void Schedule(const Handle<Model>& model, const Primitive primitive, const ShadingMode mode);
+		void Schedule(const UniqueResourceHandle<Model>& model, const Primitive primitive, const ShadingMode mode);
 	};
 }//!sge

@@ -6,6 +6,20 @@
 
 namespace sge
 {
+	bool VertexBuffer::Definition::IsValid() const
+	{
+		bool returnVal = (bool)componentType;
+		returnVal &= (bool)componentsPerElement;
+		returnVal &= (bool)bufferContentsType;
+		returnVal &= (bool)mutability;
+		if(mutability == Mutability::STATIC) // If it's dynamic, begin, byteLen and preComputedHash can be 0.
+		{
+			returnVal &= (bool)begin;
+			returnVal &= (bool)byteLen;
+			returnVal &= (bool)preComputedHash.value;
+		}
+		return returnVal;
+	}
 	void VertexBuffer::Init_(const Definition& def)
 	{
 		assert(def.IsValid());
@@ -30,6 +44,7 @@ namespace sge
 
 		if(def.begin)
 		{
+			// Note: this is the reason there needs to be a preComputedHash.
 			delete[] def.begin; // Free buffer data stored on heap.
 		}
 
@@ -42,6 +57,7 @@ namespace sge
 		assert(mutability == Mutability::DYNAMIC && target == GL_ARRAY_BUFFER); // Not handling dynamic indices.
 		glBindBuffer(target, VBO);
 		// glBufferSubData(target, 0, (GLsizeiptr)byteLen, data);
+		// Note: this recreates the whole buffer... Not ideal.
 		glBufferData(target, (GLsizeiptr)byteLen, data, (GLenum)Mutability::DYNAMIC);
 		sge_CHECK_GL_ERROR();
 	}
@@ -63,19 +79,61 @@ namespace sge
 	}
 	uint32_t VertexBuffer::Stride() const
 	{
-		switch(componentType)
+		switch(bufferContentsType)
 		{
-			case NumberType::FLOAT:
+			case sge::VertexBuffer::Type::POSITIONS_VEC3:
 			{
+				assert(componentType == NumberType::FLOAT && componentsPerElement == 3);
 				return sizeof(float) * componentsPerElement;
 			}break;
-			case NumberType::UINT:
+			case sge::VertexBuffer::Type::POSITIONS_VEC2:
 			{
+				assert(componentType == NumberType::FLOAT && componentsPerElement == 2);
+				return sizeof(float) * componentsPerElement;
+			}break;
+			case sge::VertexBuffer::Type::NORMALS:
+			{
+				assert(componentType == NumberType::FLOAT && componentsPerElement == 3);
+				return sizeof(float) * componentsPerElement;
+			}break;
+			case sge::VertexBuffer::Type::TANGENTS:
+			{
+				assert(componentType == NumberType::FLOAT && componentsPerElement == 3);
+				return sizeof(float) * componentsPerElement;
+			}break;
+			case sge::VertexBuffer::Type::BITANGENTS:
+			{
+				assert(componentType == NumberType::FLOAT && componentsPerElement == 3);
+				return sizeof(float) * componentsPerElement;
+			}break;
+			case sge::VertexBuffer::Type::UVS:
+			{
+				assert(componentType == NumberType::FLOAT && componentsPerElement == 2);
+				return sizeof(float) * componentsPerElement;
+			}break;
+			case sge::VertexBuffer::Type::INDICES_UINT32:
+			{
+				assert(componentType == NumberType::UINT && componentsPerElement == 1);
 				return sizeof(uint32_t) * componentsPerElement;
+			}break;
+			case sge::VertexBuffer::Type::MODEL_MATRIX:
+			{
+				assert(componentType == NumberType::FLOAT && componentsPerElement == 16);
+				return sizeof(float) * componentsPerElement;
+			}break;
+			case sge::VertexBuffer::Type::GENERIC_VEC3:
+			{
+				assert(componentType == NumberType::FLOAT && componentsPerElement == 3);
+				return sizeof(float) * componentsPerElement;
+			}break;
+			case sge::VertexBuffer::Type::GENERIC_FLOAT:
+			{
+				assert(componentType == NumberType::FLOAT && componentsPerElement == 1);
+				return sizeof(float) * componentsPerElement;
 			}break;
 			default:
 			{
-				sge_ERROR("Unexpected component type!");
+				sge_ERROR("Unexpected vertex buffer content type!");
 			}break;
 		}
 	}

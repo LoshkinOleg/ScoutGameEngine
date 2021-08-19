@@ -63,6 +63,11 @@ namespace sge
 		materials_.reserve(MATERIALS_POOL_SIZE_);
 		indexedMeshes_.reserve(INDEXED_MESHES_POOL_SIZE_);
 		models_.reserve(MODELS_POOL_SIZE_);
+
+		// Create buffer for all model matrices.
+		glGenBuffers(1, &modelMatricesVBO_);
+		glBindBuffer(GL_ARRAY_BUFFER, modelMatricesVBO_);
+		glBufferData(GL_ARRAY_BUFFER, (GLsizeiptr)(rm.GetMaxNrOfModelMatrices() * sizeof(glm::mat4)), rm.GetModelMatricesBegin(), GL_DYNAMIC_DRAW);
 	}
 	void Renderer::Shutdown()
 	{
@@ -90,6 +95,8 @@ namespace sge
 		// deferredPassShader_.resourceData.Destroy_();
 		// postprocessPassShader_.resourceData.Destroy_();
 
+		glDeleteBuffers(1, &modelMatricesVBO_);
+
 		models_.clear();
 		indexedMeshes_.clear();
 		vertexBuffers_.clear();
@@ -101,6 +108,11 @@ namespace sge
 	void Renderer::Update()
 	{
 		glClear(CLEAR_FLAGS_);
+
+		// Upload transforms to gpu.
+		auto& rm = Engine::Get().GetResourceManager();
+		glBindBuffer(GL_ARRAY_BUFFER, modelMatricesVBO_);
+		glBufferSubData(GL_ARRAY_BUFFER, 0, (GLsizeiptr)(rm.GetMaxNrOfModelMatrices()), rm.GetModelMatricesBegin());
 
 		// TODO: update view matrix using player input.
 
@@ -133,84 +145,96 @@ namespace sge
 		drawQueue_.clear();
 	}
 
-	Handle<Shader> Renderer::CreateShader(const Handle<ShaderData>& handle)
+	UniqueResourceHandle<Shader> Renderer::CreateShader(const UniqueResourceHandle<ShaderData>& handle)
 	{
 		sge_ERROR("You're not supposed to create your own shaders just yet.");
 	}
 
-	Handle<VertexBuffer> Renderer::CreateVertexBuffer(const VertexBuffer::Definition & def)
+	UniqueResourceHandle<VertexBuffer> Renderer::CreateVertexBuffer(const VertexBuffer::Definition & def)
 	{
-		vertexBuffers_.push_back(Resource<VertexBuffer>());
+		assert(vertexBuffers_.size() + 1 < VERTEX_BUFFER_POOL_SIZE_);
+
+		vertexBuffers_.push_back(UniqueResource<VertexBuffer>());
 		auto& newElement = vertexBuffers_.back();
 		auto& newValue = newElement.resourceData;
 		newElement.hash = Hash(def.begin, def.byteLen, 0);
 		newValue.Init_(def);
-		Handle<VertexBuffer> handle;
+		UniqueResourceHandle<VertexBuffer> handle;
 		handle.hash = newElement.hash;
 		handle.ptr = &vertexBuffers_.back();
+		assert(newElement.IsValid());
+		assert(newValue.IsValid());
 		assert(handle.IsValid());
 		return handle;
 	}
 
-	Handle<Texture> Renderer::CreateTexture(const Texture::Definition & def)
+	UniqueResourceHandle<Texture> Renderer::CreateTexture(const Texture::Definition & def)
 	{
-		textures_.push_back(Resource<Texture>());
+		assert(textures_.size() + 1 < TEXTURES_POOL_SIZE_);
+
+		textures_.push_back(UniqueResource<Texture>());
 		auto& newElement = textures_.back();
 		auto& newValue = newElement.resourceData;
 		newElement.hash = Hash(def.datas[0], def.byteLens[0], 0);
 		newValue.Init_(def);
-		Handle<Texture> handle;
+		UniqueResourceHandle<Texture> handle;
 		handle.hash = newElement.hash;
 		handle.ptr = &newElement;
 		assert(handle.IsValid());
 		return handle;
 	}
 
-	Handle<Material> Renderer::CreateMaterial(const Material::Definition & def)
+	UniqueResourceHandle<Material> Renderer::CreateMaterial(const Material::Definition & def)
 	{
-		materials_.push_back(Resource<Material>());
+		assert(materials_.size() + 1 < MATERIALS_POOL_SIZE_);
+
+		materials_.push_back(UniqueResource<Material>());
 		auto& newElement = materials_.back();
 		auto& newValue = newElement.resourceData;
 		newElement.hash = def.ComputeHash();
 		newValue.Init_(def);
-		Handle<Material> handle;
+		UniqueResourceHandle<Material> handle;
 		handle.hash = newElement.hash;
 		handle.ptr = &newElement;
 		assert(handle.IsValid());
 		return handle;
 	}
 
-	Handle<IndexedMesh> Renderer::CreateMesh(const IndexedMesh::Definition & def)
+	UniqueResourceHandle<IndexedMesh> Renderer::CreateMesh(const IndexedMesh::Definition & def)
 	{
-		indexedMeshes_.push_back(Resource<IndexedMesh>());
+		assert(indexedMeshes_.size() + 1 < INDEXED_MESHES_POOL_SIZE_);
+
+		indexedMeshes_.push_back(UniqueResource<IndexedMesh>());
 		auto& newElement = indexedMeshes_.back();
 		auto& newValue = newElement.resourceData;
 		newValue.Init_(def);
 		newElement.hash = def.ComputeHash();
-		Handle<IndexedMesh> handle;
+		UniqueResourceHandle<IndexedMesh> handle;
 		handle.hash = newElement.hash;
 		handle.ptr = &newElement;
 		assert(handle.IsValid());
 		return handle;
 	}
 
-	Handle<Model> Renderer::CreateModel(const Model::Definition & def)
+	UniqueResourceHandle<Model> Renderer::CreateModel(const Model::Definition & def)
 	{
-		models_.push_back(Resource<Model>());
+		assert(models_.size() + 1 < MODELS_POOL_SIZE_);
+
+		models_.push_back(UniqueResource<Model>());
 		auto& newElement = models_.back();
 		auto& newValue = newElement.resourceData;
 		newValue.Init_(def);
 		newElement.hash = def.ComputeHash();
-		Handle<Model> handle;
+		UniqueResourceHandle<Model> handle;
 		handle.hash = newElement.hash;
 		handle.ptr = &newElement;
 		assert(handle.IsValid());
 		return handle;
 	}
 
-	Handle<Shader> Renderer::GetShaderForShadingMode(const ShadingMode mode)
+	UniqueResourceHandle<Shader> Renderer::GetShaderForShadingMode(const ShadingMode mode)
 	{
-		Handle<Shader> handle;
+		UniqueResourceHandle<Shader> handle;
 		switch(mode)
 		{
 			case ShadingMode::GIZMO:
@@ -266,7 +290,12 @@ namespace sge
 		return handle;
 	}
 
-	void Renderer::Schedule(const Handle<Model>& model, const Primitive primitive, const ShadingMode mode)
+	void Renderer::BindModelMatricesVbo() const
+	{
+		glBindBuffer(GL_ARRAY_BUFFER, modelMatricesVBO_);
+	}
+
+	void Renderer::Schedule(const UniqueResourceHandle<Model>& model, const Primitive primitive, const ShadingMode mode)
 	{
 		assert(model->IsValid() && (uint32_t)mode);
 		drawQueue_.push_back(DrawCall_());

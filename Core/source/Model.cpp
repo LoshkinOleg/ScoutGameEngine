@@ -42,7 +42,7 @@ namespace sge
 		{
 			indexedMeshes.push_back(renderer.CreateMesh(meshDef));
 		}
-		transforms.Init_(def.transforms);
+		transforms = rm.CreateTransformsBuffer(def.transforms);
 	}
 	void Model::Draw_(const uint32_t primitive, const ShadingMode mode) const
 	{
@@ -50,8 +50,7 @@ namespace sge
 		assert(transforms.IsValid());
 		for(const auto& mesh : indexedMeshes)
 		{
-			transforms.Bind(mesh->VAO, mesh->vertexBuffers.size()); // iModelMatrix always comes after all the per-vertex attributes.
-			mesh->Draw_(transforms.NrOfTransforms(), primitive, mode);
+			mesh->Draw_(transforms, primitive, mode);
 		}
 	}
 }//!sge
