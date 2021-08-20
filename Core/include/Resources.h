@@ -4,13 +4,15 @@
 
 namespace sge
 {
-	struct I_Validateable
+	class I_Validateable
 	{
+	public:
 		virtual bool IsValid() const = 0;
 	};
 
-	struct Hash: public I_Validateable
+	class Hash: public I_Validateable
 	{
+	public:
 		constexpr static const uint64_t HASHING_SEED_ = 0x1337;
 
 		uint64_t value = 0;
@@ -48,8 +50,9 @@ namespace sge
 	};
 
 	template <typename Type>
-	struct UniqueResource: public I_Validateable
+	class HashableResource: public I_Validateable
 	{
+	public:
 		Hash hash = 0;
 		Type resourceData = {};
 
@@ -57,30 +60,33 @@ namespace sge
 	};
 
 	template <typename Type>
-	struct HashlessResource: public I_Validateable
+	class HashlessResource: public I_Validateable
 	{
+	public:
 		Type resourceData = {};
 
 		bool IsValid() const override;
 	};
 
 	template <typename Type>
-	struct UniqueResourceHandle: public I_Validateable
+	class HashableHandle: public I_Validateable
 	{
+	public:
 		Hash hash = 0;
-		UniqueResource<Type>* ptr = nullptr;
+		HashableResource<Type>* ptr = nullptr;
 
 		Type* operator->() const;
 		Type& operator*() const;
-		bool operator==(const UniqueResourceHandle<Type>& other) const;
-		bool operator==(const UniqueResource<Type>& resource) const;
+		bool operator==(const HashableHandle<Type>& other) const;
+		bool operator==(const HashableResource<Type>& resource) const;
 
 		bool IsValid() const override;
 	};
 
 	template <typename Type>
-	struct HashlessHandle: public I_Validateable
+	class HashlessHandle: public I_Validateable
 	{
+	public:
 		HashlessResource<Type>* ptr = nullptr;
 
 		inline Type* operator->() const

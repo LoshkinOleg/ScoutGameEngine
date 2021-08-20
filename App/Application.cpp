@@ -7,7 +7,7 @@
 class Game final : public sge::I_Application
 {
 private:
-	sge::UniqueResourceHandle<sge::StaticModel> model = {};
+	sge::HashableHandle<sge::StaticModel> model = {};
 public:
 	void Init() override
 	{

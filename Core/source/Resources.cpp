@@ -108,7 +108,7 @@ namespace sge
 	}
 
 	template<typename Type>
-	bool UniqueResource<Type>::IsValid() const
+	bool HashableResource<Type>::IsValid() const
 	{
 		bool returnVal = hash.IsValid();
 		returnVal &= resourceData.IsValid();
@@ -125,29 +125,29 @@ namespace sge
 	}
 
 	template<typename Type>
-	Type* UniqueResourceHandle<Type>::operator->() const
+	Type* HashableHandle<Type>::operator->() const
 	{
 		assert(hash == ptr->hash);
 		return &ptr->resourceData;
 	}
 	template<typename Type>
-	Type& UniqueResourceHandle<Type>::operator*() const
+	Type& HashableHandle<Type>::operator*() const
 	{
 		assert(hash == ptr->hash);
 		return ptr->resourceData;
 	}
 	template<typename Type>
-	bool UniqueResourceHandle<Type>::operator==(const UniqueResourceHandle<Type>& other) const
+	bool HashableHandle<Type>::operator==(const HashableHandle<Type>& other) const
 	{
 		return hash == other.hash;
 	}
 	template<typename Type>
-	bool UniqueResourceHandle<Type>::operator==(const UniqueResource<Type>& resource) const
+	bool HashableHandle<Type>::operator==(const HashableResource<Type>& resource) const
 	{
 		return hash == resource.hash;
 	}
 	template<typename Type>
-	bool UniqueResourceHandle<Type>::IsValid() const
+	bool HashableHandle<Type>::IsValid() const
 	{
 		bool returnVal = hash.IsValid();
 		returnVal &= ptr->IsValid();

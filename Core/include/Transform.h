@@ -18,18 +18,32 @@ namespace sge
 		class MatrixRange: public I_Validateable
 		{
 		public:
-			glm::mat4* begin = nullptr;
+			glm::mat4* beginPtr = nullptr;
+			glm::mat4* endPtr = nullptr;
+			uint32_t beginIdx = 0;
+			uint32_t endIdx = 0;
 			uint32_t nrOfMatrices = 0;
+
+			MatrixRange() = delete;
+			MatrixRange(glm::mat4* const beginPtr, glm::mat4* const endPtr):
+				beginPtr(beginPtr), endPtr(endPtr), beginIdx(0), endIdx(endPtr - beginPtr), nrOfMatrices(endPtr - beginPtr){};
+			MatrixRange(glm::mat4* const beginPtr, const uint32_t nrOfMatrices):
+				beginPtr(beginPtr), endPtr(beginPtr + nrOfMatrices), beginIdx(0), endIdx(nrOfMatrices), nrOfMatrices(nrOfMatrices){};
+			MatrixRange(const uint32_t beginIdx, const uint32_t endIdx):
+				beginPtr(nullptr), endPtr(nullptr), beginIdx(beginIdx), endIdx(endIdx), nrOfMatrices(endIdx - beginIdx){};
+			MatrixRange(const uint32_t nrOfMatrices):
+				beginPtr(nullptr), endPtr(nullptr), beginIdx(0), endIdx(nrOfMatrices), nrOfMatrices(nrOfMatrices){};
 
 			bool IsValid() const override;
 		};
 
-		void Translate(const glm::vec3 deltaPos, const uint32_t begin, const uint32_t end);
-		void Rotate(const float radians, const glm::vec3 axis, const uint32_t begin, const uint32_t end);
-		void Scale(const glm::vec3 deltaScale, const uint32_t begin, const uint32_t end);
+		void Translate(const glm::vec3 deltaPos, const MatrixRange& range);
+		void Rotate(const float radians, const glm::vec3 axis, const MatrixRange& range);
+		void Scale(const glm::vec3 deltaScale, const MatrixRange& range);
 
-		const MatrixRange ReadMatrix(const uint32_t begin, const uint32_t end) const;
-		void WriteMatrix(const glm::mat4& value, const uint32_t begin, const uint32_t end);
+		const MatrixRange ReadMatrix(const MatrixRange& range) const;
+		void WriteMatrix(const glm::mat4& value, const MatrixRange& range);
+		void WriteMatrix(const MatrixRange& range);
 
 		const glm::mat4* const GetBegin() const;
 		uint32_t GetNrOfTransforms() const;

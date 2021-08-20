@@ -22,14 +22,14 @@ namespace sge
 			bool IsValid() const override;
 		};
 
-		HashlessHandle<TransformsBuffer> transforms = {};
-		std::vector<UniqueResourceHandle<IndexedMesh>> indexedMeshes = {};
-		std::vector<UniqueResourceHandle<IndexedMesh>> interlacedMeshes = {};
-
 		bool IsValid() const override;
 
 	private:
+		HashlessHandle<TransformsBuffer> transforms_ = {};
+		std::vector<HashableHandle<IndexedMesh>> indexedMeshes_ = {};
+		std::vector<HashableHandle<InterlacedMesh>> interlacedMeshes_ = {};
+
 		void Init_(const Definition& def);
-		void Draw_(const uint32_t primitive, const ShadingMode mode) const;
+		void Draw_(const ShadingMode mode) const;
 	};
 }//!sge

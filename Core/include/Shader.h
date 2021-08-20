@@ -3,16 +3,18 @@
 #include <string_view>
 #include <map>
 
+#include <glm/glm.hpp>
+
 #include "Resources.h"
-#include "globals.h"
+#include "EnumsAndFlags.h"
 
 namespace sge
 {
-	struct Shader: public I_Validateable
+	class Shader: public I_Validateable
 	{
-		uint32_t PROGRAM = 0;
-		std::map<Hash, uint32_t> uniformLocationCache = {};
+		friend class Renderer;
 
+	public:
 		void Bind() const;
 
 		int32_t GetUniformLocation(const std::string_view name);
@@ -25,11 +27,12 @@ namespace sge
 		bool IsValid() const override;
 
 	private:
-		friend class Renderer;
+		uint32_t PROGRAM_ = 0;
+		std::map<Hash, uint32_t> uniformLocationCache_ = {};
+
 		void Init_(const std::string_view vertexSrc,
 				   const std::string_view fragmentSrc,
-				   const std::string_view geometrySrc,
-				   const ShadingMode shadingMode);
+				   const std::string_view geometrySrc);
 		void UpdatePerFrameUniforms_(const glm::mat4& viewMatrix, const ShadingMode mode);
 		void Destroy_();
 	};

@@ -1,24 +1,56 @@
 #pragma once
 
-#include <cstdint>
-
 namespace sge
 {
-	enum class Mutability: uint32_t
+	enum class E_ColorFormat: unsigned
 	{
-		INVALID = 0,
-
+		RGBA_B8 = 0x8058, // GL_RGBA8
+		RED_F32 = 0x822E // GL_R32F
+	};
+	enum class E_Mutability: unsigned
+	{
 		STATIC = 0x88E4, // GL_STATIC_DRAW
 		DYNAMIC = 0x88E8 // GL_DYNAMIC_DRAW
 	};
-	enum class NumberType: uint32_t
+	enum class E_NumberType: unsigned
 	{
-		INVALID = 0,
-
 		UINT = 0x1405, // GL_UNSIGNED_INT
 		FLOAT = 0x1406 // GL_FLOAT
 	};
-	enum class ShadingMode: uint8_t
+	enum class E_DrawingPrimitive: unsigned
+	{
+		POINTS = 0, // GL_POINTS
+		LINES = 1, // GL_LINES
+		LINE_STRIP = 3, // GL_LINE_STRIP
+		TRIANGLES = 4, // GL_TRIANGLES
+	};
+	enum class E_VertexBufferTarget: unsigned
+	{
+		VBO = 0x8892, // GL_ARRAY_BUFFER
+		EBO = 0x8893 // GL_ELEMENT_ARRAY_BUFFER
+	};
+	enum class E_SamplingMode: unsigned
+	{
+		NEAREST = 0x2600, // GL_NEAREST
+		LINEAR = 0x2601, // GL_LINEAR
+		LINEAR_MIPMAP_NEAREST = 0x2701, // GL_LINEAR_MIPMAP_NEAREST
+		LINEAR_MIPMAP_LINEAR = 0x2703 // GL_LINEAR_MIPMAP_LINEAR
+	};
+	enum class E_WrappingMode: unsigned
+	{
+		CLAMP = 0x812F, // GL_CLAMP_TO_EDGE
+		REPEAT = 0x2901, // GL_REPEAT
+		MIRRORED_REPEAT = 0x8370 // GL_MIRRORED_REPEAT
+	};
+	enum class E_TextureCompressionMode: unsigned
+	{
+		NONE = 1,
+		ETC1 = 0x8D64, // GL_COMPRESSED_RGB8_ETC1
+		ETC2 = 0x9278, // GL_COMPRESSED_RGBA8_ETC2_EAC
+		ASTC_RGBA_4x4 = 0x93B0 // GL_COMPRESSED_RGBA_ASTC_4x4_KHR
+	};
+
+	enum F_ShadingMode: unsigned char
 	{
 		INVALID = 0,
 
@@ -32,29 +64,16 @@ namespace sge
 		POST_PROCESS_PASS = 1 << 6,
 		DEFERRED_PASS = 1 << 7
 	};
-	enum class TextureType: uint8_t
+	enum F_TextureType: unsigned char
 	{
 		INVALID = 0,
 
 		ALBEDO_MAP = 1 << 0,
 		SPECULAR_MAP = 1 << 1,
-		NORMAL_MAP = 1 << 2
+		NORMAL_MAP = 1 << 2,
+		HEIGHT_MAP = 1 << 3,
 	};
-	enum class DrawingPrimitive: uint32_t
-	{
-		POINTS = 0, // GL_POINTS
-		LINES = 1, // GL_LINES
-		LINE_STRIP = 3, // GL_LINE_STRIP
-		TRIANGLES = 4, // GL_TRIANGLES
-	};
-	enum class VertexBufferTarget: uint32_t
-	{
-		INVALID = 0,
-
-		VBO = 0x8892, // GL_ARRAY_BUFFER
-		EBO = 0x8893 // GL_ELEMENT_ARRAY_BUFFER
-	};
-	enum class VertexBufferType: uint16_t
+	enum F_VertexBufferType: unsigned short
 	{
 		INVALID = 0,
 
@@ -69,9 +88,14 @@ namespace sge
 		MODEL_MATRIX = 1 << 7,
 
 		GENERIC_VEC3 = 1 << 8,
-		GENERIC_FLOAT = 1 << 9
+		GENERIC_FLOAT = 1 << 9,
+
+		INTERLACED_GOOCH = POSITIONS_VEC3 | NORMALS,
+		INTERLACED_ALBEDO_ONLY = POSITIONS_VEC3 | UVS,
+		INTERLACED_BLINN_PHONG = POSITIONS_VEC3 | NORMALS | UVS,
+		INTERLACED_BLINN_PHONG_NORMALMAPPED = POSITIONS_VEC3 | NORMALS | TANGENTS | UVS
 	};
-	enum class GltfAttributes: uint8_t
+	enum F_3dFileAttributes: unsigned short
 	{
 		INVALID = 0,
 
@@ -81,7 +105,14 @@ namespace sge
 		UVS = 1 << 3,
 
 		INDICES = 1 << 4,
+		ALBEDO_MAP = 1 << 5,
+		SPECULAR_MAP = 1 << 6,
+		NORMAL_MAP = 1 << 7,
 
-		EVERYTHING = POSITIONS | NORMALS | TANGENTS | UVS | INDICES
+		EVERYTHING = -1,
+		GOOCH_ONLY = POSITIONS | NORMALS | INDICES,
+		ALBEDO_ONLY = POSITIONS | UVS | INDICES | ALBEDO_MAP,
+		BLINN_PHONG = POSITIONS | NORMALS | UVS | INDICES | ALBEDO_MAP | SPECULAR_MAP,
+		BLINN_PHONG_NORMALMAPPED = POSITIONS | NORMALS | TANGENTS | UVS | INDICES | ALBEDO_MAP | SPECULAR_MAP | NORMAL_MAP
 	};
 }//!sge

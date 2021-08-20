@@ -23,16 +23,16 @@ namespace sge
 			bool IsValid() const override;
 		};
 
-		std::vector<UniqueResourceHandle<Texture>> textures = {};
-		std::vector<glm::vec3> vec3s = {};
-		std::vector<float> floats = {};
-		ShadingMode shadingMode = ShadingMode::INVALID;
-
 		void Bind() const;
 
 		bool IsValid() const override;
 
 	private:
+		std::vector<HashableHandle<Texture>> textures_ = {};
+		std::vector<glm::vec3> vec3s_ = {};
+		std::vector<float> floats_ = {};
+		ShadingMode shadingMode_ = ShadingMode::INVALID;
+
 		void Init_(const Definition& def);
 	};
 }//!sge

@@ -2,10 +2,13 @@
 
 #include <filesystem>
 
+#define STB_IMAGE_IMPLEMENTATION
 #define TINYGLTF_IMPLEMENTATION
+#define TINYOBJLOADER_IMPLEMENTATION
+
+#include <stb_image.h>
 #include <tiny_gltf.h>
-#include <glm/gtx/quaternion.hpp>
-#include <glad/glad.h>
+#include <tiny_obj_loader.h>
 
 #include "Engine.h"
 
@@ -55,7 +58,7 @@ namespace sge
 		}
 	}
 
-	UniqueResourceHandle<JsonData> ResourceManager::LoadJson(const std::string_view path)
+	HashableHandle<JsonData> ResourceManager::LoadJson(const std::string_view path)
 	{
 		if(jsons_.capacity() != JSON_POOL_SIZE_)
 		{
@@ -66,7 +69,7 @@ namespace sge
 		assert(extension == ".json"); // Make sure we're loading a .json
 		if (extension == ".gltf") { sge_ERROR("Please use LoadGltf to load composite gltf files instead."); };
 
-		UniqueResource<JsonData> newElement;
+		HashableResource<JsonData> newElement;
 		auto& newJson = newElement.resourceData;
 
 		const std::string str = LoadFile_(path);
@@ -78,14 +81,14 @@ namespace sge
 		assert(!ElementExists_<JsonData>(jsons_, newElement.hash));
 		jsons_.push_back(newElement);
 
-		UniqueResourceHandle<JsonData> handle;
+		HashableHandle<JsonData> handle;
 		handle.hash = newElement.hash;
 		handle.ptr = &jsons_.back();
 		assert(handle.IsValid());
 		return handle;
 	}
 
-	UniqueResourceHandle<GltfData> ResourceManager::LoadGltf(const std::string_view path)
+	HashableHandle<GltfData> ResourceManager::LoadGltf(const std::string_view path)
 	{
 		if(gltfs_.capacity() != GLTF_POOL_SIZE_)
 		{
@@ -104,7 +107,7 @@ namespace sge
 		}
 		assert(std::filesystem::exists(path));
 
-		UniqueResource<GltfData> newElement;
+		HashableResource<GltfData> newElement;
 		auto& newGltf = newElement.resourceData;
 
 		tinygltf::TinyGLTF loader;
@@ -183,13 +186,13 @@ namespace sge
 		assert(!ElementExists_<GltfData>(gltfs_, newElement.hash));
 		gltfs_.push_back(newElement);
 
-		UniqueResourceHandle<GltfData> handle;
+		HashableHandle<GltfData> handle;
 		handle.hash = newElement.hash;
 		handle.ptr = &gltfs_.back();
 		return handle;
 	}
 
-	StaticModel::Definition ResourceManager::GenerateDefinitionFrom(const UniqueResourceHandle<GltfData>& handle, const GltfData::GltfAttributes relevantData, const ShadingMode requiredShadingModes) const
+	StaticModel::Definition ResourceManager::GenerateDefinitionFrom(const HashableHandle<GltfData>& handle, const GltfData::GltfAttributes relevantData, const ShadingMode requiredShadingModes) const
 	{
 		assert((uint32_t)relevantData > 0); // Need at least something to load.
 
@@ -592,7 +595,7 @@ namespace sge
 	}
 
 	Texture::Definition ResourceManager::GenerateDefinitionFrom
-		(const UniqueResourceHandle<KtxData>& handle,
+		(const HashableHandle<KtxData>& handle,
 		 const Texture::SamplingMode minifyingMode,
 		 const Texture::SamplingMode magnifyingMode,
 		 const Texture::WrappingMode onS,
@@ -620,7 +623,7 @@ namespace sge
 			newTextureDef.widths.push_back((uint32_t)image.extent(level).x);
 			newTextureDef.heights.push_back((uint32_t)image.extent(level).y);
 		}
-		newTextureDef.format = Texture::Format::RGBA_B8; // TODO: add support for more formats.
+		newTextureDef.format = Texture::ColorFormat::RGBA_B8; // TODO: add support for more formats.
 		newTextureDef.generateMipMaps = false;
 		newTextureDef.minifyingMode = minifyingMode;
 		newTextureDef.magnifyingMode = magnifyingMode;
@@ -633,15 +636,15 @@ namespace sge
 		{
 			case gli::texture::format_type::FORMAT_RGBA_ASTC_4X4_UNORM_BLOCK16:
 			{
-				newTextureDef.compression = Texture::Compression::ASTC_RGBA_4x4;
+				newTextureDef.compression = Texture::TextureCompressionMode::ASTC_RGBA_4x4;
 			}break;
 			case gli::texture::format_type::FORMAT_RGBA_ETC2_UNORM_BLOCK16:
 			{
-				newTextureDef.compression = Texture::Compression::ETC2;
+				newTextureDef.compression = Texture::TextureCompressionMode::ETC2;
 			}break;
 			case gli::texture::format_type::FORMAT_RGB_ETC_UNORM_BLOCK8:
 			{
-				newTextureDef.compression = Texture::Compression::ETC1;
+				newTextureDef.compression = Texture::TextureCompressionMode::ETC1;
 			}break;
 			default:
 			{
@@ -652,7 +655,7 @@ namespace sge
 		return newTextureDef;
 	}
 
-	UniqueResourceHandle<KtxData> ResourceManager::LoadKtx(const std::string_view path)
+	HashableHandle<KtxData> ResourceManager::LoadKtx(const std::string_view path)
 	{
 		if(ktxs_.capacity() != KTX_POOL_SIZE_)
 		{
@@ -675,7 +678,7 @@ namespace sge
 		assert(std::filesystem::exists(path));
 
 
-		UniqueResource<KtxData> newElement;
+		HashableResource<KtxData> newElement;
 		auto& newKtx = newElement.resourceData;
 
 		newKtx.data = gli::load(path.data());
@@ -708,7 +711,7 @@ namespace sge
 			assert(newElement.IsValid());
 			ktxs_.push_back(newElement);
 
-			UniqueResourceHandle<KtxData> handle;
+			HashableHandle<KtxData> handle;
 			handle.hash = newElement.hash;
 			handle.ptr = &ktxs_.back();
 			assert(handle.IsValid());
@@ -718,7 +721,7 @@ namespace sge
 		{
 			sge_WARNING("Element already in a resource manager's list! Returning handle to existing element.");
 			auto& existingElement = GetElement_<KtxData>(ktxs_, newElement.hash);
-			UniqueResourceHandle<KtxData> handle;
+			HashableHandle<KtxData> handle;
 			handle.hash = existingElement.hash;
 			handle.ptr = &existingElement;
 			assert(handle.IsValid());
@@ -726,7 +729,7 @@ namespace sge
 		}
 	}
 
-	UniqueResourceHandle<ShaderData> ResourceManager::LoadShader(const std::string_view vertexPath, const std::string_view fragmentPath, const std::string_view geometryPath)
+	HashableHandle<ShaderData> ResourceManager::LoadShader(const std::string_view vertexPath, const std::string_view fragmentPath, const std::string_view geometryPath)
 	{
 		if(shaderSrcs_.capacity() != SHADER_SRC_POOL_SIZE_)
 		{
@@ -751,7 +754,7 @@ namespace sge
 		}
 		assert(!ElementExists_<ShaderData>(shaderSrcs_, hash));
 
-		shaderSrcs_.push_back(UniqueResource<ShaderData>());
+		shaderSrcs_.push_back(HashableResource<ShaderData>());
 		auto& newElement = shaderSrcs_.back();
 		auto& newShaderSrc = newElement.resourceData;
 
@@ -766,7 +769,7 @@ namespace sge
 		newElement.hash = hash;
 		assert(newElement.IsValid());
 
-		UniqueResourceHandle<ShaderData> handle;
+		HashableHandle<ShaderData> handle;
 		handle.hash = newElement.hash;
 		handle.ptr = &shaderSrcs_.back();
 		assert(handle.IsValid());
@@ -821,30 +824,5 @@ namespace sge
 
 		std::ifstream stream(path.data());
 		return std::string((std::istreambuf_iterator<char>(stream)), std::istreambuf_iterator<char>());
-	}
-
-	template<typename Type>
-	static bool ResourceManager::ElementExists_(const std::vector<UniqueResource<Type>>& list, const Hash hash)
-	{
-		for(const auto& element : list)
-		{
-			if(element.hash == hash)
-			{
-				return true;
-			}
-		}
-		return false;
-	}
-	template<typename Type>
-	static UniqueResource<Type>& ResourceManager::GetElement_(std::vector<UniqueResource<Type>>& list, const Hash hash)
-	{
-		for(auto& element : list)
-		{
-			if(element.hash == hash)
-			{
-				return element;
-			}
-		}
-		sge_ERROR("Element with the specified hash was not found in the list provided!");
 	}
 }//!sge

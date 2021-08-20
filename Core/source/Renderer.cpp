@@ -147,23 +147,23 @@ namespace sge
 		drawQueue_.clear();
 	}
 
-	UniqueResourceHandle<Shader> Renderer::CreateShader(const UniqueResourceHandle<ShaderData>& handle)
+	HashableHandle<Shader> Renderer::CreateShader(const HashableHandle<ShaderData>& handle)
 	{
 		sge_ERROR("You're not supposed to create your own shaders just yet.");
 		return {};
 	}
 
-	UniqueResourceHandle<VertexBuffer> Renderer::CreateStaticVertexBuffer(const VertexBuffer::Definition & def)
+	HashableHandle<VertexBuffer> Renderer::CreateStaticVertexBuffer(const VertexBuffer::Definition & def)
 	{
 		assert(def.mutability == Mutability::STATIC);
 		assert(uniqueVertexBuffers_.size() + 1 < STATIC_VERTEX_BUFFER_POOL_SIZE_);
 
-		uniqueVertexBuffers_.push_back(UniqueResource<VertexBuffer>());
+		uniqueVertexBuffers_.push_back(HashableResource<VertexBuffer>());
 		auto& newElement = uniqueVertexBuffers_.back();
 		auto& newValue = newElement.resourceData;
 		newElement.hash = Hash(def.begin, def.byteLen, 0);
 		newValue.Init_(def);
-		UniqueResourceHandle<VertexBuffer> handle;
+		HashableHandle<VertexBuffer> handle;
 		handle.hash = newElement.hash;
 		handle.ptr = &uniqueVertexBuffers_.back();
 		assert(newElement.IsValid());
@@ -191,73 +191,73 @@ namespace sge
 		return handle;
 	}
 
-	UniqueResourceHandle<Texture> Renderer::CreateTexture(const Texture::Definition & def)
+	HashableHandle<Texture> Renderer::CreateTexture(const Texture::Definition & def)
 	{
 		assert(textures_.size() + 1 < TEXTURES_POOL_SIZE_);
 
-		textures_.push_back(UniqueResource<Texture>());
+		textures_.push_back(HashableResource<Texture>());
 		auto& newElement = textures_.back();
 		auto& newValue = newElement.resourceData;
 		newElement.hash = Hash(def.datas[0], def.byteLens[0], 0);
 		newValue.Init_(def);
-		UniqueResourceHandle<Texture> handle;
+		HashableHandle<Texture> handle;
 		handle.hash = newElement.hash;
 		handle.ptr = &newElement;
 		assert(handle.IsValid());
 		return handle;
 	}
 
-	UniqueResourceHandle<Material> Renderer::CreateMaterial(const Material::Definition & def)
+	HashableHandle<Material> Renderer::CreateMaterial(const Material::Definition & def)
 	{
 		assert(materials_.size() + 1 < MATERIALS_POOL_SIZE_);
 
-		materials_.push_back(UniqueResource<Material>());
+		materials_.push_back(HashableResource<Material>());
 		auto& newElement = materials_.back();
 		auto& newValue = newElement.resourceData;
 		newElement.hash = def.ComputeHash();
 		newValue.Init_(def);
-		UniqueResourceHandle<Material> handle;
+		HashableHandle<Material> handle;
 		handle.hash = newElement.hash;
 		handle.ptr = &newElement;
 		assert(handle.IsValid());
 		return handle;
 	}
 
-	UniqueResourceHandle<IndexedMesh> Renderer::CreateIndexedMesh(const IndexedMesh::Definition & def)
+	HashableHandle<IndexedMesh> Renderer::CreateIndexedMesh(const IndexedMesh::Definition & def)
 	{
 		assert(indexedMeshes_.size() + 1 < INDEXED_MESHES_POOL_SIZE_);
 
-		indexedMeshes_.push_back(UniqueResource<IndexedMesh>());
+		indexedMeshes_.push_back(HashableResource<IndexedMesh>());
 		auto& newElement = indexedMeshes_.back();
 		auto& newValue = newElement.resourceData;
 		newValue.Init_(def);
 		newElement.hash = def.ComputeHash();
-		UniqueResourceHandle<IndexedMesh> handle;
+		HashableHandle<IndexedMesh> handle;
 		handle.hash = newElement.hash;
 		handle.ptr = &newElement;
 		assert(handle.IsValid());
 		return handle;
 	}
 
-	UniqueResourceHandle<StaticModel> Renderer::CreateModel(const StaticModel::Definition & def)
+	HashableHandle<StaticModel> Renderer::CreateModel(const StaticModel::Definition & def)
 	{
 		assert(models_.size() + 1 < MODELS_POOL_SIZE_);
 
-		models_.push_back(UniqueResource<StaticModel>());
+		models_.push_back(HashableResource<StaticModel>());
 		auto& newElement = models_.back();
 		auto& newValue = newElement.resourceData;
 		newValue.Init_(def);
 		newElement.hash = def.ComputeHash();
-		UniqueResourceHandle<StaticModel> handle;
+		HashableHandle<StaticModel> handle;
 		handle.hash = newElement.hash;
 		handle.ptr = &newElement;
 		assert(handle.IsValid());
 		return handle;
 	}
 
-	UniqueResourceHandle<Shader> Renderer::GetShaderForShadingMode(const ShadingMode mode)
+	HashableHandle<Shader> Renderer::GetShaderForShadingMode(const ShadingMode mode)
 	{
-		UniqueResourceHandle<Shader> handle;
+		HashableHandle<Shader> handle;
 		switch(mode)
 		{
 			case ShadingMode::GIZMO:
@@ -318,7 +318,7 @@ namespace sge
 		glBindBuffer(GL_ARRAY_BUFFER, modelMatricesVBO_);
 	}
 
-	void Renderer::Schedule(const UniqueResourceHandle<StaticModel>& model, const Primitive primitive, const ShadingMode mode)
+	void Renderer::Schedule(const HashableHandle<StaticModel>& model, const Primitive primitive, const ShadingMode mode)
 	{
 		assert(model->IsValid() && (uint32_t)mode);
 		drawQueue_.push_back(DrawCall_());

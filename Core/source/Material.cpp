@@ -77,7 +77,7 @@ namespace sge
 			textures.push_back(renderer.CreateTexture(texDef));
 		}
 
-		UniqueResourceHandle<Shader> shaderHandle = renderer.GetShaderForShadingMode(def.shadingMode);
+		HashableHandle<Shader> shaderHandle = renderer.GetShaderForShadingMode(def.shadingMode);
 		switch(def.shadingMode)
 		{
 			case ShadingMode::GIZMO:

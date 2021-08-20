@@ -12,7 +12,7 @@ find_package(glad REQUIRED)
 find_path(VCPKG_GENERATED_HEADERS_DIR "stb.h")
 file(GLOB_RECURSE Core_sources ${PROJECT_SOURCE_DIR}/Core/source/*.cpp ${PROJECT_SOURCE_DIR}/Core/include/*.h)
 
-add_compile_definitions(XXH_INLINE_ALL)
+# add_compile_definitions(XXH_INLINE_ALL)
 add_compile_definitions(TINYGLTF_NO_STB_IMAGE)
 add_compile_definitions(TINYGLTF_NO_INCLUDE_STB_IMAGE)
 add_compile_definitions(TINYGLTF_NO_STB_IMAGE_WRITE)

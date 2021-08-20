@@ -18,39 +18,46 @@ namespace sge
 		constexpr static const size_t INTERLACED_MESHES_POOL_SIZE_ = 8;
 		constexpr static const size_t MODELS_POOL_SIZE_ = 8;
 		constexpr static const size_t DRAW_QUEUE_SIZE_ = 16;
+		using StaticVertBuffContainer = StaticHashableVector<HashableResource<VertexBuffer>, STATIC_VERTEX_BUFFER_POOL_SIZE_>;
+		using DynamicVertBuffContainer = StaticHashableVector<HashlessResource<VertexBuffer>, DYNAMIC_VERTEX_BUFFER_POOL_SIZE_>;
+		using TextureContainer = StaticHashableVector<HashableResource<Texture>, TEXTURES_POOL_SIZE_>;
+		using MaterialContainer = StaticHashableVector<HashableResource<Material>, MATERIALS_POOL_SIZE_>;
+		using IndexedMeshContainer = StaticHashableVector<HashableResource<IndexedMesh>, INDEXED_MESHES_POOL_SIZE_>;
+		using InterlacedMeshContainer = StaticHashableVector<HashableResource<InterlacedMesh>, INTERLACED_MESHES_POOL_SIZE_>;
+		using ModelContainer = StaticHashableVector<HashableResource<Model>, MODELS_POOL_SIZE_>;
 
 		class DrawCall_
 		{
 		public:
-			UniqueResourceHandle<Model> model = {};
-			ShadingMode mode = ShadingMode::INVALID;
-			DrawingPrimitive primitive = DrawingPrimitive::POINTS;
+			HashableHandle<Model> model = {};
+			F_ShadingMode mode = F_ShadingMode::INVALID;
+			E_DrawingPrimitive primitive = E_DrawingPrimitive::POINTS;
 		};
 
 	public:
-		UniqueResourceHandle<Shader> CreateShader(const UniqueResourceHandle<ShaderData>& handle);
-		UniqueResourceHandle<VertexBuffer> CreateStaticVertexBuffer(const VertexBuffer::Definition& def);
+		HashableHandle<Shader> CreateShader(const HashableHandle<ShaderData>& handle);
+		HashableHandle<VertexBuffer> CreateStaticVertexBuffer(const VertexBuffer::Definition& def);
 		HashlessHandle<VertexBuffer> CreateDynamicVertexBuffer(const VertexBuffer::Definition & def);
-		UniqueResourceHandle<Texture> CreateTexture(const Texture::Definition& def);
-		UniqueResourceHandle<Material> CreateMaterial(const Material::Definition& def);
-		UniqueResourceHandle<IndexedMesh> CreateIndexedMesh(const IndexedMesh::Definition& def);
-		UniqueResourceHandle<InterlacedMesh> CreateInterlacedMesh(const InterlacedMesh::Definition& def);
-		UniqueResourceHandle<Model> CreateModel(const Model::Definition& def);
+		HashableHandle<Texture> CreateTexture(const Texture::Definition& def);
+		HashableHandle<Material> CreateMaterial(const Material::Definition& def);
+		HashableHandle<IndexedMesh> CreateIndexedMesh(const IndexedMesh::Definition& def);
+		HashableHandle<InterlacedMesh> CreateInterlacedMesh(const InterlacedMesh::Definition& def);
+		HashableHandle<Model> CreateModel(const Model::Definition& def);
 
-		UniqueResourceHandle<Shader> GetShaderFor(const ShadingMode mode);
+		HashableHandle<Shader> GetShaderFor(const F_ShadingMode mode);
 
-		void Schedule(const UniqueResourceHandle<Model>& model, const DrawingPrimitive primitive, const ShadingMode mode);
+		void Schedule(const HashableHandle<Model>& model, const E_DrawingPrimitive primitive, const F_ShadingMode mode);
 
 	private:
-		std::vector<UniqueResource<VertexBuffer>> staticVertexBuffers_ = {};
-		std::vector<HashlessResource<VertexBuffer>> dynamicVertexBuffers_ = {};
-		std::vector<UniqueResource<Texture>> textures_ = {};
-		std::vector<UniqueResource<Material>> materials_ = {};
-		std::vector<UniqueResource<IndexedMesh>> indexedMeshes_ = {};
-		std::vector<UniqueResource<InterlacedMesh>> interlacedMeshes = {};
-		std::vector<UniqueResource<Model>> models_ = {};
+		StaticVertBuffContainer staticVertexBuffers_ = {};
+		DynamicVertBuffContainer dynamicVertexBuffers_ = {};
+		TextureContainer textures_ = {};
+		MaterialContainer materials_ = {};
+		IndexedMeshContainer indexedMeshes_ = {};
+		InterlacedMeshContainer interlacedMeshes = {};
+		ModelContainer models_ = {};
 
-		UniqueResource<Shader> goochShader_ = {};
+		HashableResource<Shader> goochShader_ = {};
 		std::vector<DrawCall_> drawQueue_ = {};
 		VertexBuffer modelMatricesVbo_ = {};
 

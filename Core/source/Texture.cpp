@@ -92,8 +92,8 @@ namespace sge
 		if(mutability == Mutability::DYNAMIC)
 		{
 			sge_CHECK_GL_ERROR();
-			assert(def.compression == Compression::NONE);
-			assert(def.format == Format::RED_F32); // Supporting only single channel float textures for dynamic ones.
+			assert(def.compression == TextureCompressionMode::NONE);
+			assert(def.format == ColorFormat::RED_F32); // Supporting only single channel float textures for dynamic ones.
 			assert(!def.mipLevels && !def.generateMipMaps); // Not supporting mip mapping for dynamic textures.
 			assert(def.widths.size() == 1);
 			glTexImage2D(GL_TEXTURE_2D, 0, GL_R32F, (GLsizei)widths[0], (GLsizei)heights[0], 0, GL_RED, GL_FLOAT, def.datas[0]);
@@ -108,11 +108,11 @@ namespace sge
 		else
 		{
 			// TODO: add support for compressed textures.
-			if(def.compression != Compression::NONE)
+			if(def.compression != TextureCompressionMode::NONE)
 			{
 				switch(def.compression)
 				{
-					case Compression::ASTC_RGBA_4x4:
+					case TextureCompressionMode::ASTC_RGBA_4x4:
 					{
 						sge_ERROR("The loading of astc textures is not working yet!");
 
@@ -136,7 +136,7 @@ namespace sge
 							sge_CHECK_GL_ERROR();
 						}
 					}break;
-					case Compression::ETC1:
+					case TextureCompressionMode::ETC1:
 					{
 						glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_BASE_LEVEL, 0);
 						glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, (GLint)(def.mipLevels));
@@ -158,7 +158,7 @@ namespace sge
 							sge_CHECK_GL_ERROR();
 						}
 					}break;
-					case Compression::ETC2:
+					case TextureCompressionMode::ETC2:
 					{
 						glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_BASE_LEVEL, 0);
 						glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, (GLint)(def.mipLevels));
@@ -188,7 +188,7 @@ namespace sge
 			}
 			else
 			{
-				assert(def.format == Format::RGBA_B8); // Supporting only uint8_t type for each color channel in RGBA.
+				assert(def.format == ColorFormat::RGBA_B8); // Supporting only uint8_t type for each color channel in RGBA.
 				if(minifyingMode > SamplingMode::NEAREST) assert(def.mipLevels > 0);
 				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_BASE_LEVEL, 0);
 				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, (GLint)(def.mipLevels));

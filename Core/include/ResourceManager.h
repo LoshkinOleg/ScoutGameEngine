@@ -4,13 +4,11 @@
 using json = nlohmann::json;
 #include <gli/gli.hpp>
 #include <tiny_gltf.h>
+#include <stb_image.h>
+#include <tiny_obj_loader.h>
 
 #include "EnumsAndFlags.h"
-#include "Resources.h"
-#include "Transform.h"
-#include "Model.h"
-
-// TODO: create a custom container to use instead of the std::vector.
+#include "Containers.h"
 
 namespace sge
 {
@@ -21,20 +19,29 @@ namespace sge
 
 		bool IsValid() const override;
 	};
-	// TODO: implement import of png and jpg textures.
-	// class UncompressedTextureData: public I_Validateable
-	// {
-	// public:
-	// 	// std_image data = nullptr;
-	// 	TextureType type = TextureType::INVALID;
-	// 
-	// 	bool IsValid() const override;
-	// };
+	class UncompressedByteTexData: public I_Validateable
+	{
+	public:
+		int width = 0, height = 0, nrOfChannels = 0;
+		unsigned char* data = nullptr;
+		F_TextureType type = F_TextureType::INVALID;
+	
+		bool IsValid() const override;
+	};
+	class UncompressedFloatTexData: public I_Validateable
+	{
+	public:
+		int width = 0, height = 0, nrOfChannels = 0;
+		float* data = nullptr;
+		F_TextureType type = F_TextureType::INVALID;
+
+		bool IsValid() const override;
+	};
 	class KtxData: public I_Validateable
 	{
 	public:
 		gli::texture data = {};
-		TextureType type = TextureType::INVALID;
+		F_TextureType type = F_TextureType::INVALID;
 
 		bool IsValid() const override;
 	};
@@ -47,12 +54,23 @@ namespace sge
 
 		bool IsValid() const override;
 	};
+	class ObjData: public I_Validateable
+	{
+	public:
+		tinyobj::ObjReader reader = {};
+		std::vector<HashableHandle<KtxData>> compressedImages = {}; // TODO: should be handles to generic texture data rather than a specific format.
+		std::vector<HashableHandle<UncompressedByteTexData>> uncompressedByteImages = {};
+		std::vector<HashableHandle<UncompressedFloatTexData>> uncompressedFloatImages = {};
+
+		bool IsValid() const override;
+	};
 	class GltfData: public I_Validateable
 	{
 	public:
 		tinygltf::Model model = {};
-		std::vector<UniqueResourceHandle<KtxData>> compressedImages = {}; // TODO: should be handles to generic texture data rather than a specific format.
-		// std::vector<UniqueResourceHandle<UncompressedTextureData>> uncompressedImages = {};
+		std::vector<HashableHandle<KtxData>> compressedImages = {}; // TODO: should be handles to generic texture data rather than a specific format.
+		std::vector<HashableHandle<UncompressedByteTexData>> uncompressedByteImages = {};
+		std::vector<HashableHandle<UncompressedFloatTexData>> uncompressedFloatImages = {};
 
 		bool IsValid() const override;
 	};
@@ -60,62 +78,76 @@ namespace sge
 	class ResourceManager
 	{
 		friend class Engine;
+		friend class Renderer;
 		constexpr static const bool FREE_ASSETS_POST_INIT_ = true;
-		constexpr static const size_t JSON_POOL_SIZE_ = 32;
-		constexpr static const size_t KTX_POOL_SIZE_ = 64;
-		constexpr static const size_t SHADER_SRC_POOL_SIZE_ = 16;
-		constexpr static const size_t GLTF_POOL_SIZE_ = 16;
+		constexpr static const size_t JSON_POOL_SIZE_ = 8;
+		constexpr static const size_t KTX_POOL_SIZE_ = 8;
+		constexpr static const size_t UNCOMPRESSED_BYTE_TEXTURES_POOL_SIZE_ = 8;
+		constexpr static const size_t UNCOMPRESSED_FLOAT_TEXTURES_POOL_SIZE_ = 8;
+		constexpr static const size_t SHADER_SRC_POOL_SIZE_ = 8;
+		constexpr static const size_t GLTF_POOL_SIZE_ = 8;
+		constexpr static const size_t OBJ_POOL_SIZE_ = 8;
 		constexpr static const size_t TRANSFORM_BUFFER_POOL_SIZE_ = 64;
 		constexpr static const size_t MODEL_MATRIX_POOL_SIZE_ = 256;
+		using JsonContainer = StaticHashableVector<HashableResource<JsonData>, JSON_POOL_SIZE_>;
+		using KtxContainer = StaticHashableVector<HashableResource<KtxData>, KTX_POOL_SIZE_>;
+		using RawByteImageContainer = StaticHashableVector<HashableResource<UncompressedByteTexData>, UNCOMPRESSED_BYTE_TEXTURES_POOL_SIZE_>;
+		using RawFloatImageContainer = StaticHashableVector<HashableResource<UncompressedFloatTexData>, UNCOMPRESSED_FLOAT_TEXTURES_POOL_SIZE_>;
+		using ShaderSrcContainer = StaticHashableVector<HashableResource<ShaderData>, SHADER_SRC_POOL_SIZE_>;
+		using GltfContainer = StaticHashableVector<HashableResource<GltfData>, GLTF_POOL_SIZE_>;
+		using ObjContainer = StaticHashableVector<HashableResource<ObjData>, OBJ_POOL_SIZE_>;
+		using TransformHandlesContainer = StaticHashlessVector<HashlessResource<TransformsBuffer>, TRANSFORM_BUFFER_POOL_SIZE_>;
 
 	public:
-		UniqueResourceHandle<JsonData> LoadJson(const std::string_view path);
-		UniqueResourceHandle<KtxData> LoadKtx(const std::string_view path);
-		// UniqueResourceHandle<UncompressedTextureData> LoadUncompressedImage(const std::string_view path);
-		UniqueResourceHandle<ShaderData> LoadShader(const std::string_view vertexPath, const std::string_view fragmentPath, const std::string_view geometryPath);
-		UniqueResourceHandle<GltfData> LoadGltf(const std::string_view path);
+		using RawByteImage = UncompressedByteTexData;
+		using RawFloatImage = UncompressedFloatTexData;
 
-		static Model::Definition GenerateDefinitionFrom(const UniqueResourceHandle<GltfData>& handle, const GltfAttributes relevantData, const ShadingMode shadingModesNeeded);
-		static Texture::Definition GenerateDefinitionFrom(const UniqueResourceHandle<KtxData>& handle,
-												   const Texture::SamplingMode minifyingMode,
-												   const Texture::SamplingMode magnifyingMode,
-												   const Texture::WrappingMode onS,
-												   const Texture::WrappingMode onT,
-												   const Mutability mutability,
-												   const bool generateMipMaps);
-		// static Texture::Definition GenerateDefinitionFrom(const UniqueResourceHandle<UncompressedTextureData>& handle,
-		// 												  const Texture::SamplingMode minifyingMode,
-		// 												  const Texture::SamplingMode magnifyingMode,
-		// 												  const Texture::WrappingMode onS,
-		// 												  const Texture::WrappingMode onT,
-		// 												  const Mutability mutability,
-		// 												  const bool generateMipMaps);
+		HashableHandle<JsonData> LoadJson(const std::string_view path);
+		HashableHandle<KtxData> LoadKtx(const std::string_view path);
+		HashableHandle<RawByteImage> LoadUncompressedByteImage(const std::string_view path);
+		HashableHandle<RawFloatImage> LoadUncompressedFloatImage(const std::string_view path);
+		HashableHandle<ShaderData> LoadShader(const std::string_view vertexPath, const std::string_view fragmentPath, const std::string_view geometryPath);
+		HashableHandle<GltfData> LoadGltf(const std::string_view path);
+
+		static Model::Definition GenerateModelDefinitionFrom(const HashableHandle<GltfData>& handle, const F_3dFileAttributes relevantData, const F_ShadingMode shadingModesNeeded);
+		static Model::Definition GenerateModelDefinitionFrom(const HashableHandle<ObjData>& handle, const F_3dFileAttributes relevantData, const F_ShadingMode shadingModesNeeded);
+
+		static Texture::Definition GenerateTextureDefinitionFrom(const HashableHandle<KtxData>& handle,
+																 Pair<E_SamplingMode, E_SamplingMode> samplingModes,
+																 Pair<E_WrappingMode, E_WrappingMode> wrappingModes); // TODO: assert that mipmaps levels > 1
+		static Texture::Definition GenerateTextureDefinitionFrom(const HashableHandle<RawByteImage>& handle,
+																 Pair<E_SamplingMode, E_SamplingMode> samplingModes,
+																 Pair<E_WrappingMode, E_WrappingMode> wrappingModes,
+																 const bool generateMipMaps);
+		static Texture::Definition GenerateTextureDefinitionFrom(const HashableHandle<RawFloatImage>& handle,
+																 Pair<E_SamplingMode, E_SamplingMode> samplingModes,
+																 Pair<E_WrappingMode, E_WrappingMode> wrappingModes,
+																 const bool generateMipMaps);
 
 		HashlessHandle<TransformsBuffer> CreateTransformsBuffer(const std::vector<glm::mat4>& transforms);
-		glm::mat4* AllocateModelMatrices(const uint32_t nrOfTransforms);
-		glm::mat4* GetModelMatricesBegin();
-		uint32_t GetMaxNrOfModelMatrices() const;
 
+		uint32_t GetMaxNrOfModelMatrices() const;
 		const glm::mat4& GetViewMatrix() const;
 
 	private:
-		std::vector<UniqueResource<JsonData>> jsons_ = {};
-		std::vector<UniqueResource<KtxData>> ktxs_ = {};
-		// std::vector<UniqueResource<UncompressedTextureData>> uncompressedImages_ = {};
-		std::vector<UniqueResource<ShaderData>> shaderSrcs_ = {};
-		std::vector<UniqueResource<GltfData>> gltfs_ = {};
-		std::vector<HashlessResource<TransformsBuffer>> transformBuffers_ = {};
+		JsonContainer jsons_ = {};
+		KtxContainer ktxs_ = {};
+		RawByteImageContainer byteImages_ = {};
+		RawFloatImageContainer floatImages_ = {};
+		ShaderSrcContainer shaderSrcs_ = {};
+		GltfContainer gltfs_ = {};
+		ObjContainer objs_ = {};
+		TransformHandlesContainer transformsHandles_ = {};
 
 		ModelMatrixPool modelMatrixPool_ = {};
 		glm::mat4 viewMatrix_ = DEFAULT_VIEW_MATRIX;
 
-		void Init_();
-		void FreeAssetResources_();
-		void Shutdown_();
+		void Init();
+		void FreeAssetResources();
+		void Shutdown();
+
+		glm::mat4* AllocateModelMatrices(const uint32_t nrOfTransforms);
 
 		static std::string LoadFile_(const std::string_view path);
-		// TODO: make own map container that checks that stuff automatically.
-		template<typename Type> static bool ElementExists_(const std::vector<UniqueResource<Type>>& list, const Hash hash);
-		template<typename Type> static UniqueResource<Type>& GetElement_(std::vector<UniqueResource<Type>>& list, const Hash hash);
 	};
 }//!sge
