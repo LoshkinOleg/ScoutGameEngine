@@ -35,3 +35,5 @@ target_link_libraries(Application PRIVATE Game)
 
 file(GLOB simpleMain_files ${PROJECT_SOURCE_DIR}/App/SimpleMain.cpp)
 add_executable(SimpleMain ${simpleMain_files})
+target_include_directories(SimpleMain PRIVATE ${VCPKG_GENERATED_HEADERS_DIR})
+target_link_libraries(SimpleMain PRIVATE SDL2::SDL2 SDL2::SDL2main glad::glad ${OPENGL_LIBRARIES})

@@ -4,13 +4,7 @@
 
 namespace sge
 {
-	class I_Validateable
-	{
-	public:
-		virtual bool IsValid() const = 0;
-	};
-
-	class Hash: public I_Validateable
+	class Hash
 	{
 	public:
 		constexpr static const uint64_t HASHING_SEED_ = 0x1337;
@@ -46,30 +40,30 @@ namespace sge
 		bool operator&&(const Hash other) const;
 		bool operator&&(const uint64_t other) const;
 
-		bool IsValid() const override;
+		bool IsValid() const;
 	};
 
 	template <typename Type>
-	class HashableResource: public I_Validateable
+	class HashableResource
 	{
 	public:
 		Hash hash = 0;
 		Type resourceData = {};
 
-		bool IsValid() const override;
+		bool IsValid() const;
 	};
 
 	template <typename Type>
-	class HashlessResource: public I_Validateable
+	class HashlessResource
 	{
 	public:
 		Type resourceData = {};
 
-		bool IsValid() const override;
+		bool IsValid() const;
 	};
 
 	template <typename Type>
-	class HashableHandle: public I_Validateable
+	class HashableHandle
 	{
 	public:
 		Hash hash = 0;
@@ -80,11 +74,11 @@ namespace sge
 		bool operator==(const HashableHandle<Type>& other) const;
 		bool operator==(const HashableResource<Type>& resource) const;
 
-		bool IsValid() const override;
+		bool IsValid() const;
 	};
 
 	template <typename Type>
-	class HashlessHandle: public I_Validateable
+	class HashlessHandle
 	{
 	public:
 		HashlessResource<Type>* ptr = nullptr;
@@ -98,6 +92,6 @@ namespace sge
 			return ptr->resourceData;
 		}
 
-		bool IsValid() const override;
+		bool IsValid() const;
 	};
 }//!sge

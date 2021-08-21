@@ -23,8 +23,7 @@ namespace sge
 	{
 	public:
 		Engine() = delete;
-		Engine(I_Application& app, ResourceManager& rm, Renderer& renderer, InputManager& im, PhysicsEngine& phy):
-			app_(app), rm_(rm), renderer_(renderer), im_(im), phy_(phy) {};
+		Engine(I_Application& app): app_(app){};
 
 		static Engine& Get();
 		ResourceManager& GetResourceManager();
@@ -44,10 +43,10 @@ namespace sge
 		float lastTimer_ = 0.0f;
 		float currentTimer_ = 0.0f;
 		I_Application& app_;
-		ResourceManager& rm_;
-		Renderer& renderer_;
-		InputManager& im_;
-		PhysicsEngine& phy_;
+		ResourceManager rm_;
+		Renderer renderer_;
+		InputManager im_;
+		PhysicsEngine phy_;
 
 		void Init_();
 		void Shutdown_();

@@ -4,16 +4,22 @@ namespace sge
 {
 	enum class E_ColorFormat: unsigned
 	{
+		INVALID = 0,
+
 		RGBA_B8 = 0x8058, // GL_RGBA8
 		RED_F32 = 0x822E // GL_R32F
 	};
 	enum class E_Mutability: unsigned
 	{
+		INVALID = 0,
+
 		STATIC = 0x88E4, // GL_STATIC_DRAW
 		DYNAMIC = 0x88E8 // GL_DYNAMIC_DRAW
 	};
 	enum class E_NumberType: unsigned
 	{
+		INVALID = 0,
+
 		UINT = 0x1405, // GL_UNSIGNED_INT
 		FLOAT = 0x1406 // GL_FLOAT
 	};
@@ -26,11 +32,15 @@ namespace sge
 	};
 	enum class E_VertexBufferTarget: unsigned
 	{
+		INVALID = 0,
+
 		VBO = 0x8892, // GL_ARRAY_BUFFER
 		EBO = 0x8893 // GL_ELEMENT_ARRAY_BUFFER
 	};
 	enum class E_SamplingMode: unsigned
 	{
+		INVALID = 0,
+
 		NEAREST = 0x2600, // GL_NEAREST
 		LINEAR = 0x2601, // GL_LINEAR
 		LINEAR_MIPMAP_NEAREST = 0x2701, // GL_LINEAR_MIPMAP_NEAREST
@@ -38,12 +48,16 @@ namespace sge
 	};
 	enum class E_WrappingMode: unsigned
 	{
+		INVALID = 0,
+
 		CLAMP = 0x812F, // GL_CLAMP_TO_EDGE
 		REPEAT = 0x2901, // GL_REPEAT
 		MIRRORED_REPEAT = 0x8370 // GL_MIRRORED_REPEAT
 	};
 	enum class E_TextureCompressionMode: unsigned
 	{
+		INVALID = 0,
+
 		NONE = 1,
 		ETC1 = 0x8D64, // GL_COMPRESSED_RGB8_ETC1
 		ETC2 = 0x9278, // GL_COMPRESSED_RGBA8_ETC2_EAC

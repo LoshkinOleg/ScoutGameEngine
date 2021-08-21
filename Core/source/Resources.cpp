@@ -119,7 +119,7 @@ namespace sge
 	template<typename Type>
 	bool HashlessResource<Type>::IsValid() const
 	{
-		const bool returnVal = resourceData.IsValid());
+		const bool returnVal = resourceData.IsValid();
 		assert(returnVal);
 		return returnVal;
 	}

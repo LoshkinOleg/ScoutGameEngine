@@ -1,5 +1,7 @@
 #include "Containers.h"
 
+#include <assert.h>
+
 #include "Resources.h"
 #include "macros.h"
 
@@ -56,7 +58,7 @@ namespace sge
 	template<typename T, size_t nrOfElements>
 	T& StaticHashlessVector<T, nrOfElements>::At(const uint32_t position)
 	{
-		assert(position <= current_);
+		assert(position < current_);
 		return *(begin_ + position);
 	}
 	template<typename T, size_t nrOfElements>
@@ -84,7 +86,7 @@ namespace sge
 	}
 
 	template<typename T, size_t nrOfElements>
-	void StaticHashableVector<T, nrOfElements>::Push(const T& newElement)
+	void StaticHashableVector<T, nrOfElements>::PushCopy(const T& newElement)
 	{
 		assert(current_ < nrOfElements);
 		begin_[current_++] = newElement;
@@ -124,7 +126,7 @@ namespace sge
 	template<typename T, size_t nrOfElements>
 	T& StaticHashableVector<T, nrOfElements>::At(const uint32_t position)
 	{
-		assert(position <= current_);
+		assert(position < current_);
 		T& returnVal = *(begin_ + position);
 		assert(returnVal.IsValid());
 		return returnVal;

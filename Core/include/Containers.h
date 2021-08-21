@@ -1,5 +1,7 @@
 #pragma once
 
+#include <iterator>
+
 namespace sge
 {
 	using uint32_t = unsigned int;
@@ -14,25 +16,26 @@ namespace sge
 		using value_type = StaticVector::value_type;
 		using pointer = value_type*;
 		using reference = value_type&;
+		using iterator = StaticVectorIterator<StaticVector>;
 
-		StaticHashlessVectorIterator(PointerType ptr): ptr_(ptr) {};
+		StaticVectorIterator(pointer ptr): ptr_(ptr) {};
 
-		reference operator*() const { return *m_ptr; }
-		pointer operator->() { return m_ptr; }
-		Iterator& operator++() { m_ptr++; return *this; }
-		Iterator operator++(int) { Iterator tmp = *this; ++(*this); return tmp; }
-		friend bool operator== (const Iterator& a, const Iterator& b) { return a.m_ptr == b.m_ptr; };
-		friend bool operator!= (const Iterator& a, const Iterator& b) { return a.m_ptr != b.m_ptr; };
+		reference operator*() const { return *ptr_; }
+		pointer operator->() { return ptr_; }
+		iterator& operator++() { ptr_++; return *this; }
+		iterator operator++(int) { iterator tmp = *this; ++(*this); return tmp; }
+		friend bool operator== (const iterator& a, const iterator& b) { return a.ptr_ == b.ptr_; };
+		friend bool operator!= (const iterator& a, const iterator& b) { return a.ptr_ != b.ptr_; };
 
 	private:
-		pointer m_ptr;
+		pointer ptr_;
 	};
 
 	template<typename T, size_t nrOfElements>
 	class StaticHashlessVector
 	{
-		T* begin_ = nullptr;
-		uint32_t current_ = 0;
+		T* begin_ = nullptr; // 8 bytes
+		size_t current_ = 0; // 8 bytes
 
 	public:
 		using value_type = T;
@@ -60,8 +63,8 @@ namespace sge
 	template<typename T, size_t nrOfElements>
 	class StaticHashableVector
 	{
-		T* begin_ = nullptr;
-		uint32_t current_ = 0;
+		T* begin_ = nullptr; // 8 bytes
+		size_t current_ = 0; // 8 bytes
 
 	public:
 		using value_type = T;
@@ -75,7 +78,7 @@ namespace sge
 		StaticHashableVector();
 		~StaticHashableVector();
 
-		void Push(const T& newElement);
+		void PushCopy(const T& newElement);
 		void Pop();
 		void Remove(const uint32_t position);
 
