@@ -1,0 +1,6 @@
+.git/
+.vs/
+.vscode/
+.idea/
+__pycache__/
+[Bb]uild/
