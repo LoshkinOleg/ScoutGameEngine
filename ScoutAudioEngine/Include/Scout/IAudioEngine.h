@@ -48,6 +48,7 @@ namespace Scout
 		Bitdepth engineBufferQuantisation = Bitdepth::F32;
 		Samplerate engineBufferSamplerate = Samplerate::Hz_48k;
 		SpeakerSetup speakersSetup = SpeakerSetup::MONO;
+		MixingPolicy mixingPolicy = MixingPolicy::AVERAGE;
 		std::chrono::milliseconds desiredLatency = std::chrono::milliseconds((std::uint64_t)(1.0 / 30.0 * 1000.0)); // 1/30 sec
     };
 

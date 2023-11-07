@@ -24,6 +24,21 @@ namespace Scout
 				data0[i] = std::clamp(data0[i], -1.0, 1.0);
 			}
 		}break;
+		case MixingPolicy::SUM:
+		{
+			for (size_t i = 0; i < nrOfSamples; i++)
+			{
+				data0[i] += data1[i];
+			}
+		}break;
+		case MixingPolicy::AVERAGE:
+		{
+			for (size_t i = 0; i < nrOfSamples; i++)
+			{
+				data0[i] += data1[i];
+				data0[i] *= 0.5f;
+			}
+		}break;
 
 		default:
 		{
@@ -46,6 +61,21 @@ namespace Scout
 			{
 				data0[i] += data1[i];
 				data0[i] = std::clamp(data0[i], -1.0f, 1.0f);
+			}
+		}break;
+		case MixingPolicy::SUM:
+		{
+			for (size_t i = 0; i < nrOfSamples; i++)
+			{
+				data0[i] += data1[i];
+			}
+		}break;
+		case MixingPolicy::AVERAGE: // Avoids clipping artifacts and does not require actual clipping. Maybe not ideal? Does it preserve the relative loudness?
+		{
+			for (size_t i = 0; i < nrOfSamples; i++)
+			{
+				data0[i] += data1[i];
+				data0[i] *= 0.5f;
 			}
 		}break;
 

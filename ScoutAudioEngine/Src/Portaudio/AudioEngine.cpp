@@ -13,8 +13,8 @@ namespace Scout
 {
 	AudioEngine_Portaudio::AudioEngine_Portaudio(
 		const Bitdepth_Portaudio quant, const Samplerate_Portaudio sampleRate,
-		const SpeakerSetup_Portaudio speakersSetup, const std::chrono::milliseconds desiredLatency):
-		quant_(quant), sampleRate_(sampleRate), speakerSetup_(speakersSetup)
+		const SpeakerSetup_Portaudio speakersSetup, const std::chrono::milliseconds desiredLatency, const MixingPolicy policy):
+		quant_(quant), sampleRate_(sampleRate), speakerSetup_(speakersSetup), mixingPolicy_(policy)
 	{
 		const double sampleDuration = 1.0 / (double)((std::uint32_t)sampleRate_);
 		const double latencyDuration = (double)desiredLatency.count() * 0.001;
@@ -317,12 +317,12 @@ namespace Scout
 		if (!update_) return;
 
 		static std::vector<float> outputBuff(GetBufferSizeInBytes() / sizeof(float), 0.0f);
-		std::fill(outputBuff.begin(), outputBuff.end(), 0.0f);
 
 		switch(speakerSetup_)
 		{
-			case Scout::SpeakerSetup_Portaudio::MONO:
+			case Scout::SpeakerSetup_Portaudio::MONO: // Note: might have broken it when code stereo support.
 			{
+				std::fill(outputBuff.begin(), outputBuff.end(), 0.0f);
 				const std::uint32_t framesPerBuff = (std::uint32_t)GetFramesPerBuffer();
 
 				static std::vector<float> sumBuff(framesPerBuff, 0.0f);
@@ -334,7 +334,7 @@ namespace Scout
 				{
 					soundsMono_[handle].Service(workingBuff);
 					soundsMono_[handle].AdvanceBy(framesPerBuff);
-					MixSignalsInPlace(sumBuff, workingBuff, MixingPolicy::SUM_AND_CLAMP);
+					MixSignalsInPlace(sumBuff, workingBuff, mixingPolicy_);
 					if (soundsMono_[handle].currentBegin == END_OF_DATA) StopSound(handle);
 				}
 
@@ -342,8 +342,9 @@ namespace Scout
 				std::copy(sumBuff.begin(), sumBuff.end(), outputBuff.begin());
 			}break;
 
-			case Scout::SpeakerSetup_Portaudio::DUAL_MONO:
+			case Scout::SpeakerSetup_Portaudio::DUAL_MONO: // Note: might have broken it when code stereo support.
 			{
+				std::fill(outputBuff.begin(), outputBuff.end(), 0.0f);
 				const std::uint32_t framesPerBuff = (std::uint32_t)GetFramesPerBuffer();
 
 				static std::vector<float> sumBuff(framesPerBuff, 0.0f);
@@ -355,7 +356,7 @@ namespace Scout
 				{
 					soundsMono_[handle].Service(workingBuff);
 					soundsMono_[handle].AdvanceBy(framesPerBuff);
-					MixSignalsInPlace(sumBuff, workingBuff, MixingPolicy::SUM_AND_CLAMP);
+					MixSignalsInPlace(sumBuff, workingBuff, mixingPolicy_);
 					if (soundsMono_[handle].currentBegin == END_OF_DATA) StopSound(handle);
 				}
 
@@ -370,6 +371,7 @@ namespace Scout
 				const std::uint32_t framesPerBuff = (std::uint32_t)GetFramesPerBuffer();
 
 				{ // Mono
+					std::fill(outputBuff.begin(), outputBuff.end(), 0.0f);
 					static std::vector<float> sumBuffMono(framesPerBuff, 0.0f);
 					static std::vector<float> workingBuffMono(framesPerBuff, 0.0f);
 					std::fill(sumBuffMono.begin(), sumBuffMono.end(), 0.0f);
@@ -382,7 +384,7 @@ namespace Scout
 						{
 							soundsMono_[handle].Service(workingBuffMono);
 							soundsMono_[handle].AdvanceBy(framesPerBuff);
-							MixSignalsInPlace(sumBuffMono, workingBuffMono, MixingPolicy::SUM_AND_CLAMP);
+							MixSignalsInPlace(sumBuffMono, workingBuffMono, mixingPolicy_);
 							if (soundsMono_[handle].currentBegin == END_OF_DATA) StopSound(handle);
 						}
 					}
@@ -391,9 +393,11 @@ namespace Scout
 					std::copy(sumBuffMono.begin(), sumBuffMono.end(), outputBuff.begin());
 					std::copy(sumBuffMono.begin(), sumBuffMono.end(), outputBuff.begin() + sumBuffMono.size());
 					InterleaveSignal(outputBuff, 2);
+					std::copy(outputBuff.begin(), outputBuff.end(), buffer_.begin());
 				}
 
 				{ // Stereo
+					std::fill(outputBuff.begin(), outputBuff.end(), 0.0f);
 					static std::vector<float> sumBuffStereo(framesPerBuff * 2, 0.0f);
 					static std::vector<float> workingBuffStereo(framesPerBuff * 2, 0.0f);
 					std::fill(sumBuffStereo.begin(), sumBuffStereo.end(), 0.0f);
@@ -407,7 +411,7 @@ namespace Scout
 						{
 							soundsStereo_[SoundHandle::INVALID_ID - handle].Service(workingBuffStereo);
 							soundsStereo_[SoundHandle::INVALID_ID - handle].AdvanceBy(framesPerBuff);
-							MixSignalsInPlace(sumBuffStereo, workingBuffStereo, MixingPolicy::SUM_AND_CLAMP);
+							MixSignalsInPlace(sumBuffStereo, workingBuffStereo, mixingPolicy_);
 							if (soundsStereo_[SoundHandle::INVALID_ID - handle].currentBegin == END_OF_DATA) StopSound(handle);
 						}
 					}
@@ -429,8 +433,9 @@ namespace Scout
 			displayEffects_[i](outputBuff);
 		}
 
-		// Copy to next buffer to present.
-		std::copy(outputBuff.begin(), outputBuff.end(), buffer_.begin());
+		// Mix mono sounds and stereo ones.
+		MixSignalsInPlace(buffer_, outputBuff, mixingPolicy_); // Note: might have broken this for MONO and DUAL_MONO when code stereo support. Used to just copy the outputBuff to buffer_.
+		// NormalizeSignal(buffer_);
 		update_ = false;
 	}
 

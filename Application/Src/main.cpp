@@ -6,7 +6,7 @@
 #include <Scout/IAssetSystem.h>
 #include <Scout/Math.h>
 
-// TODO: fix issue with stereo looping too early
+// TODO: figure out how to clamp signal to -1;1 without introducing wierd artefacts.
 
 int main()
 {
@@ -22,16 +22,27 @@ int main()
 	Scout::AudioEngineDef audioEngineDef;
 	audioEngineDef.implementation = Scout::AudioApi::PORTAUDIO;
 	audioEngineDef.speakersSetup = Scout::SpeakerSetup::STEREO;
+	audioEngineDef.engineBufferSamplerate = Scout::Samplerate::Hz_48k;
+	audioEngineDef.mixingPolicy = Scout::MixingPolicy::AVERAGE;
 	auto audioEngine = Scout::MakeAudioEngine(audioEngineDef);
 
 	auto wavIo = Scout::MakeWavIo({});
 	uint64_t nrOfChannels, sampleRate;
-	const auto audioData = wavIo->LoadWavF32("C:/Users/user/Desktop/ScoutGameEngine/Resource/Audio/MusicStereo_48kHz_32f.wav", nrOfChannels, sampleRate);
+	auto audioDataMusic = wavIo->LoadWavF32("C:/Users/user/Desktop/ScoutGameEngine/Resource/Audio/MusicStereo_48kHz_32f.wav", nrOfChannels, sampleRate);
+	auto audioDataSweep = wavIo->LoadWavF32("C:/Users/user/Desktop/ScoutGameEngine/Resource/Audio/LinearSweep_48kHz_32f.wav", nrOfChannels, sampleRate);
 
-	assert(audioData.size() > 0);
-	const auto soundHandle = audioEngine->MakeSound(audioData, 2, true);
-	audioEngine->SetSoundLooped(soundHandle, true);
-	audioEngine->PlaySound(soundHandle);
+	// for (size_t i = 0; i < audioDataSweep.size(); i++)
+	// {
+	// 	audioDataSweep[i] *= 0.01f;
+	// }
+
+	assert(audioDataMusic.size() > 0);
+	const auto soundHandleMusic = audioEngine->MakeSound(audioDataMusic, 2, true);
+	const auto soundHandleSweep = audioEngine->MakeSound(audioDataSweep, 1, false);
+	audioEngine->SetSoundLooped(soundHandleMusic, true);
+	audioEngine->SetSoundLooped(soundHandleSweep, true);
+	audioEngine->PlaySound(soundHandleMusic);
+	audioEngine->PlaySound(soundHandleSweep);
 
 	auto fx = [](std::vector<float>& audioData)->void
 	{
@@ -44,7 +55,8 @@ int main()
 		}
 		theta += 0.1f;
 	};
-	audioEngine->RegisterEffectForDisplay(fx);
+	// audioEngine->RegisterEffectForDisplay(fx);
+
 
 	while (!shutdown)
 	{

@@ -28,7 +28,7 @@ namespace Scout
 		SCOUT_NO_COPY(AudioEngine_Portaudio);
 		SCOUT_NO_MOVE(AudioEngine_Portaudio);
 
-		AudioEngine_Portaudio(const Bitdepth_Portaudio quant, const Samplerate_Portaudio sampleRate, const SpeakerSetup_Portaudio speakersSetup, const std::chrono::milliseconds desiredLatency);
+		AudioEngine_Portaudio(const Bitdepth_Portaudio quant, const Samplerate_Portaudio sampleRate, const SpeakerSetup_Portaudio speakersSetup, const std::chrono::milliseconds desiredLatency, const MixingPolicy policy);
 		~AudioEngine_Portaudio();
 
 		SoundHandle MakeSound(
@@ -74,6 +74,7 @@ namespace Scout
 		Bitdepth_Portaudio quant_ = Bitdepth_Portaudio::F32;
 		Samplerate_Portaudio sampleRate_ = Samplerate_Portaudio::Hz_48k;
 		SpeakerSetup_Portaudio speakerSetup_ = SpeakerSetup_Portaudio::MONO;
+		MixingPolicy mixingPolicy_ = MixingPolicy::SUM_AND_CLAMP;
 		std::uint32_t framesPerBuffer_ = 0;
 
 		PaStream* pStream_ = nullptr;

@@ -12,6 +12,7 @@ namespace Scout
 			ToImplEnum_Portaudio(def.engineBufferQuantisation),
 			ToImplEnum_Portaudio(def.engineBufferSamplerate),
 			ToImplEnum_Portaudio(def.speakersSetup),
-			def.desiredLatency);
+			def.desiredLatency,
+			def.mixingPolicy);
 	}
 }
