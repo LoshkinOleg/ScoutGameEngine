@@ -7,6 +7,9 @@
 #include <Scout/Math.h>
 #include <Scout/AudioEffects.h>
 
+// TODO: remove differenciation between mono and stereo sounds.
+// TODO: add way to unregister sound fx
+
 int main()
 {
 	bool shutdown = false;
@@ -34,15 +37,21 @@ int main()
 	assert(audioDataMusic.size() > 0);
 	const auto soundHandleMusic = audioEngine->MakeSound(audioDataMusic, 2, true);
 	const auto soundHandleSweep = audioEngine->MakeSound(audioDataSweep, 1, false);
+	const auto soundHandleSweepBis = audioEngine->MakeSound(audioDataSweep, 1, false);
 	const auto soundHandleNoise = audioEngine->MakeSound(audioDataNoise, 1, false);
+	
 	audioEngine->SetSoundLooped(soundHandleMusic, true);
 	audioEngine->SetSoundLooped(soundHandleSweep, true);
+	audioEngine->SetSoundLooped(soundHandleSweepBis, true);
 	audioEngine->SetSoundLooped(soundHandleNoise, true);
+	
 	audioEngine->PlaySound(soundHandleMusic);
 	audioEngine->PlaySound(soundHandleSweep);
+	audioEngine->PlaySound(soundHandleSweepBis);
 	audioEngine->PlaySound(soundHandleNoise);
 
-	audioEngine->RegisterEffectForDisplay(Scout::MakeLimiterCallback(0.75f));
+	// audioEngine->RegisterEffectForDisplay(Scout::MakeLimiterCallback(0.75f));
+	audioEngine->RegisterEffectForSound(Scout::MakeLimiterCallback(0.05f), soundHandleMusic);
 
 
 	while (!shutdown)

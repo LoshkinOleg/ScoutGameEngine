@@ -377,7 +377,8 @@ namespace Scout
 					std::fill(sumBuffMono.begin(), sumBuffMono.end(), 0.0f);
 					std::fill(workingBuffMono.begin(), workingBuffMono.end(), 0.0f);
 
-					for (auto& handle : playing_)
+					const auto playingCopy = playing_; // Needed to be able to stop sounds inside the for loop.
+					for (auto& handle : playingCopy)
 					{
 						// Ids at the start of the integers are for mono, ids at the end of the integers range are for stereo.
 						if (handle < SoundHandle::INVALID_ID / 2)
@@ -442,17 +443,17 @@ namespace Scout
 
 	SfxHandle AudioEngine_Portaudio::RegisterEffectForSound(const SoundSpecificEffectCallback fxCallback, const SoundHandle sound)
 	{
-		throw std::runtime_error("Implement this.");
-
 		// Ids at the start of the integers are for mono, ids at the end of the integers range are for stereo.
 		if (sound.id < SoundHandle::INVALID_ID / 2)
 		{
-			return SfxHandle::INVALID_ID;
+			soundsMono_[sound].fx_.push_back(fxCallback);
 		}
 		else
 		{
-			return SfxHandle::INVALID_ID;
+			soundsStereo_[SoundHandle::INVALID_ID - sound].fx_.push_back(fxCallback);
 		}
+
+		return 0; // TODO: change the code of handles to allow for specifying the type of handle?... or make all sounds be stored in the same vector to remove the need to differenciate between mono and stereo.
 	}
 
 	SfxHandle AudioEngine_Portaudio::RegisterEffectForDisplay(const AudioDisplayEffectCallback fxCallback)

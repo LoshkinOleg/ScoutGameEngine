@@ -66,6 +66,11 @@ namespace Scout
 			std::copy(data.begin() + currentBegin, data.end(), outBuff.begin());
 			std::copy(data.begin(), data.begin() + secondPartDelta, outBuff.begin() + firstPartDelta);
 		}
+
+		for (size_t fx = 0; fx < fx_.size(); fx++)
+		{
+			fx_[fx](outBuff);
+		}
 	}
 
 	void MonoSound_Portaudio::Play()
@@ -155,6 +160,11 @@ namespace Scout
 			const auto secondPartDelta = currentEnd;
 			std::copy(dataInterleaved.begin() + currentBegin * 2, dataInterleaved.end(), outBuff.begin()); // *2 since we're working with stereo frames
 			std::copy(dataInterleaved.begin(), dataInterleaved.begin() + secondPartDelta * 2, outBuff.begin() + firstPartDelta * 2);
+		}
+
+		for (size_t fx = 0; fx < fx_.size(); fx++)
+		{
+			fx_[fx](outBuff);
 		}
 	}
 
