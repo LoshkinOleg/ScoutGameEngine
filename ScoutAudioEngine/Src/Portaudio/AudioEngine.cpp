@@ -427,15 +427,16 @@ namespace Scout
 			}break;
 		}
 
-		// Audio display effects. Note: should this maybe be nr of channels dependant?...
-		for (size_t i = 0; i < displayEffects_.size(); i++)
-		{
-			displayEffects_[i](outputBuff);
-		}
-
 		// Mix mono sounds and stereo ones.
 		MixSignalsInPlace(buffer_, outputBuff, mixingPolicy_); // Note: might have broken this for MONO and DUAL_MONO when code stereo support. Used to just copy the outputBuff to buffer_.
 		// NormalizeSignal(buffer_);
+
+		// Audio display effects. Note: should this maybe be nr of channels dependant?...
+		for (size_t i = 0; i < displayEffects_.size(); i++)
+		{
+			displayEffects_[i](buffer_);
+		}
+
 		update_ = false;
 	}
 

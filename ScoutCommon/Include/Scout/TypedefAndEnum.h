@@ -124,10 +124,7 @@ namespace Scout
 
 		SUM_AND_CLAMP,
 		SUM,
-		// REINHARDT,
 		AVERAGE,
-		// VIKTOR, // https://www.vttoth.com/CMS/technical-notes/?view=article&id=68 suited only for uints
-		// TANH, // https://dsp.stackexchange.com/questions/3581/algorithms-to-mix-audio-signals-without-clipping 
 	};
 
 	// Graphical

@@ -5,8 +5,7 @@
 #include <Scout/IAudioEngine.h>
 #include <Scout/IAssetSystem.h>
 #include <Scout/Math.h>
-
-// TODO: figure out how to clamp signal to -1;1 without introducing wierd artefacts.
+#include <Scout/AudioEffects.h>
 
 int main()
 {
@@ -30,32 +29,20 @@ int main()
 	uint64_t nrOfChannels, sampleRate;
 	auto audioDataMusic = wavIo->LoadWavF32("C:/Users/user/Desktop/ScoutGameEngine/Resource/Audio/MusicStereo_48kHz_32f.wav", nrOfChannels, sampleRate);
 	auto audioDataSweep = wavIo->LoadWavF32("C:/Users/user/Desktop/ScoutGameEngine/Resource/Audio/LinearSweep_48kHz_32f.wav", nrOfChannels, sampleRate);
-
-	// for (size_t i = 0; i < audioDataSweep.size(); i++)
-	// {
-	// 	audioDataSweep[i] *= 0.01f;
-	// }
+	auto audioDataNoise = wavIo->LoadWavF32("C:/Users/user/Desktop/ScoutGameEngine/Resource/Audio/WhiteNoiseMonoTremolo_48kHz_32f.wav", nrOfChannels, sampleRate);
 
 	assert(audioDataMusic.size() > 0);
 	const auto soundHandleMusic = audioEngine->MakeSound(audioDataMusic, 2, true);
 	const auto soundHandleSweep = audioEngine->MakeSound(audioDataSweep, 1, false);
+	const auto soundHandleNoise = audioEngine->MakeSound(audioDataNoise, 1, false);
 	audioEngine->SetSoundLooped(soundHandleMusic, true);
 	audioEngine->SetSoundLooped(soundHandleSweep, true);
+	audioEngine->SetSoundLooped(soundHandleNoise, true);
 	audioEngine->PlaySound(soundHandleMusic);
 	audioEngine->PlaySound(soundHandleSweep);
+	audioEngine->PlaySound(soundHandleNoise);
 
-	auto fx = [](std::vector<float>& audioData)->void
-	{
-		static float theta = 0.0f;
-
-		const size_t len = audioData.size();
-		for (size_t i = 0; i < len; i++)
-		{
-			audioData[i] *= std::sinf(theta);
-		}
-		theta += 0.1f;
-	};
-	// audioEngine->RegisterEffectForDisplay(fx);
+	audioEngine->RegisterEffectForDisplay(Scout::MakeLimiterCallback(0.75f));
 
 
 	while (!shutdown)

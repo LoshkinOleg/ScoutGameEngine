@@ -6,6 +6,8 @@
 
 #include <Scout/TypedefAndEnum.h>
 
+// TODO: figure out a way to mix sounds without loosing volume.
+
 namespace Scout
 {
 	inline void MixSignalsInPlace(std::vector<double>& data0, const std::vector<double>& data1, const MixingPolicy policy)
@@ -70,7 +72,7 @@ namespace Scout
 				data0[i] += data1[i];
 			}
 		}break;
-		case MixingPolicy::AVERAGE: // Avoids clipping artifacts and does not require actual clipping. Maybe not ideal? Does it preserve the relative loudness?
+		case MixingPolicy::AVERAGE: // Avoids clipping artifacts and does not require actual clipping. Maybe not ideal: mixing a signal with a null signal will result in an output signal half as loud.
 		{
 			for (size_t i = 0; i < nrOfSamples; i++)
 			{
