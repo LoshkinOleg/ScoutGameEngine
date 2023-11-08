@@ -698,4 +698,39 @@ namespace Scout
 			data[sample] = RemapToRange(minSample, maxSample, -1.0f, 1.0f, data[sample]);
 		}
 	}
+
+	constexpr inline void ChangeNrOfChannelsInSignal(std::vector<float>& signal, const size_t from, const size_t to, const bool interleaved)
+	{
+		if (from == to) return;
+
+		if (interleaved)
+		{
+			if (from < to)
+			{
+				const size_t originalNrOfSamples = signal.size();
+				const size_t nrOfFrames = originalNrOfSamples / from;
+				const size_t targetNrOfSamples = nrOfFrames * to;
+				const std::vector<float> originalSignal = signal;
+
+				signal.resize(nrOfFrames * to);
+				std::fill(signal.begin(), signal.end(), 0.0f);
+
+				for (size_t frame = 0; frame < nrOfFrames; frame++)
+				{
+					for (size_t sample = 0; sample < from; sample++)
+					{
+						signal[frame * to + sample] = originalSignal[frame * from + sample];
+					}
+				}
+			}
+			else
+			{
+				throw std::runtime_error("Implement this.");
+			}
+		}
+		else
+		{
+			throw std::runtime_error("Implement this.");
+		}
+	}
 }

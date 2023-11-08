@@ -83,8 +83,9 @@ namespace Scout
 		bool update_ = true;
 		std::mutex bufferMutex_;
 
-		std::vector<MonoSound_Portaudio> soundsMono_{};
-		std::vector<StereoSound_Portaudio> soundsStereo_{}; // TODO: merge all sounds into a common structure to remove need to differentiate between kinds of sounds.
+		// std::vector<MonoSound_Portaudio> soundsMono_{};
+		// std::vector<StereoSound_Portaudio> soundsStereo_{}; // TODO: merge all sounds into a common structure to remove need to differentiate between kinds of sounds.
+		std::vector<MultichannelSound_Portaudio> sounds_{};
 		std::set<SoundHandle> playing_{}; // Note: data of a set is not contiguous
 
 		std::vector<AudioDisplayEffectCallback> displayEffects_{}; // Applied to the sum buffer after all sounds have been mixed.

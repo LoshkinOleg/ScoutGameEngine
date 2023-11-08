@@ -39,7 +39,7 @@ namespace Scout
 		MONO,
 
 		// 2 channels
-		DUAL_MONO,
+		// DUAL_MONO,
 		STEREO,
 	};
 
@@ -119,7 +119,7 @@ namespace Scout
 		{
 			case SpeakerSetup::NONE: return SpeakerSetup_Portaudio::NONE;
 			case SpeakerSetup::MONO: return SpeakerSetup_Portaudio::MONO;
-			case SpeakerSetup::DUAL_MONO: return SpeakerSetup_Portaudio::DUAL_MONO;
+			// case SpeakerSetup::DUAL_MONO: return SpeakerSetup_Portaudio::DUAL_MONO;
 			case SpeakerSetup::STEREO: return SpeakerSetup_Portaudio::STEREO;
 
 			default:

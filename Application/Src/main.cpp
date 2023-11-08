@@ -4,11 +4,12 @@
 #include <Scout/IGraphicEngine.h>
 #include <Scout/IAudioEngine.h>
 #include <Scout/IAssetSystem.h>
-#include <Scout/Math.h>
+// #include <Scout/Math.h>
 #include <Scout/AudioEffects.h>
 
-// TODO: remove differenciation between mono and stereo sounds.
+// TODO: make mono sounds work with stereo setup and vice versa
 // TODO: add way to unregister sound fx
+// TODO: implement compressor
 
 int main()
 {
@@ -30,28 +31,44 @@ int main()
 
 	auto wavIo = Scout::MakeWavIo({});
 	uint64_t nrOfChannels, sampleRate;
-	auto audioDataMusic = wavIo->LoadWavF32("C:/Users/user/Desktop/ScoutGameEngine/Resource/Audio/MusicStereo_48kHz_32f.wav", nrOfChannels, sampleRate);
-	auto audioDataSweep = wavIo->LoadWavF32("C:/Users/user/Desktop/ScoutGameEngine/Resource/Audio/LinearSweep_48kHz_32f.wav", nrOfChannels, sampleRate);
-	auto audioDataNoise = wavIo->LoadWavF32("C:/Users/user/Desktop/ScoutGameEngine/Resource/Audio/WhiteNoiseMonoTremolo_48kHz_32f.wav", nrOfChannels, sampleRate);
+	auto audioData_Sine440_1ch = wavIo->LoadWavF32("C:/Users/user/Desktop/ScoutGameEngine/Resource/Audio/Sine440_48kHz_32f_1ch.wav", nrOfChannels, sampleRate);
+	auto audioData_Sweep_1ch = wavIo->LoadWavF32("C:/Users/user/Desktop/ScoutGameEngine/Resource/Audio/LinearSweep_48kHz_32f_1ch.wav", nrOfChannels, sampleRate);
+	auto audioData_SweepReverse_1ch = wavIo->LoadWavF32("C:/Users/user/Desktop/ScoutGameEngine/Resource/Audio/LinearSweepReverse_48kHz_32f_1ch.wav", nrOfChannels, sampleRate);
+	auto audioData_OffsetSweeps_2ch = wavIo->LoadWavF32("C:/Users/user/Desktop/ScoutGameEngine/Resource/Audio/OffsetStereoSweeps_48kHz_32f_2ch.wav", nrOfChannels, sampleRate);
+	auto audioData_Noise_1ch = wavIo->LoadWavF32("C:/Users/user/Desktop/ScoutGameEngine/Resource/Audio/WhiteNoiseMonoTremolo_48kHz_32f_1ch.wav", nrOfChannels, sampleRate);
+	auto audioData_Music_1ch = wavIo->LoadWavF32("C:/Users/user/Desktop/ScoutGameEngine/Resource/Audio/Music_48kHz_32f_1ch.wav", nrOfChannels, sampleRate);
+	auto audioData_Music_2ch = wavIo->LoadWavF32("C:/Users/user/Desktop/ScoutGameEngine/Resource/Audio/MusicStereo_48kHz_32f_2ch.wav", nrOfChannels, sampleRate);
+	std::vector<float> audioData_dummy_1ch = {0.0f, 0.5f, 1.0f, 0.5f, 0.0f, -0.5f, -1.0f, -0.5f};
 
-	assert(audioDataMusic.size() > 0);
-	const auto soundHandleMusic = audioEngine->MakeSound(audioDataMusic, 2, true);
-	const auto soundHandleSweep = audioEngine->MakeSound(audioDataSweep, 1, false);
-	const auto soundHandleSweepBis = audioEngine->MakeSound(audioDataSweep, 1, false);
-	const auto soundHandleNoise = audioEngine->MakeSound(audioDataNoise, 1, false);
+	// const auto soundHandle_Sine440_1ch = audioEngine->MakeSound(audioData_Sine440_1ch, 1, false);
+	// const auto soundHandle_Sweep_1ch = audioEngine->MakeSound(audioData_Sweep_1ch, 1, false);
+	// const auto soundHandle_SweepReverse_1ch = audioEngine->MakeSound(audioData_SweepReverse_1ch, 1, false);
+	// const auto soundHandle_OffsetSweeps_2ch = audioEngine->MakeSound(audioData_OffsetSweeps_2ch, 2, true);
+	// const auto soundHandle_Noise_1ch = audioEngine->MakeSound(audioData_Noise_1ch, 1, false);
+	const auto soundHandle_Music_1ch = audioEngine->MakeSound(audioData_Music_1ch, 1, false);
+	// const auto soundHandle_Music_2ch = audioEngine->MakeSound(audioData_Music_2ch, 2, true);
+	// const auto soundHandle_dummy_1ch = audioEngine->MakeSound(audioData_dummy_1ch, 1, false);
 	
-	audioEngine->SetSoundLooped(soundHandleMusic, true);
-	audioEngine->SetSoundLooped(soundHandleSweep, true);
-	audioEngine->SetSoundLooped(soundHandleSweepBis, true);
-	audioEngine->SetSoundLooped(soundHandleNoise, true);
+	// audioEngine->SetSoundLooped(soundHandle_Sine440_1ch, true);
+	// audioEngine->SetSoundLooped(soundHandle_Sweep_1ch, true);
+	// audioEngine->SetSoundLooped(soundHandle_SweepReverse_1ch, true);
+	// audioEngine->SetSoundLooped(soundHandle_OffsetSweeps_2ch, true);
+	// audioEngine->SetSoundLooped(soundHandle_Noise_1ch, true);
+	audioEngine->SetSoundLooped(soundHandle_Music_1ch, true);
+	// audioEngine->SetSoundLooped(soundHandle_Music_2ch, true);
+	// audioEngine->SetSoundLooped(soundHandle_dummy_1ch, true);
 	
-	audioEngine->PlaySound(soundHandleMusic);
-	audioEngine->PlaySound(soundHandleSweep);
-	audioEngine->PlaySound(soundHandleSweepBis);
-	audioEngine->PlaySound(soundHandleNoise);
+	// audioEngine->PlaySound(soundHandle_Sine440_1ch);
+	// audioEngine->PlaySound(soundHandle_Sweep_1ch);
+	// audioEngine->PlaySound(soundHandle_SweepReverse_1ch);
+	// audioEngine->PlaySound(soundHandle_OffsetSweeps_2ch);
+	// audioEngine->PlaySound(soundHandle_Noise_1ch);
+	audioEngine->PlaySound(soundHandle_Music_1ch);
+	// audioEngine->PlaySound(soundHandle_Music_2ch);
+	// audioEngine->PlaySound(soundHandle_dummy_1ch);
 
 	// audioEngine->RegisterEffectForDisplay(Scout::MakeLimiterCallback(0.75f));
-	audioEngine->RegisterEffectForSound(Scout::MakeLimiterCallback(0.05f), soundHandleMusic);
+	// audioEngine->RegisterEffectForSound(Scout::MakeLimiterCallback(0.05f), soundHandle_Sine440_1ch);
 
 
 	while (!shutdown)

@@ -28,10 +28,10 @@ namespace Scout
 				nrOfChannels = 1;
 			}break;
 
-			case Scout::SpeakerSetup_Portaudio::DUAL_MONO:
-			{
-				nrOfChannels = 2;
-			}break;
+			// case Scout::SpeakerSetup_Portaudio::DUAL_MONO:
+			// {
+			// 	nrOfChannels = 2;
+			// }break;
 
 			case Scout::SpeakerSetup_Portaudio::STEREO:
 			{
@@ -88,8 +88,22 @@ namespace Scout
 	SoundHandle AudioEngine_Portaudio::MakeSound(const std::vector<float>& data, const std::uint64_t nrOfChannels, const bool interleaved)
 	{
 		// TODO: take into consideration sample rate: resample source data to internal sample rate?
-		// TODO: create multichannel sound classes for handling more than 2 channels
+		assert(data.size() % nrOfChannels == 0);
 
+		if (interleaved)
+		{
+			sounds_.push_back(MultichannelSound_Portaudio(data, nrOfChannels, GetNrOfChannels(), GetFramesPerBuffer() / GetNrOfChannels()));
+			return sounds_.size() - 1;
+		}
+		else
+		{
+			std::vector<float> dataCpy = data;
+			InterleaveSignal(dataCpy, nrOfChannels);
+			sounds_.push_back(MultichannelSound_Portaudio(dataCpy, nrOfChannels, GetNrOfChannels(), GetFramesPerBuffer() / GetNrOfChannels()));
+			return sounds_.size() - 1;
+		}
+
+		/*
 		if (nrOfChannels > 1)
 		{
 			if (nrOfChannels == 2)
@@ -129,65 +143,76 @@ namespace Scout
 			// 	return soundsMono_.size() - 1;
 			// }
 		}
+		*/
 
-		soundsMono_.push_back(std::vector<float>(data.begin(), data.end()));
-		return soundsMono_.size() - 1;
+		// sounds_.push_back(std::vector<float>(data.begin(), data.end()), nrOfChannels);
+		// return soundsMono_.size() - 1;
 	}
 
 	void AudioEngine_Portaudio::PlaySound(const SoundHandle sound)
 	{
-		// Ids at the start of the integers are for mono, ids at the end of the integers range are for stereo.
-		if (sound.id < SoundHandle::INVALID_ID / 2)
-		{
-			soundsMono_[sound].Play();
-		}
-		else
-		{
-			soundsStereo_[SoundHandle::INVALID_ID - sound].Play();
-		}
+
+		// // Ids at the start of the integers are for mono, ids at the end of the integers range are for stereo.
+		// if (sound.id < SoundHandle::INVALID_ID / 2)
+		// {
+		// 	soundsMono_[sound].Play();
+		// }
+		// else
+		// {
+		// 	soundsStereo_[SoundHandle::INVALID_ID - sound].Play();
+		// }
+
+		sounds_[sound].Play();
 		playing_.insert(sound);
 	}
 
 	void AudioEngine_Portaudio::PlayOneShot(const SoundHandle sound)
 	{
-		// Ids at the start of the integers are for mono, ids at the end of the integers range are for stereo.
-		if (sound.id < SoundHandle::INVALID_ID / 2)
-		{
-			soundsMono_[sound].Play();
-			soundsMono_[sound].loop = false;
-		}
-		else
-		{
-			soundsStereo_[SoundHandle::INVALID_ID - sound].Play();
-			soundsStereo_[SoundHandle::INVALID_ID - sound].loop = false;
-		}
+		// // Ids at the start of the integers are for mono, ids at the end of the integers range are for stereo.
+		// if (sound.id < SoundHandle::INVALID_ID / 2)
+		// {
+		// 	soundsMono_[sound].Play();
+		// 	soundsMono_[sound].loop = false;
+		// }
+		// else
+		// {
+		// 	soundsStereo_[SoundHandle::INVALID_ID - sound].Play();
+		// 	soundsStereo_[SoundHandle::INVALID_ID - sound].loop = false;
+		// }
+		sounds_[sound].Play();
+		sounds_[sound].loop = false;
 		playing_.insert(sound);
 	}
 
 	void AudioEngine_Portaudio::StopSound(const SoundHandle sound)
 	{
-		// Ids at the start of the integers are for mono, ids at the end of the integers range are for stereo.
-		if (sound.id < SoundHandle::INVALID_ID / 2)
-		{
-			soundsMono_[sound].Stop();
-		}
-		else
-		{
-			soundsStereo_[SoundHandle::INVALID_ID - sound].Stop();
-		}
+		// // Ids at the start of the integers are for mono, ids at the end of the integers range are for stereo.
+		// if (sound.id < SoundHandle::INVALID_ID / 2)
+		// {
+		// 	soundsMono_[sound].Stop();
+		// }
+		// else
+		// {
+		// 	soundsStereo_[SoundHandle::INVALID_ID - sound].Stop();
+		// }
+		sounds_[sound].Stop();
 		playing_.erase(sound);
 	}
 
 	void AudioEngine_Portaudio::StopAll()
 	{
-		for(auto& sound : soundsMono_)
-		{
-			sound.Stop();
-		}
-		for (auto& sound : soundsStereo_)
-		{
-			sound.Stop();
-		}
+		// for(auto& sound : soundsMono_)
+		// {
+		// 	sound.Stop();
+		// }
+		// for (auto& sound : soundsStereo_)
+		// {
+		// 	sound.Stop();
+		// }
+		for (auto& sound : sounds_)
+			{
+				sound.Stop();
+			}
 		playing_.clear();
 	}
 
@@ -203,30 +228,32 @@ namespace Scout
 
 	void AudioEngine_Portaudio::SetSoundLooping(const SoundHandle sound, const bool newLooping)
 	{
-		// Ids at the start of the integers are for mono, ids at the end of the integers range are for stereo.
-		if (sound.id < SoundHandle::INVALID_ID / 2)
-		{
-			soundsMono_[sound].loop = newLooping;
-		}
-		else
-		{
-			soundsStereo_[SoundHandle::INVALID_ID - sound].loop = newLooping;
-		}
+		// // Ids at the start of the integers are for mono, ids at the end of the integers range are for stereo.
+		// if (sound.id < SoundHandle::INVALID_ID / 2)
+		// {
+		// 	soundsMono_[sound].loop = newLooping;
+		// }
+		// else
+		// {
+		// 	soundsStereo_[SoundHandle::INVALID_ID - sound].loop = newLooping;
+		// }
+		sounds_[sound].loop = newLooping;
 	}
 
 	bool AudioEngine_Portaudio::IsSoundPlaying(const SoundHandle sound) const
 	{
 		// Sound is considered to be playing if it's currentBegin index is not pointing to END_OF_DATA.
 
-		// Ids at the start of the integers are for mono, ids at the end of the integers range are for stereo.
-		if (sound.id < SoundHandle::INVALID_ID / 2)
-		{
-			return soundsMono_[sound].currentBegin != END_OF_DATA;
-		}
-		else
-		{
-			return soundsStereo_[SoundHandle::INVALID_ID - sound].currentBegin != END_OF_DATA;
-		}
+		// // Ids at the start of the integers are for mono, ids at the end of the integers range are for stereo.
+		// if (sound.id < SoundHandle::INVALID_ID / 2)
+		// {
+		// 	return soundsMono_[sound].currentBeginFrame != END_OF_DATA;
+		// }
+		// else
+		// {
+		// 	return soundsStereo_[SoundHandle::INVALID_ID - sound].currentBeginFrame != END_OF_DATA;
+		// }
+		return sounds_[sound].currentBeginFrame != END_OF_DATA;
 	}
 
 	bool AudioEngine_Portaudio::AudioEngine_Portaudio::IsSoundPaused(const SoundHandle sound) const
@@ -238,14 +265,15 @@ namespace Scout
 	bool AudioEngine_Portaudio::IsSoundLooped(const SoundHandle sound) const
 	{
 		// Ids at the start of the integers are for mono, ids at the end of the integers range are for stereo.
-		if (sound.id < SoundHandle::INVALID_ID / 2)
-		{
-			return soundsMono_[sound].loop;
-		}
-		else
-		{
-			return soundsStereo_[SoundHandle::INVALID_ID - sound].loop;
-		}
+		// if (sound.id < SoundHandle::INVALID_ID / 2)
+		// {
+		// 	return soundsMono_[sound].loop;
+		// }
+		// else
+		// {
+		// 	return soundsStereo_[SoundHandle::INVALID_ID - sound].loop;
+		// }
+		return sounds_[sound].loop;
 	}
 
 	Bitdepth AudioEngine_Portaudio::GetBitdepth() const
@@ -276,7 +304,7 @@ namespace Scout
 		switch(speakerSetup_)
 		{
 			case SpeakerSetup_Portaudio::MONO: return 1;
-			case SpeakerSetup_Portaudio::DUAL_MONO: return 2;
+			// case SpeakerSetup_Portaudio::DUAL_MONO: return 2;
 			case SpeakerSetup_Portaudio::STEREO: return 2;
 
 			default:
@@ -311,7 +339,7 @@ namespace Scout
 		return std::chrono::milliseconds(latencyInSeconds * 1000);
 	}
 
-	void AudioEngine_Portaudio::Update()
+	/*void AudioEngine_Portaudio::Update()
 	{
 		std::scoped_lock lck(bufferMutex_);
 		if (!update_) return;
@@ -335,7 +363,7 @@ namespace Scout
 					soundsMono_[handle].Service(workingBuff);
 					soundsMono_[handle].AdvanceBy(framesPerBuff);
 					MixSignalsInPlace(sumBuff, workingBuff, mixingPolicy_);
-					if (soundsMono_[handle].currentBegin == END_OF_DATA) StopSound(handle);
+					if (soundsMono_[handle].currentBeginFrame == END_OF_DATA) StopSound(handle);
 				}
 
 				assert(outputBuff.size() == sumBuff.size());
@@ -357,7 +385,7 @@ namespace Scout
 					soundsMono_[handle].Service(workingBuff);
 					soundsMono_[handle].AdvanceBy(framesPerBuff);
 					MixSignalsInPlace(sumBuff, workingBuff, mixingPolicy_);
-					if (soundsMono_[handle].currentBegin == END_OF_DATA) StopSound(handle);
+					if (soundsMono_[handle].currentBeginFrame == END_OF_DATA) StopSound(handle);
 				}
 
 				assert(outputBuff.size() == 2 * sumBuff.size());
@@ -386,7 +414,7 @@ namespace Scout
 							soundsMono_[handle].Service(workingBuffMono);
 							soundsMono_[handle].AdvanceBy(framesPerBuff);
 							MixSignalsInPlace(sumBuffMono, workingBuffMono, mixingPolicy_);
-							if (soundsMono_[handle].currentBegin == END_OF_DATA) StopSound(handle);
+							if (soundsMono_[handle].currentBeginFrame == END_OF_DATA) StopSound(handle);
 						}
 					}
 
@@ -413,7 +441,7 @@ namespace Scout
 							soundsStereo_[SoundHandle::INVALID_ID - handle].Service(workingBuffStereo);
 							soundsStereo_[SoundHandle::INVALID_ID - handle].AdvanceBy(framesPerBuff);
 							MixSignalsInPlace(sumBuffStereo, workingBuffStereo, mixingPolicy_);
-							if (soundsStereo_[SoundHandle::INVALID_ID - handle].currentBegin == END_OF_DATA) StopSound(handle);
+							if (soundsStereo_[SoundHandle::INVALID_ID - handle].currentBeginFrame == END_OF_DATA) StopSound(handle);
 						}
 					}
 
@@ -439,21 +467,104 @@ namespace Scout
 		}
 
 		update_ = false;
+	}*/
+
+	void AudioEngine_Portaudio::Update()
+	{
+		std::scoped_lock lck(bufferMutex_);
+		if (!update_) return;
+
+		const std::uint32_t framesPerBuff = (std::uint32_t)GetFramesPerBuffer();
+		static std::vector<float> outputBuff(framesPerBuff * GetNrOfChannels(), 0.0f);
+		static std::vector<float> sumBuff(framesPerBuff * GetNrOfChannels(), 0.0f);
+		static std::vector<float> workingBuff(framesPerBuff * GetNrOfChannels(), 0.0f);
+
+		switch (speakerSetup_)
+		{
+		case Scout::SpeakerSetup_Portaudio::MONO:
+		{
+			std::fill(outputBuff.begin(), outputBuff.end(), 0.0f);
+			std::fill(sumBuff.begin(), sumBuff.end(), 0.0f);
+			std::fill(workingBuff.begin(), workingBuff.end(), 0.0f);
+
+			for (auto& handle : playing_) // Note: since sumBuff is filled with silence, the first call to MixSignalsInPlace divides the volume of the first sound by half for the AVERAGE mixing policy.
+			{
+				sounds_[handle].Service(workingBuff);
+				sounds_[handle].AdvanceBy(framesPerBuff);
+				MixSignalsInPlace(sumBuff, workingBuff, mixingPolicy_);
+				if (sounds_[handle].currentBeginFrame == END_OF_DATA) StopSound(handle);
+			}
+
+			std::copy(sumBuff.begin(), sumBuff.end(), outputBuff.begin());
+		}break;
+
+		case Scout::SpeakerSetup_Portaudio::STEREO:
+		{
+			std::fill(outputBuff.begin(), outputBuff.end(), 0.0f);
+			std::fill(sumBuff.begin(), sumBuff.end(), 0.0f);
+			std::fill(workingBuff.begin(), workingBuff.end(), 0.0f);
+
+			for (auto& handle : playing_) // Note: since sumBuff is filled with silence, the first call to MixSignalsInPlace divides the volume of the first sound by half for the AVERAGE mixing policy.
+			{
+				switch (sounds_[handle].nrOfChannels)
+				{
+					case 1:
+					{
+						sounds_[handle].Service(workingBuff);
+						sounds_[handle].AdvanceBy(framesPerBuff);
+						MixSignalsInPlace(sumBuff, workingBuff, mixingPolicy_);
+						if (sounds_[handle].currentBeginFrame == END_OF_DATA) StopSound(handle);
+					}break;
+
+					case 2:
+					{
+						sounds_[handle].Service(workingBuff);
+						sounds_[handle].AdvanceBy(framesPerBuff);
+						MixSignalsInPlace(sumBuff, workingBuff, mixingPolicy_);
+						if (sounds_[handle].currentBeginFrame == END_OF_DATA) StopSound(handle);
+					}break;
+					
+					default:
+					{
+						throw std::runtime_error("Specified speaker configuration for sound isn't handled by this implementation.");
+					}
+				}
+			}
+
+			std::copy(sumBuff.begin(), sumBuff.end(), outputBuff.begin());
+		}break;
+
+		default:
+		{
+			throw std::runtime_error("Specified speaker configuration isn't handled by this implementation.");
+		}break;
+		}
+
+		// Audio display effects. Note: should this maybe be nr of channels dependant?...
+		for (size_t i = 0; i < displayEffects_.size(); i++)
+		{
+			displayEffects_[i](outputBuff);
+		}
+
+		std::copy(outputBuff.begin(), outputBuff.end(), buffer_.begin());
+
+		update_ = false;
 	}
 
 	SfxHandle AudioEngine_Portaudio::RegisterEffectForSound(const SoundSpecificEffectCallback fxCallback, const SoundHandle sound)
 	{
 		// Ids at the start of the integers are for mono, ids at the end of the integers range are for stereo.
-		if (sound.id < SoundHandle::INVALID_ID / 2)
-		{
-			soundsMono_[sound].fx_.push_back(fxCallback);
-		}
-		else
-		{
-			soundsStereo_[SoundHandle::INVALID_ID - sound].fx_.push_back(fxCallback);
-		}
+		// if (sound.id < SoundHandle::INVALID_ID / 2)
+		// {
+		// 	soundsMono_[sound].fx.push_back(fxCallback);
+		// }
+		// else
+		// {
+		// 	soundsStereo_[SoundHandle::INVALID_ID - sound].fx.push_back(fxCallback);
+		// }
 
-		return 0; // TODO: change the code of handles to allow for specifying the type of handle?... or make all sounds be stored in the same vector to remove the need to differenciate between mono and stereo.
+		sounds_[sound].fx.push_back(fxCallback);
+		return sound.id + sounds_[sound].fx.size() - 1; // Id of sfx = id of sound + id of the sound specific fx.
 	}
 
 	SfxHandle AudioEngine_Portaudio::RegisterEffectForDisplay(const AudioDisplayEffectCallback fxCallback)
@@ -490,13 +601,15 @@ namespace Scout
 	void AudioEngine_Portaudio::SetSoundLooped(const SoundHandle sound, const bool newVal)
 	{
 		// Ids at the start of the integers are for mono, ids at the end of the integers range are for stereo.
-		if (sound < SoundHandle::INVALID_ID / 2)
-		{
-			soundsMono_[sound].loop = newVal;
-		}
-		else
-		{
-			soundsStereo_[SoundHandle::INVALID_ID - sound].loop = newVal;
-		}
+		// if (sound < SoundHandle::INVALID_ID / 2)
+		// {
+		// 	soundsMono_[sound].loop = newVal;
+		// }
+		// else
+		// {
+		// 	soundsStereo_[SoundHandle::INVALID_ID - sound].loop = newVal;
+		// }
+
+		sounds_[sound].loop = newVal;
 	}
 }
