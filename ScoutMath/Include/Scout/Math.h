@@ -699,9 +699,56 @@ namespace Scout
 		}
 	}
 
+	constexpr inline void MonoToDualMonoSignal(std::vector<float>& signal, const bool interleaved)
+	{
+		if (interleaved)
+		{
+			// signal.resize(signal.size() * 2);
+			signal.insert(signal.end(), signal.size(), 0.0f); // Resize vector.
+			for (size_t i = (signal.size() / 2) - 1; i < signal.size() / 2; i--)
+			{
+				signal[i * 2 + 1] = signal[i];
+				signal[i * 2] = signal[i];
+			}
+		}
+		else
+		{
+			throw std::runtime_error("Implement this.");
+		}
+	}
+
+	constexpr inline void StereoToMonoSignal(std::vector<float>& signal, const bool interleaved)
+	{
+		if (interleaved)
+		{
+			for (size_t i = 0; i < signal.size(); i += 2)
+			{
+				// Average mix.
+				signal[i] += signal[i + 1];
+				signal[i] *= 0.5f;
+			}
+			for (size_t i = 0; i < signal.size() / 2; i++)
+			{
+				signal[i] = signal[i * 2 + 1];
+			}
+			signal.resize(signal.size() / 2);
+			return;
+		}
+		else
+		{
+			throw std::runtime_error("Implement this.");
+		}
+	}
+
 	constexpr inline void ChangeNrOfChannelsInSignal(std::vector<float>& signal, const size_t from, const size_t to, const bool interleaved)
 	{
 		if (from == to) return;
+
+		if (from == 1 && to == 2) // When going from mono to dual mono, don't fill the second channel with silence, duplicate the left channel into the right one instead.
+		{
+			MonoToDualMonoSignal(signal, interleaved);
+			return;
+		}
 
 		if (interleaved)
 		{
@@ -723,9 +770,13 @@ namespace Scout
 					}
 				}
 			}
-			else
+			else // downmixing
 			{
-				throw std::runtime_error("Implement this.");
+				if (from == 2 && to == 1) // stereo or dual mono to mono
+				{
+					StereoToMonoSignal(signal, interleaved);
+					return;
+				}
 			}
 		}
 		else
