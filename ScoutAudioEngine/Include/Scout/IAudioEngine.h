@@ -40,6 +40,8 @@ namespace Scout
 
 		virtual SfxHandle RegisterEffectForSound(const SoundSpecificEffectCallback fxCallback, const SoundHandle sound) = 0;
 		virtual SfxHandle RegisterEffectForDisplay(const AudioDisplayEffectCallback fxCallback) = 0; // TODO: add methods for removing fx
+
+		virtual std::vector<float> GetRawBuffer() const = 0;
 	};
 
     struct AudioEngineDef
