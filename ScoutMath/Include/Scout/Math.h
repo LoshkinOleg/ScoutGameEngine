@@ -784,4 +784,22 @@ namespace Scout
 			throw std::runtime_error("Implement this.");
 		}
 	}
+
+	constexpr inline void DelaySignal(std::vector<float>& signal, const size_t nrOfChannels, const size_t delayInFrames)
+	{
+		signal.insert(signal.end(), nrOfChannels * delayInFrames, 0.0f); // Pad signal with silence.
+		std::move(signal.begin(), signal.end() - nrOfChannels * delayInFrames, signal.begin() + nrOfChannels * delayInFrames); // Move the signal over.
+		std::fill(signal.begin(), signal.begin() + nrOfChannels * delayInFrames, 0.0f); // Write silence to the beginning of the signal.
+	}
+
+	inline float ComputeRootMeanSquareOfSignal(const std::vector<float>& signal)
+	{
+		float accumulated = 0.0f;
+		for (size_t i = 0; i < signal.size(); i++)
+		{
+			accumulated += signal[i] * signal[i];
+		}
+		accumulated /= signal.size();
+		return std::sqrtf(accumulated);
+	}
 }

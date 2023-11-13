@@ -44,6 +44,7 @@ target_include_directories(${ModuleName} PUBLIC
 	${${ModuleName}_IncludePath}
 	${ScoutCommon_IncludePath}
 	${ScoutMath_IncludePath}
+	${ScoutAssetSystem_IncludePath}
 )
 if (USE_${ImplementationName})
 target_include_directories(${ModuleName} PUBLIC
@@ -55,6 +56,7 @@ endif()
 target_link_libraries(${ModuleName} PUBLIC
 	general ScoutCommon
 	general ScoutMath
+	general ScoutAssetSystem
 )
 if(USE_${ImplementationName})
 target_link_libraries(${ModuleName} PUBLIC

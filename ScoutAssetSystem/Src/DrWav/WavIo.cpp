@@ -2,7 +2,9 @@
 
 #include <stdexcept>
 
+#ifndef DR_WAV_IMPLEMENTATION
 #define DR_WAV_IMPLEMENTATION
+#endif // !DR_WAV_IMPLEMENTATION
 #include <dr_wav.h>
 
 namespace Scout
