@@ -28,7 +28,8 @@ int main()
 			// Results in buzzing artefacts if sine is played. Results in aliasing if sweep is played. The wave form is reminescent of the graph for quantization noise.
 			// signal[i] = 0.85f * cbrtf(signal[i]);
 			// signal[i] = 0.85f * powf(signal[i], 1.0f/1.8f);
-			signal[i] = tanhf(signal[i] * 1.2f);
+			// signal[i] = tanhf(signal[i] * 1.45f);
+			signal[i] = tanhf(signal[i] * 2.45f);
 		}
 	};
 	auto attenuationFx = [](std::vector<float>& signal)
@@ -59,11 +60,11 @@ int main()
 	uint64_t nrOfChannels, sampleRate;
 
 	auto audioData_Sine440_1ch = wavIo->LoadWavF32("C:/Users/user/Desktop/ScoutGameEngine/Resource/Audio/Sine440_48kHz_32f_1ch.wav", nrOfChannels, sampleRate);
-	// simpleCompressor(audioData_Sine440_1ch);
+	simpleCompressor(audioData_Sine440_1ch);
 	// wavIo->WriteWav(audioData_Sine440_1ch, OUTPUT_PATH, 1, 48000);
 	const auto soundHandle_Sine440_1ch = audioEngine->MakeSound(audioData_Sine440_1ch, 1, false);
 	audioEngine->SetSoundLooped(soundHandle_Sine440_1ch, true);
-	// audioEngine->PlaySound(soundHandle_Sine440_1ch);
+	audioEngine->PlaySound(soundHandle_Sine440_1ch);
 
 	auto audioData_Sweep_1ch = wavIo->LoadWavF32("C:/Users/user/Desktop/ScoutGameEngine/Resource/Audio/LinearSweep_48kHz_32f_1ch.wav", nrOfChannels, sampleRate);
 	// simpleCompressor(audioData_Sweep_1ch);

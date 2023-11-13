@@ -3,6 +3,7 @@
 #include <functional>
 #include <tuple>
 #include <memory>
+#include <string>
 
 #include <Scout/TypedefAndEnum.h>
 
