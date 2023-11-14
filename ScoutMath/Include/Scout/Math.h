@@ -58,6 +58,11 @@ namespace Scout
 		return std::complex<float>(std::cosf(x), std::sinf(x));
 	}
 
+	// https://stackoverflow.com/questions/1903954/is-there-a-standard-sign-function-signum-sgn-in-c-c
+	template <typename T> int Sign(T val) {
+		return (T(0) < val) - (val < T(0));
+	}
+
 	// Vectors ==================================
 
 	struct Vec4
