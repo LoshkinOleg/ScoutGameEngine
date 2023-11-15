@@ -575,7 +575,7 @@ namespace Scout
 		return displayEffects_.size() - 1;
 	}
 
-	std::vector<float> AudioEngine_Portaudio::GetRawBuffer() const
+	const std::vector<float>& AudioEngine_Portaudio::GetRawBuffer() const
 	{
 		return buffer_;
 	}

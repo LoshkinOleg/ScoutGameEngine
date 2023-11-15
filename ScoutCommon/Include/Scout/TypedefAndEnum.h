@@ -352,8 +352,10 @@ namespace Scout
 		Q,
 		R,
 		C,
+		V,
 		X,
 		Z, // Y on QWERTZ layout
+		Y,
 		ONE,
 		TWO,
 		THREE,

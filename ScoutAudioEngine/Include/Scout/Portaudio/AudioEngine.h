@@ -63,7 +63,8 @@ namespace Scout
 		SfxHandle RegisterEffectForSound(const SoundSpecificEffectCallback fxCallback, const SoundHandle sound) override;
 		SfxHandle RegisterEffectForDisplay(const AudioDisplayEffectCallback fxCallback) override;
 
-		std::vector<float> GetRawBuffer() const override;
+		// Warning: for guaranteed accuracy, this access should be protected with the mutex lock.
+		const std::vector<float>& GetRawBuffer() const override;
 
 	private:
 		static int ServicePortaudio_(const void* input, void* output,

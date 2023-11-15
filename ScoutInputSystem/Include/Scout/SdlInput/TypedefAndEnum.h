@@ -44,8 +44,10 @@ namespace Scout
         Q = SDL_SCANCODE_Q,
         R = SDL_SCANCODE_R,
         C = SDL_SCANCODE_C,
+        V = SDL_SCANCODE_V,
         X = SDL_SCANCODE_X,
         Z = SDL_SCANCODE_Z,
+        Y = SDL_SCANCODE_Y,
         ONE = SDL_SCANCODE_1,
         TWO = SDL_SCANCODE_2,
         THREE = SDL_SCANCODE_3,
@@ -102,8 +104,10 @@ namespace Scout
             case KeyboardKey::Q: return KeyboardKey_SDL::Q;
             case KeyboardKey::R: return KeyboardKey_SDL::R;
             case KeyboardKey::C: return KeyboardKey_SDL::C;
+            case KeyboardKey::V: return KeyboardKey_SDL::V;
             case KeyboardKey::X: return KeyboardKey_SDL::X;
             case KeyboardKey::Z: return KeyboardKey_SDL::Z;
+            case KeyboardKey::Y: return KeyboardKey_SDL::Y;
             case KeyboardKey::ONE: return KeyboardKey_SDL::ONE;
             case KeyboardKey::TWO: return KeyboardKey_SDL::TWO;
             case KeyboardKey::THREE: return KeyboardKey_SDL::THREE;

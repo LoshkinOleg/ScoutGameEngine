@@ -12,55 +12,59 @@
 
 // TODO: implement generic change of audio channels for nrOfChannels > 2 (ex: 3.0 to stereo and vice versa)
 // TODO: add way to unregister sound fx
+// TODO: implement oscilloscope
 // TODO: implement compressor
+//			- static curve compressor: OK
+//			- dynamic compressor: TODO
 //			- peak measurement // https://stackoverflow.com/questions/22583391/peak-signal-detection-in-realtime-timeseries-data/22640362#22640362 
-// TODO: debug static curve compressor. look at the graphs. Issues: downwardCompNeg, upwardCompNeg, downwardCompPos
 
 constexpr const char* OUTPUT_PATH = "C:/Users/user/Desktop/ScoutGameEngine/Resource/Audio/generated.wav";
 
 int main()
 {
-	auto simpleCompressor = [](std::vector<float>& signal)->void
-	{
-		for (size_t i = 0; i < signal.size(); i++)
-		{
-			// Results in buzzing artefacts if sine is played. Results in aliasing if sweep is played. The wave form is reminescent of the graph for quantization noise.
-			// signal[i] = 0.85f * cbrtf(signal[i]);
-			// signal[i] = 0.85f * powf(signal[i], 1.0f/1.8f);
-			// signal[i] = tanhf(signal[i] * 1.45f);
-			signal[i] = tanhf(signal[i] * 2.45f);
-		}
-	};
-	auto attenuationFx = [](std::vector<float>& signal)
-	{
-		for (size_t i = 0; i < signal.size(); i++)
-		{
-			signal[i] *= 0.5f;
-		}
-	};
-	auto simpleNoiseGate = [](std::vector<float>& signal)
-	{
-		for (size_t i = 0; i < signal.size(); i++)
-		{
-			if ((signal[i] < 0.2f && signal[i] > 0.0f) || (signal[i] > -0.2f && signal[i] < 0.0f))
-			{
-				signal[i] = 0.0f;
-			}
-		}
-	};
-	auto staticCurveCompressor = [](std::vector<float>& signal)
+	// Modules setup.
+	bool shutdown = false;
+
+	Scout::WindowDef windowDef;
+	windowDef.implementation = Scout::InputApi::SDL;
+	windowDef.windowName = "MyWindow";
+	windowDef.windowWidth = 720;
+	windowDef.windowHeight = 720;
+	auto window = Scout::MakeWindow(windowDef);
+
+	Scout::AudioEngineDef audioEngineDef;
+	audioEngineDef.implementation = Scout::AudioApi::PORTAUDIO;
+	audioEngineDef.speakersSetup = Scout::SpeakerSetup::MONO;
+	audioEngineDef.engineBufferSamplerate = Scout::Samplerate::Hz_48k;
+	audioEngineDef.mixingPolicy = Scout::MixingPolicy::AVERAGE;
+	auto audioEngine = Scout::MakeAudioEngine(audioEngineDef);
+
+	Scout::GraphicsEngineDef graphicsEngineDef;
+	graphicsEngineDef.implementation = Scout::GraphicalApi::SDL_RENDERER;
+	graphicsEngineDef.viewportWidth = 720;
+	graphicsEngineDef.viewportHeight = 720;
+	auto graphicsEngine = Scout::MakeGraphicsEngine(graphicsEngineDef);
+
+	// Bound static curve compressor.
+	float limiterEnd = 0.0f;
+	float upwardCompThreshold = 0.25f;
+	float downwardCompThreshold = 0.75f;
+	float limiterStart = 1.0f;
+	float makeupGainFactor = 0.0f;
+	float maxAbsSignalValue = 1.0f;
+	auto myCompFx = [&](std::vector<float>& signal)
 	{
 		// https://www.desmos.com/calculator/dywe6plrzk
 
 		// X values
-		constexpr const float i = 0.05f;
-		constexpr const float j = 0.183f;
-		constexpr const float k = 0.673f;
-		constexpr const float l = 0.95f;
+		const float& i = limiterEnd;
+		const float& j = upwardCompThreshold;
+		const float& k = downwardCompThreshold;
+		const float& l = limiterStart;
 
 		// Y values
-		constexpr const float g = 0.17f;
-		constexpr const float M = 0.954f;
+		const float& g = makeupGainFactor;
+		const float& M = maxAbsSignalValue;
 
 		auto a = [=](const float x)->float {return 0; };
 		auto c = [=](const float x)->float {return x + g; };
@@ -68,15 +72,15 @@ int main()
 		auto d = [=](const float x)->float
 		{
 			return
-				x * ( (c(j) - a(i)) / (j - i) )
-				-i * ( (c(j) - a(i)) / (j - i) )
+				x * ((c(j) - a(i)) / (j - i))
+				- i * ((c(j) - a(i)) / (j - i))
 				;
 		};
 		auto h = [=](const float x)->float
 		{
 			return
-				x * ( (b(l) - c(k)) / (l - k) )
-				+ ( k - k * ( (b(l) - c(k)) / (l - k) ) + g )
+				x * ((b(l) - c(k)) / (l - k))
+				+ (k - k * ((b(l) - c(k)) / (l - k)) + g)
 				;
 		};
 
@@ -86,15 +90,15 @@ int main()
 		auto t = [=](const float x)->float
 		{
 			return
-				x * ( (q(-i) - w(-j)) / (j - i) )
-				+i * ( (q(-i) - w(-j)) / (j - i) )
+				x * ((q(-i) - w(-j)) / (j - i))
+				+ i * ((q(-i) - w(-j)) / (j - i))
 				;
 		};
 		auto u = [=](const float x)->float
 		{
 			return
-				x * ( (w(-k) - r(-l)) / (l - k) )
-				+ ( r(-l) + l * ( (w(-k) - r(-l)) / (l - k) ) )
+				x * ((w(-k) - r(-l)) / (l - k))
+				+ (r(-l) + l * ((w(-k) - r(-l)) / (l - k)))
 				;
 		};
 
@@ -154,35 +158,17 @@ int main()
 		}
 	};
 
-	bool shutdown = false;
-
-	Scout::WindowDef windowDef;
-	windowDef.implementation = Scout::InputApi::SDL;
-	windowDef.windowName = "MyWindow";
-	windowDef.windowWidth = 720;
-	windowDef.windowHeight = 720;
-	auto window = Scout::MakeWindow(windowDef);
-
-	Scout::AudioEngineDef audioEngineDef;
-	audioEngineDef.implementation = Scout::AudioApi::PORTAUDIO;
-	audioEngineDef.speakersSetup = Scout::SpeakerSetup::MONO;
-	audioEngineDef.engineBufferSamplerate = Scout::Samplerate::Hz_48k;
-	audioEngineDef.mixingPolicy = Scout::MixingPolicy::AVERAGE;
-	auto audioEngine = Scout::MakeAudioEngine(audioEngineDef);
-
+	// Setup sounds.
 	auto wavIo = Scout::MakeWavIo({});
 	uint64_t nrOfChannels, sampleRate;
-
+	
 	auto audioData_Sine440_1ch = wavIo->LoadWavF32("C:/Users/user/Desktop/ScoutGameEngine/Resource/Audio/Sine440_48kHz_32f_1ch.wav", nrOfChannels, sampleRate);
-	// simpleCompressor(audioData_Sine440_1ch);
-	staticCurveCompressor(audioData_Sine440_1ch);
-	wavIo->WriteWav(audioData_Sine440_1ch, OUTPUT_PATH, 1, 48000);
 	const auto soundHandle_Sine440_1ch = audioEngine->MakeSound(audioData_Sine440_1ch, 1, false);
 	audioEngine->SetSoundLooped(soundHandle_Sine440_1ch, true);
-	audioEngine->PlaySound(soundHandle_Sine440_1ch);
+	// audioEngine->PlaySound(soundHandle_Sine440_1ch);
+	// audioEngine->RegisterEffectForSound(myCompFx, soundHandle_Sine440_1ch);
 
 	auto audioData_Sweep_1ch = wavIo->LoadWavF32("C:/Users/user/Desktop/ScoutGameEngine/Resource/Audio/LinearSweep_48kHz_32f_1ch.wav", nrOfChannels, sampleRate);
-	// simpleCompressor(audioData_Sweep_1ch);
 	const auto soundHandle_Sweep_1ch = audioEngine->MakeSound(audioData_Sweep_1ch, 1, false);
 	audioEngine->SetSoundLooped(soundHandle_Sweep_1ch, true);
 	// audioEngine->PlaySound(soundHandle_Sweep_1ch);
@@ -205,7 +191,7 @@ int main()
 	auto audioData_Music_1ch = wavIo->LoadWavF32("C:/Users/user/Desktop/ScoutGameEngine/Resource/Audio/Music_48kHz_32f_1ch.wav", nrOfChannels, sampleRate);
 	const auto soundHandle_Music_1ch = audioEngine->MakeSound(audioData_Music_1ch, 1, false);
 	audioEngine->SetSoundLooped(soundHandle_Music_1ch, true);
-	// audioEngine->PlaySound(soundHandle_Music_1ch);
+	audioEngine->PlaySound(soundHandle_Music_1ch);
 	
 	auto audioData_Music_2ch = wavIo->LoadWavF32("C:/Users/user/Desktop/ScoutGameEngine/Resource/Audio/MusicStereo_48kHz_32f_2ch.wav", nrOfChannels, sampleRate);
 	const auto soundHandle_Music_2ch = audioEngine->MakeSound(audioData_Music_2ch, 2, true);
@@ -216,7 +202,6 @@ int main()
 	const auto soundHandle_drumNBase_1ch = audioEngine->MakeSound(audioData_DrumNBase_1ch, 1, false);
 	audioEngine->SetSoundLooped(soundHandle_drumNBase_1ch, true);
 	// audioEngine->PlaySound(soundHandle_drumNBase_1ch);
-	// audioEngine->RegisterEffectForSound(simpleNoiseGate, soundHandle_drumNBase_1ch);
 	
 	std::vector<float> audioData_dummy_1ch = {0.0f, 0.5f, 1.0f, 0.5f, 0.0f, -0.5f, -1.0f, -0.5f};
 	const auto soundHandle_dummy_1ch = audioEngine->MakeSound(audioData_dummy_1ch, 1, false);
@@ -228,21 +213,154 @@ int main()
 	audioEngine->SetSoundLooped(soundHandle_dummy_2ch, true);
 	// audioEngine->PlaySound(soundHandle_dummy_2ch);
 
-	// std::vector<float> audioData_dummyLinearIncrease_1ch(48000, 0.0f);
-	// const float increment = 2.0f / 48000.0f;
-	// float accumulatedVal = -1.0f;
-	// for (size_t i = 0; i < audioData_dummyLinearIncrease_1ch.size(); i++)
-	// {
-	// 	audioData_dummyLinearIncrease_1ch[i] = accumulatedVal;
-	// 	accumulatedVal += increment;
-	// }
-	// staticCurveCompressor(audioData_dummyLinearIncrease_1ch);
-	// wavIo->WriteWav(audioData_dummyLinearIncrease_1ch, OUTPUT_PATH, 1, 48000);
+	auto audioData_VolumeLine_1ch = wavIo->LoadWavF32("C:/Users/user/Desktop/ScoutGameEngine/Resource/Audio/VolumeLine_48kHz_32_1ch.wav", nrOfChannels, sampleRate);
+	const auto soundHandle_VolumeLine_1ch = audioEngine->MakeSound(audioData_VolumeLine_1ch, 1, false);
+	audioEngine->SetSoundLooped(soundHandle_VolumeLine_1ch, true);
+	// audioEngine->PlaySound(soundHandle_VolumeLine_1ch);
 
+	// Input bindings.
+	auto decreaseI = [&](bool justPressed, bool repeating)
+	{
+		if (justPressed && !repeating)
+		{
+			limiterEnd -= 0.05f;
+			limiterEnd = std::clamp(limiterEnd, 0.0f, 1.0f);
+		}
+	};
+	window->RegisterKeyboardCallback(Scout::KeyboardKey::Q, decreaseI);
+	auto increaseI = [&](bool justPressed, bool repeating)
+	{
+		if (justPressed && !repeating)
+		{
+			limiterEnd += 0.05f;
+			limiterEnd = std::clamp(limiterEnd, 0.0f, 1.0f);
+		}
+	};
+	window->RegisterKeyboardCallback(Scout::KeyboardKey::W, increaseI);
+
+	auto decreaseJ = [&](bool justPressed, bool repeating)
+	{
+		if (justPressed && !repeating)
+		{
+			upwardCompThreshold -= 0.05f;
+			upwardCompThreshold = std::clamp(upwardCompThreshold, 0.0f, 1.0f);
+		}
+	};
+	window->RegisterKeyboardCallback(Scout::KeyboardKey::A, decreaseJ);
+	auto increaseJ = [&](bool justPressed, bool repeating)
+	{
+		if (justPressed && !repeating)
+		{
+			upwardCompThreshold += 0.05f;
+			upwardCompThreshold = std::clamp(upwardCompThreshold, 0.0f, 1.0f);
+		}
+	};
+	window->RegisterKeyboardCallback(Scout::KeyboardKey::S, increaseJ);
+
+	auto decreaseK = [&](bool justPressed, bool repeating)
+	{
+		if (justPressed && !repeating)
+		{
+			downwardCompThreshold -= 0.05f;
+			downwardCompThreshold = std::clamp(downwardCompThreshold, 0.0f, 1.0f);
+		}
+	};
+	window->RegisterKeyboardCallback(Scout::KeyboardKey::Y, decreaseK);
+	auto increaseK = [&](bool justPressed, bool repeating)
+	{
+		if (justPressed && !repeating)
+		{
+			downwardCompThreshold += 0.05f;
+			downwardCompThreshold = std::clamp(downwardCompThreshold, 0.0f, 1.0f);
+		}
+	};
+	window->RegisterKeyboardCallback(Scout::KeyboardKey::X, increaseK);
+
+	auto decreaseL = [&](bool justPressed, bool repeating)
+	{
+		if (justPressed && !repeating)
+		{
+			limiterStart -= 0.05f;
+			limiterStart = std::clamp(limiterStart, 0.0f, 1.0f);
+		}
+	};
+	window->RegisterKeyboardCallback(Scout::KeyboardKey::E, decreaseL);
+	auto increaseL = [&](bool justPressed, bool repeating)
+	{
+		if (justPressed && !repeating)
+		{
+			limiterStart += 0.05f;
+			limiterStart = std::clamp(limiterStart, 0.0f, 1.0f);
+		}
+	};
+	window->RegisterKeyboardCallback(Scout::KeyboardKey::R, increaseL);
+
+	auto decreaseM = [&](bool justPressed, bool repeating)
+	{
+		if (justPressed && !repeating)
+		{
+			maxAbsSignalValue -= 0.05f;
+			maxAbsSignalValue = std::clamp(maxAbsSignalValue, 0.0f, 1.0f);
+		}
+	};
+	window->RegisterKeyboardCallback(Scout::KeyboardKey::D, decreaseM);
+	auto increaseM = [&](bool justPressed, bool repeating)
+	{
+		if (justPressed && !repeating)
+		{
+			maxAbsSignalValue += 0.05f;
+			maxAbsSignalValue = std::clamp(maxAbsSignalValue, 0.0f, 1.0f);
+		}
+	};
+	window->RegisterKeyboardCallback(Scout::KeyboardKey::F, increaseM);
+
+	auto decreaseG = [&](bool justPressed, bool repeating)
+	{
+		if (justPressed && !repeating)
+		{
+			makeupGainFactor -= 0.05f;
+			makeupGainFactor = std::clamp(makeupGainFactor, 0.0f, 1.0f);
+		}
+	};
+	window->RegisterKeyboardCallback(Scout::KeyboardKey::C, decreaseG);
+	auto increaseG = [&](bool justPressed, bool repeating)
+	{
+		if (justPressed && !repeating)
+		{
+			makeupGainFactor += 0.05f;
+			makeupGainFactor = std::clamp(makeupGainFactor, 0.0f, 1.0f);
+		}
+	};
+	window->RegisterKeyboardCallback(Scout::KeyboardKey::V, increaseG);
+
+	// Oscilloscope
+	auto peekBuffer = [](const std::vector<float>& signalBuffer, std::vector<float>& visualizationSignal)
+	{
+		assert(visualizationSignal.size() && visualizationSignal.size() < signalBuffer.size());
+		std::copy(signalBuffer.begin(), signalBuffer.begin() + visualizationSignal.size(), visualizationSignal.begin());
+	};
+	auto drawOscilloscope = [](Scout::IGraphicsEngine* renderer, const std::vector<float>& signal)
+	{
+		const float intervalX = 1.0f / signal.size();
+		for (size_t i = 0; i < signal.size() - 1; i++)
+		{
+			renderer->DrawLine(intervalX * i, -(signal[i] / 2.0f) + 0.5f, intervalX * (i + 1), -(signal[i + 1] / 2.0f) + 0.5f, 1.0f, Scout::COLOR_WHITE);
+		}
+	};
+	std::vector<float> visualizationSignal(1024, 0.0f);
+
+	// Game loop.
 	while (!shutdown)
 	{
 		window->PollEvents(Scout::HidTypeFlag::MOUSE_AND_KEYBOARD, shutdown);
 		audioEngine->Update();
+
+		auto& buff = audioEngine->GetRawBuffer();
+		peekBuffer(buff, visualizationSignal);
+		drawOscilloscope(graphicsEngine.get(), visualizationSignal);
+
+		graphicsEngine->Update();
 	}
+
 	return 0;
 }
