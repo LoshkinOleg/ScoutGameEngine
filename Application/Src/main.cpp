@@ -53,100 +53,102 @@ int main()
 		// https://www.desmos.com/calculator/dywe6plrzk
 
 		// X values
-		constexpr const float NOISE_GATE_START = 0.0f;
-		constexpr const float NOISE_GATE_END = 0.05f;
-		constexpr const float UPWARD_COMPRESSOR_THRESHOLD = 0.183f;
-		constexpr const float DOWNWARD_COMPRESSOR_THRESHOLD = 0.673f;
-		constexpr const float LIMITER_START = 0.95f;
-		constexpr const float LIMITER_END = 1.0f;
+		constexpr const float i = 0.05f;
+		constexpr const float j = 0.183f;
+		constexpr const float k = 0.673f;
+		constexpr const float l = 0.95f;
 
 		// Y values
-		constexpr const float MAKEUP_GAIN_OFFSET = 0.17f;
-		constexpr const float MAX_VALUE = 0.954f;
+		constexpr const float g = 0.17f;
+		constexpr const float M = 0.954f;
 
-		auto noiseGatePos = [=](const float x)->float {return 0; };
-		auto makeupGainPos = [=](const float x)->float {return x + MAKEUP_GAIN_OFFSET; };
-		auto limiterPos = [=](const float x)->float {return MAX_VALUE; };
-		auto upwardCompPos = [=](const float x)->float
+		auto a = [=](const float x)->float {return 0; };
+		auto c = [=](const float x)->float {return x + g; };
+		auto b = [=](const float x)->float {return M; };
+		auto d = [=](const float x)->float
 		{
 			return
-				x * ((makeupGainPos(UPWARD_COMPRESSOR_THRESHOLD) - noiseGatePos(NOISE_GATE_END)) / (UPWARD_COMPRESSOR_THRESHOLD - NOISE_GATE_END) )
-				-NOISE_GATE_END * ((makeupGainPos(UPWARD_COMPRESSOR_THRESHOLD) - noiseGatePos(NOISE_GATE_END)) / UPWARD_COMPRESSOR_THRESHOLD - NOISE_GATE_END);
+				x * ( (c(j) - a(i)) / (j - i) )
+				-i * ( (c(j) - a(i)) / (j - i) )
+				;
 		};
-		auto downwardCompPos = [=](const float x)->float
+		auto h = [=](const float x)->float
 		{
 			return
-				x * ((limiterPos(LIMITER_START) - makeupGainPos(DOWNWARD_COMPRESSOR_THRESHOLD)) / (LIMITER_START - DOWNWARD_COMPRESSOR_THRESHOLD) )
-				+ ( DOWNWARD_COMPRESSOR_THRESHOLD - DOWNWARD_COMPRESSOR_THRESHOLD * ((limiterPos(LIMITER_START) - makeupGainPos(DOWNWARD_COMPRESSOR_THRESHOLD)) / LIMITER_START - DOWNWARD_COMPRESSOR_THRESHOLD) + MAKEUP_GAIN_OFFSET );
-		};
-
-		auto noiseGateNeg = [=](const float x)->float {return 0; };
-		auto makeupGainNeg = [=](const float x)->float {return x - MAKEUP_GAIN_OFFSET; };
-		auto limiterNeg = [=](const float x)->float {return -MAX_VALUE; };
-		auto upwardCompNeg = [=](const float x)->float
-		{
-			return
-				x * (( noiseGateNeg(-NOISE_GATE_END) - makeupGainNeg(-UPWARD_COMPRESSOR_THRESHOLD) ) / (UPWARD_COMPRESSOR_THRESHOLD - NOISE_GATE_END))
-				+ NOISE_GATE_END * ((noiseGateNeg(-NOISE_GATE_END) - makeupGainNeg(-UPWARD_COMPRESSOR_THRESHOLD)) / (UPWARD_COMPRESSOR_THRESHOLD - NOISE_GATE_END));
-		};
-		auto downwardCompNeg = [=](const float x)->float
-		{
-			return
-				x * (( makeupGainNeg(-DOWNWARD_COMPRESSOR_THRESHOLD) - limiterNeg(-LIMITER_START) ) / ( LIMITER_START - DOWNWARD_COMPRESSOR_THRESHOLD ))
-				+ ( limiterNeg(-LIMITER_START) + LIMITER_START * ((makeupGainNeg(-DOWNWARD_COMPRESSOR_THRESHOLD) - limiterNeg(-LIMITER_START)) / (LIMITER_START - DOWNWARD_COMPRESSOR_THRESHOLD)));
+				x * ( (b(l) - c(k)) / (l - k) )
+				+ ( k - k * ( (b(l) - c(k)) / (l - k) ) + g )
+				;
 		};
 
-		for (size_t i = 0; i < signal.size(); i++)
+		auto q = [=](const float x)->float {return 0; };
+		auto w = [=](const float x)->float {return x - g; };
+		auto r = [=](const float x)->float {return -M; };
+		auto t = [=](const float x)->float
 		{
-			float& val = signal[i];
-			if (val >= -LIMITER_END && val <= -LIMITER_START)
+			return
+				x * ( (q(-i) - w(-j)) / (j - i) )
+				+i * ( (q(-i) - w(-j)) / (j - i) )
+				;
+		};
+		auto u = [=](const float x)->float
+		{
+			return
+				x * ( (w(-k) - r(-l)) / (l - k) )
+				+ ( r(-l) + l * ( (w(-k) - r(-l)) / (l - k) ) )
+				;
+		};
+
+		for (size_t sample = 0; sample < signal.size(); sample++)
+		{
+			float& val = signal[sample];
+			if (val >= -1.0f && val <= -l)
 			{
-				val = limiterNeg(val);
+				val = r(val);
 				continue;
 			}
-			if (val > -LIMITER_START && val <= -DOWNWARD_COMPRESSOR_THRESHOLD)
+			if (val > -l && val <= -k)
 			{
-				val = upwardCompNeg(val);
+				val = u(val);
 				continue;
 			}
-			if (val > -DOWNWARD_COMPRESSOR_THRESHOLD && val <= -UPWARD_COMPRESSOR_THRESHOLD)
+			if (val > -k && val <= -j)
 			{
-				val = makeupGainNeg(val);
+				val = w(val);
 				continue;
 			}
-			if (val > -UPWARD_COMPRESSOR_THRESHOLD && val <= -NOISE_GATE_END)
+			if (val > -j && val <= -i)
 			{
-				val = downwardCompNeg(val);
+				val = t(val);
 				continue;
 			}
-			if (val > -NOISE_GATE_END && val <= -NOISE_GATE_START)
+			if (val > -i && val <= 0.0f)
 			{
-				val = noiseGateNeg(val);
+				val = q(val);
 				continue;
 			}
-			if (val > NOISE_GATE_START && val <= NOISE_GATE_END)
+			if (val > 0.0f && val <= i)
 			{
-				val = noiseGatePos(val);
+				val = a(val);
 				continue;
 			}
-			if (val > NOISE_GATE_END && val <= UPWARD_COMPRESSOR_THRESHOLD)
+			if (val > i && val <= j)
 			{
-				val = upwardCompPos(val);
+				val = d(val);
 				continue;
 			}
-			if (val > UPWARD_COMPRESSOR_THRESHOLD && val <= DOWNWARD_COMPRESSOR_THRESHOLD)
+			if (val > j && val <= k)
 			{
-				val = makeupGainPos(val);
+				val = c(val);
 				continue;
 			}
-			if (val > DOWNWARD_COMPRESSOR_THRESHOLD && val <= LIMITER_START)
+			if (val > k && val <= l)
 			{
-				val = downwardCompPos(val);
+				val = h(val);
 				continue;
 			}
-			if (val > LIMITER_START && val <= LIMITER_END)
+			if (val > l && val <= 1.0f)
 			{
-				val = limiterPos(val);
+				val = b(val);
 				continue;
 			}
 		}
@@ -173,10 +175,11 @@ int main()
 
 	auto audioData_Sine440_1ch = wavIo->LoadWavF32("C:/Users/user/Desktop/ScoutGameEngine/Resource/Audio/Sine440_48kHz_32f_1ch.wav", nrOfChannels, sampleRate);
 	// simpleCompressor(audioData_Sine440_1ch);
-	// wavIo->WriteWav(audioData_Sine440_1ch, OUTPUT_PATH, 1, 48000);
+	staticCurveCompressor(audioData_Sine440_1ch);
+	wavIo->WriteWav(audioData_Sine440_1ch, OUTPUT_PATH, 1, 48000);
 	const auto soundHandle_Sine440_1ch = audioEngine->MakeSound(audioData_Sine440_1ch, 1, false);
 	audioEngine->SetSoundLooped(soundHandle_Sine440_1ch, true);
-	// audioEngine->PlaySound(soundHandle_Sine440_1ch);
+	audioEngine->PlaySound(soundHandle_Sine440_1ch);
 
 	auto audioData_Sweep_1ch = wavIo->LoadWavF32("C:/Users/user/Desktop/ScoutGameEngine/Resource/Audio/LinearSweep_48kHz_32f_1ch.wav", nrOfChannels, sampleRate);
 	// simpleCompressor(audioData_Sweep_1ch);
@@ -225,16 +228,16 @@ int main()
 	audioEngine->SetSoundLooped(soundHandle_dummy_2ch, true);
 	// audioEngine->PlaySound(soundHandle_dummy_2ch);
 
-	std::vector<float> audioData_dummyLinearIncrease_1ch(48000, 0.0f);
-	const float increment = 2.0f / 48000.0f;
-	float accumulatedVal = -1.0f;
-	for (size_t i = 0; i < audioData_dummyLinearIncrease_1ch.size(); i++)
-	{
-		audioData_dummyLinearIncrease_1ch[i] = accumulatedVal;
-		accumulatedVal += increment;
-	}
-	staticCurveCompressor(audioData_dummyLinearIncrease_1ch);
-	wavIo->WriteWav(audioData_dummyLinearIncrease_1ch, OUTPUT_PATH, 1, 48000);
+	// std::vector<float> audioData_dummyLinearIncrease_1ch(48000, 0.0f);
+	// const float increment = 2.0f / 48000.0f;
+	// float accumulatedVal = -1.0f;
+	// for (size_t i = 0; i < audioData_dummyLinearIncrease_1ch.size(); i++)
+	// {
+	// 	audioData_dummyLinearIncrease_1ch[i] = accumulatedVal;
+	// 	accumulatedVal += increment;
+	// }
+	// staticCurveCompressor(audioData_dummyLinearIncrease_1ch);
+	// wavIo->WriteWav(audioData_dummyLinearIncrease_1ch, OUTPUT_PATH, 1, 48000);
 
 	while (!shutdown)
 	{
