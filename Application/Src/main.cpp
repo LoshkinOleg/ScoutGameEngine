@@ -12,7 +12,7 @@
 
 // TODO: implement generic change of audio channels for nrOfChannels > 2 (ex: 3.0 to stereo and vice versa)
 // TODO: add way to unregister sound fx
-// TODO: implement oscilloscope
+// TODO: implement oscilloscope as imgui widget
 // TODO: implement compressor
 //			- static curve compressor: OK
 //			- dynamic compressor: TODO
@@ -161,7 +161,7 @@ int main()
 	// Setup sounds.
 	auto wavIo = Scout::MakeWavIo({});
 	uint64_t nrOfChannels, sampleRate;
-	
+
 	auto audioData_Sine440_1ch = wavIo->LoadWavF32("C:/Users/user/Desktop/ScoutGameEngine/Resource/Audio/Sine440_48kHz_32f_1ch.wav", nrOfChannels, sampleRate);
 	const auto soundHandle_Sine440_1ch = audioEngine->MakeSound(audioData_Sine440_1ch, 1, false);
 	audioEngine->SetSoundLooped(soundHandle_Sine440_1ch, true);
@@ -191,7 +191,7 @@ int main()
 	auto audioData_Music_1ch = wavIo->LoadWavF32("C:/Users/user/Desktop/ScoutGameEngine/Resource/Audio/Music_48kHz_32f_1ch.wav", nrOfChannels, sampleRate);
 	const auto soundHandle_Music_1ch = audioEngine->MakeSound(audioData_Music_1ch, 1, false);
 	audioEngine->SetSoundLooped(soundHandle_Music_1ch, true);
-	audioEngine->PlaySound(soundHandle_Music_1ch);
+	// audioEngine->PlaySound(soundHandle_Music_1ch);
 	
 	auto audioData_Music_2ch = wavIo->LoadWavF32("C:/Users/user/Desktop/ScoutGameEngine/Resource/Audio/MusicStereo_48kHz_32f_2ch.wav", nrOfChannels, sampleRate);
 	const auto soundHandle_Music_2ch = audioEngine->MakeSound(audioData_Music_2ch, 2, true);
@@ -341,10 +341,19 @@ int main()
 	};
 	auto drawOscilloscope = [](Scout::IGraphicsEngine* renderer, const std::vector<float>& signal)
 	{
-		const float intervalX = 1.0f / signal.size();
-		for (size_t i = 0; i < signal.size() - 1; i++)
+		size_t oscilloscopeOffset = 0;
+		for (size_t i = 0; i < signal.size(); i++)
 		{
-			renderer->DrawLine(intervalX * i, -(signal[i] / 2.0f) + 0.5f, intervalX * (i + 1), -(signal[i + 1] / 2.0f) + 0.5f, 1.0f, Scout::COLOR_WHITE);
+			if (abs(signal[i]) < 0.01f && signal[i + 1] > signal[i])
+			{
+				oscilloscopeOffset = i;
+				break;
+			}
+		}
+		const float intervalX = 1.0f / signal.size();
+		for (size_t i = 0; i < signal.size() - 1 - oscilloscopeOffset; i++)
+		{
+			renderer->DrawLine(intervalX * i, -(signal[i + oscilloscopeOffset] / 2.0f) + 0.5f, intervalX * (i + 1), -(signal[i + 1 + oscilloscopeOffset] / 2.0f) + 0.5f, 1.0f, Scout::COLOR_WHITE);
 		}
 	};
 	std::vector<float> visualizationSignal(1024, 0.0f);
