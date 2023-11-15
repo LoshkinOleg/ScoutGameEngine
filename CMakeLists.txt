@@ -143,6 +143,7 @@ target_include_directories(Application PUBLIC
 	${ScoutInputSystem_IncludePath}
 	${ScoutAudioEngine_IncludePath}
 	${ScoutAssetSystem_IncludePath}
+	${ScoutUiSystem_IncludePath}
 )
 
 # Linking specifications for Application.
@@ -153,4 +154,5 @@ target_link_libraries(Application PUBLIC
 	general ScoutInputSystem
 	general ScoutAudioEngine
 	general ScoutAssetSystem
+	general ScoutUiSystem
 )

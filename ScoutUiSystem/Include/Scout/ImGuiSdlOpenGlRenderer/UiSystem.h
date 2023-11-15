@@ -12,6 +12,7 @@ namespace Scout
 	{
 	public:
 		void Render() override;
+		// Called by the input system (like SDL)
 		bool ProcessEvent(const void* event) override;
 		void RegisterDrawingCallback(ImmediateModeUiDrawingCallback callback) override;
 
