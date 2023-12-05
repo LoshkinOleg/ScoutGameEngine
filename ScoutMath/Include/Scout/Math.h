@@ -5,6 +5,7 @@
 #include <vector>
 #include <complex>
 #include <random>
+#include <cassert>
 
 namespace Scout
 {
@@ -806,5 +807,25 @@ namespace Scout
 		}
 		accumulated /= signal.size();
 		return std::sqrtf(accumulated);
+	}
+
+	inline void ConvolveMonoSignals_LinearConvolution_TimeDomain(const std::vector<float> a, const std::vector<float> b, std::vector<float>& out)
+	{
+		// https://github.com/markusbuchholz/Linear-Convolution-Simulation-in-Cpp-ImGui/blob/main/lin_convolution/src/lin_convolution.cpp
+
+		assert(out.size() == a.size() + b.size() - 1);
+
+		std::fill(out.begin(), out.end(), 0.0f);
+		std::vector<float> reversedB(b.size(), 0.0f);
+		std::reverse_copy(b.begin(), b.end(), reversedB.begin());
+		reversedB.insert(reversedB.end(), b.size(), 0.0f);
+
+		for (size_t n = 0; n < a.size(); n++)
+		{
+			for (size_t k = 0; k < b.size(); k++)
+			{
+				out[n + k] += a[n] * b[k];
+			}
+		}
 	}
 }

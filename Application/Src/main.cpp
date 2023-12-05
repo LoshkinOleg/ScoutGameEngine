@@ -23,7 +23,7 @@
 
 constexpr const char* OUTPUT_PATH = "C:/Users/user/Desktop/ScoutGameEngine/Resource/Audio/generated.wav";
 
-int main()
+int CompressorMain()
 {
 	// Modules setup.
 	bool shutdown = false;
@@ -388,6 +388,69 @@ int main()
 		auto& buff = audioEngine->GetRawBuffer();
 		peekBuffer(buff, visualizationSignal);
 		drawOscilloscope(graphicsEngine.get(), visualizationSignal);
+
+		graphicsEngine->Update();
+	}
+
+	return 0;
+}
+
+int main()
+{
+	// Modules setup.
+	bool shutdown = false;
+
+	Scout::WindowDef windowDef;
+	windowDef.implementation = Scout::InputApi::SDL;
+	windowDef.windowName = "MyWindow";
+	windowDef.windowWidth = 720;
+	windowDef.windowHeight = 720;
+	auto window = Scout::MakeWindow(windowDef);
+
+	Scout::AudioEngineDef audioEngineDef;
+	audioEngineDef.implementation = Scout::AudioApi::PORTAUDIO;
+	audioEngineDef.speakersSetup = Scout::SpeakerSetup::MONO;
+	audioEngineDef.engineBufferSamplerate = Scout::Samplerate::Hz_48k;
+	audioEngineDef.mixingPolicy = Scout::MixingPolicy::AVERAGE;
+	auto audioEngine = Scout::MakeAudioEngine(audioEngineDef);
+
+	Scout::GraphicsEngineDef graphicsEngineDef;
+	graphicsEngineDef.implementation = Scout::GraphicalApi::SDL_RENDERER;
+	graphicsEngineDef.viewportWidth = 720;
+	graphicsEngineDef.viewportHeight = 720;
+	auto graphicsEngine = Scout::MakeGraphicsEngine(graphicsEngineDef);
+
+	// Scout::UiSystemDef uiDef;
+	// uiDef.implementation = Scout::UiApi::IMGUI;
+	// uiDef.pRenderer = graphicsEngine.get();
+	// uiDef.pInputsProvider = window.get();
+	// auto uiSystem = Scout::MakeImmediateModeUiSystem(uiDef);
+
+	// Setup sounds.
+	auto wavIo = Scout::MakeWavIo({});
+	uint64_t nrOfChannels, sampleRate;
+
+	auto audioData_Music_1ch = wavIo->LoadWavF32("C:/Users/user/Desktop/ScoutGameEngine/Resource/Audio/Music_48kHz_32f_1ch.wav", nrOfChannels, sampleRate);
+	// const auto soundHandle_Music_1ch = audioEngine->MakeSound(audioData_Music_1ch, 1, false);
+	// audioEngine->SetSoundLooped(soundHandle_Music_1ch, true);
+	// audioEngine->PlaySound(soundHandle_Music_1ch);
+
+	auto audioData_Impulse_1ch = wavIo->LoadWavF32("C:/Users/user/Desktop/ScoutGameEngine/Resource/Audio/BigHallIR_48kHz_32f_1ch.wav", nrOfChannels, sampleRate);
+	// const auto soundHandle_Impulse_1ch = audioEngine->MakeSound(audioData_Impulse_1ch, 1, false);
+	// audioEngine->SetSoundLooped(soundHandle_Impulse_1ch, true);
+	// audioEngine->PlaySound(soundHandle_Music_1ch);
+
+	std::vector<float> convolved(audioData_Music_1ch.size() + audioData_Impulse_1ch.size() - 1);
+	Scout::ConvolveMonoSignals_LinearConvolution_TimeDomain(audioData_Music_1ch, audioData_Impulse_1ch, convolved);
+	const auto conv = audioEngine->MakeSound(convolved, 1, false);
+	audioEngine->SetSoundLooped(conv, true);
+	audioEngine->PlaySound(conv);
+
+	// Game loop.
+	while (!shutdown)
+	{
+		window->PollEvents(Scout::HidTypeFlag::MOUSE_AND_KEYBOARD, shutdown);
+		audioEngine->Update();
 
 		graphicsEngine->Update();
 	}
