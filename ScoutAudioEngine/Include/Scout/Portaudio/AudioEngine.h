@@ -57,6 +57,7 @@ namespace Scout
 		std::uint64_t GetFramesPerBuffer() const override;
 		std::uint64_t GetBufferSizeInBytes() const override;
 		std::chrono::milliseconds GetBufferLatency() const override;
+		std::chrono::milliseconds GetBufferDuration() const override;
 
 		void Update() override;
 

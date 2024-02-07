@@ -67,13 +67,13 @@ namespace Scout
 
 		NONE = 0,
 
-		Hz_8k, // minimal sampling for voice intelligebility
-		Hz_16k, // standard VoIP
-		Hz_22050, // higher sampled MPEG audio
-		Hz_44100, // standard CD
-		Hz_48k, // default sampling rate for audio production
-		Hz_96k, // DVD and Blu-ray
-		Hz_384k, // highest samplerate for common software
+		Hz_8k = 8000, // minimal sampling for voice intelligebility
+		Hz_16k = 16000, // standard VoIP
+		Hz_22050 = 22050, // higher sampled MPEG audio
+		Hz_44100 = 44100, // standard CD
+		Hz_48k = 48000, // default sampling rate for audio production
+		Hz_96k = 96000, // DVD and Blu-ray
+		Hz_384k = 384000, // highest samplerate for common software
 	};
 
 	enum class SpeakerSetup : std::uint64_t

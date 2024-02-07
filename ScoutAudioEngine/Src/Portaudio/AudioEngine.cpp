@@ -326,17 +326,23 @@ namespace Scout
 
 	std::chrono::milliseconds AudioEngine_Portaudio::GetBufferLatency() const
 	{
-		std::uint64_t latencyInSeconds = 0;
+		float latencyInSeconds = 0;
 		const auto* info = Pa_GetStreamInfo(pStream_);
 		if (info)
 		{
-			latencyInSeconds = (std::uint64_t)info->outputLatency;
+			latencyInSeconds = info->outputLatency;
 		}
 		else
 		{
 			throw std::runtime_error("AudioEngine_Portaudio::GetBufferLatency: Failed to retireve portaudio output latency.");
 		}
-		return std::chrono::milliseconds(latencyInSeconds * 1000);
+		return std::chrono::milliseconds((std::uint64_t)std::floorf(latencyInSeconds * 1000));
+	}
+
+	std::chrono::milliseconds AudioEngine_Portaudio::GetBufferDuration() const
+	{
+		const float duration = (float)GetFramesPerBuffer() / (float)(std::uint64_t)GetSamplerate();
+		return std::chrono::milliseconds((std::uint64_t)std::floorf(duration * 1000));
 	}
 
 	/*void AudioEngine_Portaudio::Update()

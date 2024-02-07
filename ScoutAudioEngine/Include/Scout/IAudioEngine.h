@@ -31,6 +31,7 @@ namespace Scout
 		virtual std::uint64_t GetFramesPerBuffer() const = 0;
 		virtual std::uint64_t GetBufferSizeInBytes() const = 0;
 		virtual std::chrono::milliseconds GetBufferLatency() const = 0;
+		virtual std::chrono::milliseconds GetBufferDuration() const = 0;
 
 		virtual SoundHandle MakeSound(
 			const std::vector<float>& data, const std::uint64_t nrOfChannels,

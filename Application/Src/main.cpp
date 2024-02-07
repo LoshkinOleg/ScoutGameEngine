@@ -4,6 +4,7 @@
 #include <string>
 #include <complex>
 #include <algorithm>
+#include <numeric>
 
 #include <Scout/IInputSystem.h>
 #include <Scout/IGraphicEngine.h>
@@ -21,8 +22,8 @@
 // TODO: vocoder
 // TODO: low pass filter
 // TODO: EQ
-// TODO: FFT and IFFT
 // TODO: resampling
+// TODO: be able to specify audio buffer size
 // TODO: figure out why for a 8k clip, DFTing it and IDFTing it at 12k is the minimum required to not loose any frequencies.
 // TODO: implement compressor
 //			- smooth static curve compressor: TODO
@@ -31,64 +32,8 @@
 //			- peak measurement // https://stackoverflow.com/questions/22583391/peak-signal-detection-in-realtime-timeseries-data/22640362#22640362 
 
 
+
 constexpr const char* OUTPUT_PATH = "C:/Users/user/Desktop/ScoutGameEngine/Resource/Audio/generated.wav";
-
-
-// https://cp-algorithms.com/algebra/fft.html 
-void fft(std::vector<std::complex<float>>& a)
-{
-	if (a.size() == 1) return;
-
-	std::vector<std::complex<float>> a0(a.size() / 2), a1(a.size() / 2);
-
-	// Split signal into even and odd samples
-	for (int i = 0; 2 * i < a.size(); i++)
-	{
-		a0[i] = a[2 * i];
-		a1[i] = a[2 * i + 1];
-	}
-	
-	// Recursive call.
-	fft(a0);
-	fft(a1);
-
-	// Actual operation.
-	const float PI = acosf(-1.0f);
-	float ang = 2 * PI / a.size();
-
-	std::complex<float> w(1), wn(cosf(ang), sinf(ang));
-
-	for (int i = 0; 2 * i < a.size(); i++)
-	{
-		a[i] = a0[i] + w * a1[i];
-		a[i + a.size() / 2] = a0[i] - w * a1[i];
-		w *= wn;
-	}
-}
-
-void ifft(std::vector<std::complex<float>>& a) {
-	if (a.size() == 1)
-		return;
-
-	std::vector<std::complex<float>> a0(a.size() / 2), a1(a.size() / 2);
-	for (int i = 0; 2 * i < a.size(); i++) {
-		a0[i] = a[2 * i];
-		a1[i] = a[2 * i + 1];
-	}
-	ifft(a0);
-	ifft(a1);
-
-	const float PI = acosf(-1.0f);
-	float ang = 2 * PI / a.size() * -1.0f;
-	std::complex<float> w(1), wn(cos(ang), sin(ang));
-	for (int i = 0; 2 * i < a.size(); i++) {
-		a[i] = a0[i] + w * a1[i];
-		a[i + a.size() / 2] = a0[i] - w * a1[i];
-		a[i] /= 2;
-		a[i + a.size() / 2] /= 2;
-		w *= wn;
-	}
-}
 
 int main()
 {
@@ -126,27 +71,70 @@ int main()
 	uint64_t nrOfChannels, sampleRate;
 
 	auto audioData_Music_1ch = wavIo->LoadWavF32("C:/Users/user/Desktop/ScoutGameEngine/Resource/Audio/Music_8kHz_32f_1ch.wav", nrOfChannels, sampleRate);
-	const size_t padding = Scout::NearestUpperPowOfTwo(audioData_Music_1ch.size()) - audioData_Music_1ch.size();
-	audioData_Music_1ch.insert(audioData_Music_1ch.end(), padding, 0.0f);
-	
-	std::vector<std::complex<float>> freqDomData(audioData_Music_1ch.size(), {0.0f, 0.0f});
-	for (size_t i = 0; i < freqDomData.size(); i++)
-	{
-		freqDomData[i] = {audioData_Music_1ch[i], 0.0f};
-	}
-	fft(freqDomData);
-	ifft(freqDomData);
-	for (size_t i = 0; i < freqDomData.size(); i++)
-	{
-		// audioData_Music_1ch[i] = std::sqrtf(freqDomData[i].real() * freqDomData[i].real() + freqDomData[i].imag() * freqDomData[i].imag());
-		audioData_Music_1ch[i] = freqDomData[i].real();
-	}
+	const auto soundHandle_Music_1ch = audioEngine->MakeSound(audioData_Music_1ch, 1, false);
+	audioEngine->SetSoundLooped(soundHandle_Music_1ch, true);
+	audioEngine->PlaySound(soundHandle_Music_1ch);
 
-	wavIo->WriteWav(audioData_Music_1ch, "C:/Users/user/Desktop/ScoutGameEngine/Resource/Audio/Music_8kHz_32f_1ch_generated.wav", 1, 8000);
-	
-	// const auto soundHandle_Music_1ch = audioEngine->MakeSound(convolved, 1, false);
-	// audioEngine->SetSoundLooped(soundHandle_Music_1ch, true);
-	// audioEngine->PlaySound(soundHandle_Music_1ch);
+	auto lowPassFx = [&](std::vector<float>& signal)
+	{
+		assert(audioEngine->GetBufferDuration() < std::chrono::milliseconds(1000)); // Not handling really big buffers.
+		const size_t transitionBegin = 1000;
+		const size_t transitionEnd = 4000;
+		
+		static std::vector<float> paddedSignal(Scout::NearestUpperPowOfTwo((size_t)audioEngine->GetSamplerate()), 0.f);
+		static std::vector<std::complex<float>> freqDomSignal(paddedSignal.size(), {0.f,0.f});
+		std::copy(signal.begin(), signal.end(), paddedSignal.begin());
+
+		Scout::FFT(paddedSignal, freqDomSignal);
+		for (size_t freq = 0; freq < freqDomSignal.size(); freq++)
+		{
+			if (freq >= transitionBegin && freq <= transitionEnd)
+			{
+				const float v = Scout::Lerp(1.f, 0.f, (float)(freq - transitionBegin) / (float)(transitionEnd - transitionBegin));
+				freqDomSignal[freq] *= v;
+			}
+			else if (freq > transitionEnd)
+			{
+				freqDomSignal[freq] = 0.f;
+			}
+		}
+		Scout::IFFT(freqDomSignal, paddedSignal);
+		std::copy(paddedSignal.begin(), paddedSignal.begin() + signal.size(), signal.begin());
+	};
+	auto notchFx = [&](std::vector<float>& signal)
+		{
+			assert(audioEngine->GetBufferDuration() < std::chrono::milliseconds(1000)); // Not handling really big buffers.
+			const size_t a = 500;
+			const size_t b = 1000;
+			const size_t c = 1500;
+			const size_t d = 2000;
+
+			static std::vector<float> paddedSignal(Scout::NearestUpperPowOfTwo((size_t)audioEngine->GetSamplerate()), 0.f);
+			static std::vector<std::complex<float>> freqDomSignal(paddedSignal.size(), { 0.f,0.f });
+			std::copy(signal.begin(), signal.end(), paddedSignal.begin());
+
+			Scout::FFT(paddedSignal, freqDomSignal);
+			for (size_t freq = 0; freq < freqDomSignal.size(); freq++)
+			{
+				if (freq >= a && freq <= b)
+				{
+					const float v = Scout::Lerp(1.f, 0.f, (float)(freq - a) / (float)(b - a));
+					freqDomSignal[freq] *= v;
+				}
+				else if (freq > b && freq <= c)
+				{
+					freqDomSignal[freq] = 0.f;
+				}
+				if (freq >= c && freq <= d)
+				{
+					const float v = Scout::Lerp(0.f, 1.f, (float)(freq - c) / (float)(d - c));
+					freqDomSignal[freq] *= v;
+				}
+			}
+			Scout::IFFT(freqDomSignal, paddedSignal);
+			std::copy(paddedSignal.begin(), paddedSignal.begin() + signal.size(), signal.begin());
+		};
+	audioEngine->RegisterEffectForDisplay(notchFx);
 
 	// Game loop.
 	while (!shutdown)

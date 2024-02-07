@@ -519,6 +519,99 @@ namespace Scout
 		}
 	}
 
+	namespace
+	{
+		constexpr inline void FFT_ComplexValued(std::vector<std::complex<float>>& signal)
+		{
+			// Taken from: https://cp-algorithms.com/algebra/fft.html 
+
+			const size_t N = signal.size();
+			assert(IsPowerOfTwo(N));
+			if (N == 1) return;
+
+			constexpr const float pi = 3.14159265359f;
+			const float ang = 2.0f * pi / (float)N;
+			const std::complex<float> wn(std::cosf(ang), std::sinf(ang));
+
+			std::vector<std::complex<float>> a0(N / 2), a1(N / 2);
+			for (size_t i = 0; 2 * i < N; i++)
+			{
+				a0[i] = signal[2 * i];
+				a1[i] = signal[2 * i + 1];
+			}
+
+			FFT_ComplexValued(a0);
+			FFT_ComplexValued(a1);
+
+			std::complex<float> w(1);
+			for (size_t i = 0; 2 * i < N; i++)
+			{
+				signal[i] = a0[i] + w * a1[i];
+				signal[i + N / 2] = a0[i] - w * a1[i];
+				w *= wn;
+			}
+		}
+
+		constexpr inline void IFFT_ComplexValued(std::vector<std::complex<float>>& signal)
+		{
+			// Taken from: https://cp-algorithms.com/algebra/fft.html 
+
+			const size_t N = signal.size();
+			assert(IsPowerOfTwo(N));
+			if (N == 1) return;
+
+			constexpr const float pi = 3.14159265359f;
+			const float ang = -2.0f * pi / (float)N;
+			const std::complex<float> wn(std::cosf(ang), std::sinf(ang));
+
+			std::vector<std::complex<float>> a0(N / 2), a1(N / 2);
+			for (size_t i = 0; 2 * i < N; i++)
+			{
+				a0[i] = signal[2 * i];
+				a1[i] = signal[2 * i + 1];
+			}
+
+			IFFT_ComplexValued(a0);
+			IFFT_ComplexValued(a1);
+
+			std::complex<float> w(1);
+			for (size_t i = 0; 2 * i < N; i++)
+			{
+				signal[i] = a0[i] + w * a1[i];
+				signal[i + N / 2] = a0[i] - w * a1[i];
+				signal[i] /= 2;
+				signal[i + signal.size() / 2] /= 2;
+				w *= wn;
+			}
+		}
+	}
+
+	constexpr inline void FFT(const std::vector<float>& input, std::vector<std::complex<float>>& output)
+	{
+		const size_t N = input.size();
+		assert(N == output.size() && IsPowerOfTwo(N));
+
+		for (size_t i = 0; i < N; i++)
+		{
+			output[i] = {input[i], 0.0f};
+		}
+		FFT_ComplexValued(output);
+	}
+
+	constexpr inline void IFFT(const std::vector<std::complex<float>>& input, std::vector<float>& output)
+	{
+		const size_t N = input.size();
+		assert(N == output.size() && IsPowerOfTwo(N));
+
+		auto out = input;
+		IFFT_ComplexValued(out);
+
+		for (size_t i = 0; i < N; i++)
+		{
+			output[i] = out[i].real();
+		}
+	}
+
 	constexpr inline void InterleaveSignal(std::vector<double>& data, const std::uint64_t nrOfChannels)
 	{
 		const size_t len = data.size();
@@ -827,5 +920,55 @@ namespace Scout
 				out[n + k] += a[n] * b[k];
 			}
 		}
+	}
+
+	inline std::vector<std::vector<float>> SplitMonoInterleavedSignalIntoSeconds(const std::vector<float>& signal, const size_t sampleRate)
+	{
+		if (signal.size() == 0) return {}; // Trivial case.
+
+		std::vector<std::vector<float>> returnVal;
+
+		const float nrOfSeconds = (float)signal.size() / (float)sampleRate;
+		const size_t nrOfWholeSeconds = std::floorf(nrOfSeconds);
+		const float lastSecondDuration = nrOfSeconds - (float)nrOfWholeSeconds;
+		const size_t samplesInLastSecond = (size_t)std::floorf(lastSecondDuration * sampleRate);
+
+		returnVal.resize(nrOfWholeSeconds + 1, std::vector<float>(sampleRate, 0.0f));
+		for (size_t second = 0; second < nrOfWholeSeconds; second++)
+		{
+			std::copy(signal.begin() + second * sampleRate, signal.begin() + second * sampleRate + sampleRate, returnVal[second].begin());
+		}
+		returnVal[returnVal.size() - 1].resize(samplesInLastSecond);
+		std::copy(signal.end() - samplesInLastSecond, signal.end(), returnVal[returnVal.size() - 1].begin());
+
+		return returnVal;
+	}
+
+	inline std::vector<float> RecombineMonoInterleavedSignalFromSeconds(const std::vector<std::vector<float>>& splitSignal)
+	{
+		if (splitSignal.size() == 0) return {}; // Trivial case.
+
+		size_t totalNrOfSamples = 0;
+		for (size_t second = 0; second < splitSignal.size(); second++)
+		{
+			totalNrOfSamples += splitSignal[second].size();
+		}
+		std::vector<float> returnVal(totalNrOfSamples);
+
+		size_t i = 0;
+		for (size_t second = 0; second < splitSignal.size(); second++)
+		{
+			for (size_t sample = 0; sample < splitSignal[second].size(); sample++)
+			{
+				returnVal[i++] = splitSignal[second][sample];
+			}
+		}
+
+		return returnVal;
+	}
+
+	inline float Lerp(const float a, const float b, const float lambda)
+	{
+		return a * (1.0f - lambda) + b * lambda;
 	}
 }
