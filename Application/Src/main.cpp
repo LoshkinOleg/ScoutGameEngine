@@ -22,6 +22,8 @@
 // TODO: vocoder
 // TODO: low pass filter
 // TODO: EQ
+// TODO: implement ability to use non float PCM
+// TODO: resolution change
 // TODO: resampling
 // TODO: be able to specify audio buffer size
 // TODO: figure out why for a 8k clip, DFTing it and IDFTing it at 12k is the minimum required to not loose any frequencies.
@@ -60,12 +62,6 @@ int main()
 	graphicsEngineDef.viewportHeight = 720;
 	auto graphicsEngine = Scout::MakeGraphicsEngine(graphicsEngineDef);
 
-	// Scout::UiSystemDef uiDef;
-	// uiDef.implementation = Scout::UiApi::IMGUI;
-	// uiDef.pRenderer = graphicsEngine.get();
-	// uiDef.pInputsProvider = window.get();
-	// auto uiSystem = Scout::MakeImmediateModeUiSystem(uiDef);
-
 	// Setup sounds.
 	auto wavIo = Scout::MakeWavIo({});
 	uint64_t nrOfChannels, sampleRate;
@@ -75,66 +71,8 @@ int main()
 	audioEngine->SetSoundLooped(soundHandle_Music_1ch, true);
 	audioEngine->PlaySound(soundHandle_Music_1ch);
 
-	auto lowPassFx = [&](std::vector<float>& signal)
-	{
-		assert(audioEngine->GetBufferDuration() < std::chrono::milliseconds(1000)); // Not handling really big buffers.
-		const size_t transitionBegin = 1000;
-		const size_t transitionEnd = 4000;
-		
-		static std::vector<float> paddedSignal(Scout::NearestUpperPowOfTwo((size_t)audioEngine->GetSamplerate()), 0.f);
-		static std::vector<std::complex<float>> freqDomSignal(paddedSignal.size(), {0.f,0.f});
-		std::copy(signal.begin(), signal.end(), paddedSignal.begin());
-
-		Scout::FFT(paddedSignal, freqDomSignal);
-		for (size_t freq = 0; freq < freqDomSignal.size(); freq++)
-		{
-			if (freq >= transitionBegin && freq <= transitionEnd)
-			{
-				const float v = Scout::Lerp(1.f, 0.f, (float)(freq - transitionBegin) / (float)(transitionEnd - transitionBegin));
-				freqDomSignal[freq] *= v;
-			}
-			else if (freq > transitionEnd)
-			{
-				freqDomSignal[freq] = 0.f;
-			}
-		}
-		Scout::IFFT(freqDomSignal, paddedSignal);
-		std::copy(paddedSignal.begin(), paddedSignal.begin() + signal.size(), signal.begin());
-	};
-	auto notchFx = [&](std::vector<float>& signal)
-		{
-			assert(audioEngine->GetBufferDuration() < std::chrono::milliseconds(1000)); // Not handling really big buffers.
-			const size_t a = 500;
-			const size_t b = 1000;
-			const size_t c = 1500;
-			const size_t d = 2000;
-
-			static std::vector<float> paddedSignal(Scout::NearestUpperPowOfTwo((size_t)audioEngine->GetSamplerate()), 0.f);
-			static std::vector<std::complex<float>> freqDomSignal(paddedSignal.size(), { 0.f,0.f });
-			std::copy(signal.begin(), signal.end(), paddedSignal.begin());
-
-			Scout::FFT(paddedSignal, freqDomSignal);
-			for (size_t freq = 0; freq < freqDomSignal.size(); freq++)
-			{
-				if (freq >= a && freq <= b)
-				{
-					const float v = Scout::Lerp(1.f, 0.f, (float)(freq - a) / (float)(b - a));
-					freqDomSignal[freq] *= v;
-				}
-				else if (freq > b && freq <= c)
-				{
-					freqDomSignal[freq] = 0.f;
-				}
-				if (freq >= c && freq <= d)
-				{
-					const float v = Scout::Lerp(0.f, 1.f, (float)(freq - c) / (float)(d - c));
-					freqDomSignal[freq] *= v;
-				}
-			}
-			Scout::IFFT(freqDomSignal, paddedSignal);
-			std::copy(paddedSignal.begin(), paddedSignal.begin() + signal.size(), signal.begin());
-		};
-	audioEngine->RegisterEffectForDisplay(notchFx);
+	const auto resampled = Scout::ResampleSignal(audioData_Music_1ch, 8000, 16000);
+	wavIo->WriteWav(resampled, "C:/Users/user/Desktop/ScoutGameEngine/Resource/Audio/generated.wav", 1, 16000);
 
 	// Game loop.
 	while (!shutdown)

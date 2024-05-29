@@ -1,6 +1,7 @@
 #pragma once
 
 #include <set>
+#include <mutex>
 
 #include <Scout/PreprocessorMacro.h>
 #include <Scout/IAudioEngine.h>

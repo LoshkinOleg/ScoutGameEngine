@@ -64,6 +64,11 @@ namespace Scout
 		return (T(0) < val) - (val < T(0));
 	}
 
+	inline float Lerp(const float a, const float b, const float lambda)
+	{
+		return a * (1.0f - lambda) + b * lambda;
+	}
+
 	// Vectors ==================================
 
 	struct Vec4
@@ -967,8 +972,59 @@ namespace Scout
 		return returnVal;
 	}
 
-	inline float Lerp(const float a, const float b, const float lambda)
+	inline std::vector<float> ResampleSignal(const std::vector<float>& signal, const size_t fromSamplerate, const size_t toSamplerate)
 	{
-		return a * (1.0f - lambda) + b * lambda;
+		// TODO: edge cases, exceptions, nr of channels, interleaved or not
+		std::vector<float> returnVal;
+
+		const float sampleDuration = (float)signal.size() / (float)fromSamplerate;
+		returnVal.resize((float)toSamplerate * sampleDuration, 0.f);
+
+		/*
+		// Just remap
+		for (size_t originalSampleIdx = 0; originalSampleIdx < signal.size(); originalSampleIdx++)
+		{
+			const float normalizedLocationOfSampleInSignal = (float)originalSampleIdx / (float)signal.size();
+			size_t associatedSample = normalizedLocationOfSampleInSignal * (float)returnVal.size();
+
+			returnVal[associatedSample] = signal[originalSampleIdx];
+		}
+
+		
+		// Dumb linear interpolation.
+		// for (size_t i = 0; i < returnVal.size(); i++)
+		// {
+		// 	if (returnVal[i] == 0.f && i > 0 && i < returnVal.size() - 1)
+		// 	{
+		// 		returnVal[i] = (returnVal[i - 1] + returnVal[i + 1]) / 2.0f;
+		// 	}
+		// }
+		
+
+		// Flatten right
+		{
+			float lastSample = returnVal[0];
+			for (size_t i = 0; i < returnVal.size(); i++)
+			{
+				if (returnVal[i] == 0.f)
+				{
+					returnVal[i] = lastSample;
+				}
+				else {
+					lastSample = returnVal[i];
+				}
+			}
+		}
+
+		// Smooth
+		for (size_t i = 1; i < returnVal.size() - 1; i++)
+		{
+			returnVal[i] = (returnVal[i - 1] + returnVal[i] + returnVal[i + 1]) / 3.f;
+		}
+		*/
+
+		// https://ccrma.stanford.edu/~jos/resample/ 
+
+		return returnVal;
 	}
 }
